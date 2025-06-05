@@ -1,0 +1,12 @@
+module <%= class_name %>
+  class Service < Servus::ApplicationService
+    def initialize<%= parameter_list %>
+      <%= initialize_params %>
+    end
+    def call
+      # Implement service logic here
+      success({})
+    end
+    <%= attr_readers %>
+  end
+end

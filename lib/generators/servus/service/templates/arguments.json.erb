@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "properties": {
+    <%- parameters.each do |param| %>
+      "<%= param %>": {
+        "type": "UNDECLARED_TYPE"
+      }
+    <% end %>
+  },
+  "required": [
+    <%- parameters.each do |param| %>
+      "<%= param %>",
+    <% end %>
+  ]
+}
