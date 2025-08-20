@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 RSpec.describe Servus::Base do
@@ -12,12 +14,12 @@ RSpec.describe Servus::Base do
       if @should_succeed
         success(@data)
       else
-        failure("error message")
+        failure('error message')
       end
     end
 
     def call_error
-      error!("error message")
+      error!('error message')
     end
   end
 
@@ -80,13 +82,15 @@ RSpec.describe Servus::Base do
     end
 
     it 'calls log_failure on Logger with correct arguments' do
+      allowed_instance = an_instance_of(Servus::Support::Errors::ServiceError)
+
       allow(Servus::Support::Logger).to receive(:log_failure)
-        .with(TestServiceV2, an_instance_of(Servus::Support::Errors::ServiceError), an_instance_of(Float)).exactly(1).times
+        .with(TestServiceV2, allowed_instance, an_instance_of(Float)).exactly(1).times
 
       TestServiceV2.call(should_succeed: false)
 
       expect(Servus::Support::Logger).to have_received(:log_failure)
-        .with(TestServiceV2, an_instance_of(Servus::Support::Errors::ServiceError), an_instance_of(Float)).exactly(1).times
+        .with(TestServiceV2, allowed_instance, an_instance_of(Float)).exactly(1).times
     end
 
     it 'calls log_exception on Logger with correct arguments' do
@@ -105,21 +109,20 @@ RSpec.describe Servus::Base do
   end
 
   describe '#success' do
-    let(:test_cases) { [ nil, "success data", { key: 'value' }, [ 'array', 'data' ], 123, true ] }
-
+    let(:test_cases) { [nil, 'success data', { key: 'value' }, %w[array data], 123, true] }
 
     it 'returns an Servus::Support::Response with success status' do
-      result = TestServiceV2.call(should_succeed: true, data: "success data")
+      result = TestServiceV2.call(should_succeed: true, data: 'success data')
 
       expect(result).to be_a(Servus::Support::Response)
       expect(result.error).to be_nil
       expect(result.success?).to be true
-      expect(result.data).to eq("success data")
+      expect(result.data).to eq('success data')
     end
 
     it 'can handle different types of data' do
       test_cases.each do |data|
-        result = TestServiceV2.call(should_succeed: true, data:)
+        result = TestServiceV2.call(should_succeed: true, data: data)
         expect(result.data).to eq(data)
       end
     end
@@ -136,39 +139,39 @@ RSpec.describe Servus::Base do
     end
 
     it 'has a service error and message' do
-      expect(result.error.message).to eq("error message")
+      expect(result.error.message).to eq('error message')
     end
 
     it 'has an api error and message' do
-      expect(result.error.api_error).to eq({ code: :bad_request, message: "error message" })
+      expect(result.error.api_error).to eq({ code: :bad_request, message: 'error message' })
     end
 
     it 'uses the default error type and default message' do
       result = TestServiceV2.new.failure
 
       expect(result.error).to be_a(Servus::Support::Errors::ServiceError)
-      expect(result.error.message).to eq("An error occurred")
+      expect(result.error.message).to eq('An error occurred')
     end
 
     it 'uses the specified error type and default message' do
       result = TestServiceV2.new.failure(type: Servus::Support::Errors::ValidationError)
 
       expect(result.error).to be_a(Servus::Support::Errors::ValidationError)
-      expect(result.error.message).to eq("Validation failed")
+      expect(result.error.message).to eq('Validation failed')
     end
 
     it 'uses the specified error type and specified message' do
-      result = TestServiceV2.new.failure("Custom message", type: Servus::Support::Errors::NotFoundError)
+      result = TestServiceV2.new.failure('Custom message', type: Servus::Support::Errors::NotFoundError)
 
       expect(result.error).to be_a(Servus::Support::Errors::NotFoundError)
-      expect(result.error.message).to eq("Custom message")
+      expect(result.error.message).to eq('Custom message')
     end
 
     it 'uses the default error type and specified message' do
-      result = TestServiceV2.new.failure("Custom message")
+      result = TestServiceV2.new.failure('Custom message')
 
       expect(result.error).to be_a(Servus::Support::Errors::ServiceError)
-      expect(result.error.message).to eq("Custom message")
+      expect(result.error.message).to eq('Custom message')
     end
   end
 
@@ -184,7 +187,7 @@ RSpec.describe Servus::Base do
     end
 
     it 'allows child classes to access error method' do
-      expect { TestServiceV2.new.call_error }.to raise_error(Servus::Support::Errors::ServiceError, "error message")
+      expect { TestServiceV2.new.call_error }.to raise_error(Servus::Support::Errors::ServiceError, 'error message')
     end
   end
 end

@@ -261,6 +261,102 @@ class SomeController < AppController
 end
 ```
 
+### `rescue_from` for service errors
+
+Services can configure default error handling using the `rescue_from` method.
+
+```ruby
+class SomeServiceObject::Service < Servus::Base
+  class SomethingBroke < StandardError; end
+  class SomethingGlitched < StandardError; end
+
+  # Rescue from standard errors and use custom error
+  rescue_from 
+    SomethingBroke, 
+    SomethingGlitched, 
+    use: Servus::Support::Errors::ServiceUnavailableError # this is optional
+
+  def call
+    do_something
+  end
+
+  private
+
+  def do_something
+    make_and_api_call
+    rescue Net::HTTPError => e
+      raise SomethingGlitched, "Whoaaaa, something went wrong! #{e.message}"
+    end
+  end
+end
+```
+
+```sh
+result = SomeServiceObject::Service.call
+# Failure response
+result.error.class
+=> Servus::Support::Errors::ServiceUnavailableError
+result.error.message
+=> "[SomeServiceObject::Service::SomethingGlitched]: Whoaaaa, something went wrong! Net::HTTPError (503)"
+result.error.api_error
+=> { code: :service_unavailable, message: "[SomeServiceObject::Service::SomethingGlitched]: Whoaaaa, something went wrong! Net::HTTPError (503)" }
+```
+
+The `rescue_from` method will rescue from the specified errors and use the specified error type to create a failure response object with
+the custom error. It helps eliminate the need to manually rescue many errors and create failure responses within the call method of
+a service object.
+
+## Controller Helpers
+
+Service objects can be called from controllers using the `run_service` and `render_service_object_error` helpers.
+
+### run_service
+
+`run_service` calls the service object with the provided parameters and set's an instance variable `@result` to the 
+result of the service object if the result is successful. If the result is not successful, it will pass the result 
+to error to the `render_service_object_error` helper. This allows for easy error handling in the controller for
+repetetive usecases.
+
+```ruby
+class SomeController < AppController
+  # Before
+  def controller_action
+    result = Services::SomeServiceObject::Service.call(my_params)
+    return if result.success?
+    render_service_object_error(result.error.api_error)
+  end
+
+  # After
+  def controller_action_refactored
+    run_service Services::SomeServiceObject::Service, my_params
+  end
+end
+```
+
+### render_service_object_error
+
+`render_service_object_error` renders the error of a service object. It expects a hash with a `message` key and a `code` key from 
+the api_error method of the service error. This is all setup by default for a JSON API response, thought the method can be
+overridden if needed to handle different usecases.
+
+```ruby
+# Behind the scenes, render_service_object_error calls the following:
+#
+#  error = result.error.api_error
+#  => { message: "Error message", code: 400 }
+# 
+#  render json: { message: error[:message], code: error[:code] }, status: error[:code]
+
+class SomeController < AppController
+  def controller_action
+    result = Services::SomeServiceObject::Service.call(my_params)
+    return if result.success?
+
+    render_service_object_error(result.error.api_error)
+  end
+end
+```
+
 ## **Schema Validation**
 
 Service objects support two methods for schema validation: JSON Schema files and inline schema declarations.

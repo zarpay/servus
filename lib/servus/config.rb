@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
+# Servus namespace
 module Servus
+  # Configuration class for Servus
   class Config
     # The directory where schemas are loaded from, can be set by the user
     attr_reader :schema_root
@@ -8,10 +10,10 @@ module Servus
     def initialize
       # Default to Rails.root if available, otherwise use current working directory
       @schema_root = if defined?(Rails)
-        Rails.root.join("app/schemas/services")
-      else
-        File.expand_path("../../../app/schemas/services", __dir__)
-      end
+                       Rails.root.join('app/schemas/services')
+                     else
+                       File.expand_path('../../../app/schemas/services', __dir__)
+                     end
     end
 
     # Returns the path for a specific service's schema

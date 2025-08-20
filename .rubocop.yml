@@ -1,0 +1,11 @@
+AllCops:
+  Include:
+    - 'lib/**/*.rb'
+    - 'spec/**/*.rb'
+
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*'
+
+Lint/ConstantDefinitionInBlock:
+  Enabled: false

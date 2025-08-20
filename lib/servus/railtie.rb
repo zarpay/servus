@@ -1,8 +1,15 @@
 # frozen_string_literal: true
 
 # lib/servus/railtie.rb
-require "rails/railtie"
+require 'rails/railtie'
 
 module Servus
-  class Railtie < Rails::Railtie; end
+  # Railtie for Rails integration
+  class Railtie < Rails::Railtie
+    initializer 'servus.controller_helpers' do
+      ActiveSupport.on_load(:action_controller) do
+        include Servus::Helpers::ControllerHelpers
+      end
+    end
+  end
 end

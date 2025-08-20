@@ -1,8 +1,9 @@
 PATH
   remote: .
   specs:
-    servus (0.1.0)
+    servus (0.0.1)
       active_model_serializers
+      activesupport
       json-schema
 
 GEM
@@ -115,7 +116,9 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
+  actionpack
   active_model_serializers
+  activesupport
   json-schema
   rake (~> 13.0)
   rspec (~> 3.0)

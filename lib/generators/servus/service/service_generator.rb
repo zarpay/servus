@@ -4,17 +4,17 @@ module Servus
   module Generators
     # Servus Generator
     class ServiceGenerator < Rails::Generators::NamedBase
-      source_root File.expand_path("templates", __dir__)
+      source_root File.expand_path('templates', __dir__)
 
-      argument :parameters, type: :array, default: [], banner: "parameter"
+      argument :parameters, type: :array, default: [], banner: 'parameter'
 
       def create_service_file
-        template "service.rb.erb", service_path
-        template "service_spec.rb.erb", service_path_spec
+        template 'service.rb.erb', service_path
+        template 'service_spec.rb.erb', service_path_spec
 
         # Template json schemas
-        template "result.json.erb", service_result_schema_path
-        template "arguments.json.erb", service_arguments_shecma_path
+        template 'result.json.erb', service_result_schema_path
+        template 'arguments.json.erb', service_arguments_shecma_path
       end
 
       private
@@ -40,13 +40,13 @@ module Servus
       end
 
       def service_full_class_name
-        service_class_name.include?("::") ? service_class_name : "::#{service_class_name}"
+        service_class_name.include?('::') ? service_class_name : "::#{service_class_name}"
       end
 
       def parameter_list
-        return "" if parameters.empty?
+        return '' if parameters.empty?
 
-        "(#{parameters.map { |param| "#{param}:" }.join(", ")})"
+        "(#{parameters.map { |param| "#{param}:" }.join(', ')})"
       end
 
       def initialize_params
@@ -54,9 +54,9 @@ module Servus
       end
 
       def attr_readers
-        return "" if parameters.empty?
+        return '' if parameters.empty?
 
-        "attr_reader #{parameters.map { |param| ":#{param}" }.join(", ")}"
+        "attr_reader #{parameters.map { |param| ":#{param}" }.join(', ')}"
       end
     end
   end

@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
-require "logger"
+require 'logger'
 
 module Servus
   module Support
+    # Logger class for logging service calls and results
     class Logger
       # Returns the logger instance depending on the environment
       #

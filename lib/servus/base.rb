@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 module Servus
+  # Base class for all services
   class Base
     include Servus::Support::Errors
+    include Servus::Support::Rescuer
 
     # Support class aliases
     Logger = Servus::Support::Logger
@@ -10,21 +12,16 @@ module Servus
     Validator = Servus::Support::Validator
 
     # Calls the service and returns a response
+    #
     # @param args [Hash] The arguments to pass to the service
     # @return [Servus::Support::Response] The response
     # @raise [StandardError] If an exception is raised
     # @raise [Servus::Support::Errors::ValidationError] If result is invalid
     # @raise [Servus::Support::Errors::ValidationError] If arguments are invalid
     def self.call(**args)
-      Logger.log_call(self, args)
-
-      Validator.validate_arguments!(self, args)
-
-      result = benchmark(**args) do
-        new(**args).call
-      end
-
-      Validator.validate_result!(self, result)
+      before_call(args)
+      result = benchmark(**args) { new(**args).call }
+      after_call(result)
 
       result
     rescue ValidationError => e
@@ -36,6 +33,7 @@ module Servus
     end
 
     # Returns a success response
+    #
     # @param data [Object] The data to return
     # @return [Servus::Support::Response] The success response
     def success(data)
@@ -43,6 +41,7 @@ module Servus
     end
 
     # Returns a failure response
+    #
     # @param message [String] The error message
     # @param type [Class] The error type
     # @return [Servus::Support::Response] The failure response
@@ -52,6 +51,7 @@ module Servus
     end
 
     # Raises an error and logs it
+    #
     # @param message [String] The error message
     # @param type [Class] The error type
     # @return [void]
@@ -60,7 +60,25 @@ module Servus
       raise type, message
     end
 
+    # Runs call setup before call
+    #
+    # @param args [Hash] The arguments to pass to the service
+    # @return [Object] The result of the call
+    def self.before_call(args)
+      Logger.log_call(self, args)
+      Validator.validate_arguments!(self, args)
+    end
+
+    # Runs after call
+    #
+    # @param args [Hash] The arguments to pass to the service
+    # @return [Object] The result of the call
+    def self.after_call(args)
+      Validator.validate_result!(self, args)
+    end
+
     # Benchmarks the call
+    #
     # @param args [Hash] The arguments to pass to the service
     # @return [Object] The result of the call
     def self.benchmark(**_args)
