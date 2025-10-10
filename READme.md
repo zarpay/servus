@@ -119,6 +119,29 @@ end
 
 ```
 
+Here’s a section you can add to your README for the new `.call_async` feature, matching the style of your existing `## Inheritance` section:
+
+---
+
+## **Asynchronous Execution**
+
+You can asynchronously execute any service class that inherits from `Servus::Base` using `.call_async`. This uses `ActiveJob` under the hood and supports standard job options (`wait`, `queue`, `priority`, etc.). Only available in environments where `ActiveJob` is loaded (e.g., Rails apps)
+
+```ruby
+# Good ✅
+Services::NotifyUser::Service.call_async(
+  user_id: current_user.id,
+  wait: 5.minutes,
+  queue: :low_priority,
+  job_options: { tags: ['notifications'] }
+)
+
+# Bad ❌
+Services::NotifyUser::Support::MessageBuilder.call_async(
+  # Invalid: support classes don't inherit from Servus::Base
+)
+```
+
 ## **Inheritance**
 
 - Every main service class (`service.rb`) must inherit from `Servus::Base`
@@ -249,12 +272,12 @@ end
 class SomeController < AppController
 	def controller_action
 	  result = SomeServiceObject::Service.call(arg: 1)
-	
+
 	  return if result.success?
-	
+
 	  # If you just want the error message
 	  bad_request(result.error.message)
-	
+
 	  # If you want the API error
 	  service_object_error(result.error.api_error)
 	end
@@ -271,9 +294,9 @@ class SomeServiceObject::Service < Servus::Base
   class SomethingGlitched < StandardError; end
 
   # Rescue from standard errors and use custom error
-  rescue_from 
-    SomethingBroke, 
-    SomethingGlitched, 
+  rescue_from
+    SomethingBroke,
+    SomethingGlitched,
     use: Servus::Support::Errors::ServiceUnavailableError # this is optional
 
   def call
@@ -312,8 +335,8 @@ Service objects can be called from controllers using the `run_service` and `rend
 
 ### run_service
 
-`run_service` calls the service object with the provided parameters and set's an instance variable `@result` to the 
-result of the service object if the result is successful. If the result is not successful, it will pass the result 
+`run_service` calls the service object with the provided parameters and set's an instance variable `@result` to the
+result of the service object if the result is successful. If the result is not successful, it will pass the result
 to error to the `render_service_object_error` helper. This allows for easy error handling in the controller for
 repetetive usecases.
 
@@ -335,7 +358,7 @@ end
 
 ### render_service_object_error
 
-`render_service_object_error` renders the error of a service object. It expects a hash with a `message` key and a `code` key from 
+`render_service_object_error` renders the error of a service object. It expects a hash with a `message` key and a `code` key from
 the api_error method of the service error. This is all setup by default for a JSON API response, thought the method can be
 overridden if needed to handle different usecases.
 
@@ -344,7 +367,7 @@ overridden if needed to handle different usecases.
 #
 #  error = result.error.api_error
 #  => { message: "Error message", code: 400 }
-# 
+#
 #  render json: { message: error[:message], code: error[:code] }, status: error[:code]
 
 class SomeController < AppController
