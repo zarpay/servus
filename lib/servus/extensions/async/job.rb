@@ -27,8 +27,8 @@ module Servus
         attr_reader :klass
 
         def constantize!(class_name)
-          class_name.safe_constantize || (raise Errors::ServiceNotFoundError,
-                                                "Service class '#{class_name}' not found.")
+          "::#{class_name}".safe_constantize ||
+            (raise Errors::ServiceNotFoundError, "Service class '#{class_name}' not found.")
         end
       end
     end
