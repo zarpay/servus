@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.1.2] - 2025-10-10
+- Added: Added `call_async` method to `Servus::Base` to enqueue a job for calling the service asynchronously
+- Added: Added `Async::Job` to handle async enqueing with support for ActiveJob set options
+
 ## [0.1.1] - 2025-08-20
 
 - Added: Added `rescue_from` method to `Servus::Base` to rescue from standard errors and use custom error types.

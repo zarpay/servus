@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'servus'
+require 'spec_support/active_job_loader'
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
@@ -11,5 +12,9 @@ RSpec.configure do |config|
 
   config.expect_with :rspec do |c|
     c.syntax = :expect
+  end
+
+  config.before(:each) do
+    ActiveJob::Base.queue_adapter = :test
   end
 end

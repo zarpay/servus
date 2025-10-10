@@ -6,16 +6,14 @@ source 'https://rubygems.org'
 gemspec
 
 gem 'json-schema'
-
 gem 'activesupport'
-
 gem 'active_model_serializers'
-
 gem 'rake', '~> 13.0'
-
 gem 'rspec', '~> 3.0'
 
-# # Test only
-# group :test do
-#   gem "actionpack"
-# end
+# Test only
+group :test do
+  gem 'activejob'
+  gem 'railties'
+  gem 'rspec-rails' # gives you `have_enqueued_job` matcher
+end
