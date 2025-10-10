@@ -11,9 +11,10 @@ RSpec.describe Servus::Extensions::Async::Job, type: :job do
 
   before do
     stub_const('DummyService', Class.new(Servus::Base) do
-      def initialize(a:, b:)
-        @a = a
-        @b = b
+      def initialize(arg1:, arg2:)
+        super()
+        @a = arg1
+        @b = arg2
       end
 
       def call
@@ -31,8 +32,8 @@ RSpec.describe Servus::Extensions::Async::Job, type: :job do
   end
 
   it 'raises NameError if the service class does not exist' do
-    expect {
+    expect do
       job.perform(name: 'NonExistentService', args: {})
-    }.to raise_error(errors::ServiceNotFoundError, /Service class 'NonExistentService' not found/)
+    end.to raise_error(errors::ServiceNotFoundError, /Service class 'NonExistentService' not found/)
   end
 end

@@ -2,6 +2,7 @@
 
 module Servus
   module Extensions
+    # Async extensions for Servus
     module Async
       require 'servus/extensions/async/errors'
       require 'servus/extensions/async/job'
@@ -12,4 +13,3 @@ module Servus
     end
   end
 end
-

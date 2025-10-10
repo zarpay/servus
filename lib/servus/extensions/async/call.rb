@@ -3,26 +3,26 @@
 module Servus
   module Extensions
     module Async
+      # Calls the service asynchronously using AsyncCallerJob.
+      #
+      # Supports all standard ActiveJob scheduling and routing options:
+      #   - wait:        <ActiveSupport::Duration>   (e.g., 5.minutes)
+      #   - wait_until:  <Time>                      (e.g., 2.hours.from_now)
+      #   - queue:       <Symbol/String>             (e.g., :critical, 'low_priority')
+      #   - priority:    <Integer>                   (depends on adapter support)
+      #   - retry:       <Boolean>                   (custom control for job retry)
+      #   - job_options: <Hash>                      (extra options, merged in)
+      #
+      # Example:
+      #   call_async(
+      #     wait: 10.minutes,
+      #     queue: :low_priority,
+      #     priority: 20,
+      #     job_options: { tags: ['user_graduation'] },
+      #     user_id: current_user.id
+      #   )
+      #
       module Call
-        # Calls the service asynchronously using AsyncCallerJob.
-        #
-        # Supports all standard ActiveJob scheduling and routing options:
-        #   - wait:        <ActiveSupport::Duration>   (e.g., 5.minutes)
-        #   - wait_until:  <Time>                      (e.g., 2.hours.from_now)
-        #   - queue:       <Symbol/String>             (e.g., :critical, 'low_priority')
-        #   - priority:    <Integer>                   (depends on adapter support)
-        #   - retry:       <Boolean>                   (custom control for job retry)
-        #   - job_options: <Hash>                      (extra options, merged in)
-        #
-        # Example:
-        #   call_async(
-        #     wait: 10.minutes,
-        #     queue: :low_priority,
-        #     priority: 20,
-        #     job_options: { tags: ['user_graduation'] },
-        #     user_id: current_user.id
-        #   )
-        #
         # @param args [Hash] The arguments to pass to the service and job options.
         # @return [void]
         def call_async(**args)
@@ -37,7 +37,7 @@ module Servus
           job = job_options.any? ? Job.set(**job_options.compact) : Job
 
           # Enqueue the job asynchronously
-          job.perform_later(name:, args:)
+          job.perform_later(name: name, args: args)
         rescue StandardError => e
           raise Errors::JobEnqueueError, "Failed to enqueue async job for #{self}: #{e.message}"
         end

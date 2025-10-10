@@ -14,6 +14,7 @@ RSpec.describe '.call_async extension', type: :job do
 
     stub_const('DummyService', Class.new(Servus::Base) do
       def initialize(arg1:, arg2:)
+        super()
         @arg1 = arg1
         @arg2 = arg2
       end
@@ -57,7 +58,7 @@ RSpec.describe '.call_async extension', type: :job do
       .with(
         priority: 10,
         some_meta: 'test',
-        queue: :low_priority,
+        queue: :low_priority
       )
   end
 
@@ -81,8 +82,8 @@ RSpec.describe '.call_async extension', type: :job do
   it 'raises JobEnqueueError if job enqueueing fails' do
     allow(job_class).to receive(:perform_later).and_raise(StandardError, 'Simulated failure')
 
-    expect {
+    expect do
       DummyService.call_async(test: 'data')
-    }.to raise_error(Servus::Extensions::Async::Errors::JobEnqueueError, /Failed to enqueue async job/)
+    end.to raise_error(Servus::Extensions::Async::Errors::JobEnqueueError, /Failed to enqueue async job/)
   end
 end
