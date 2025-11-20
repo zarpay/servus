@@ -24,13 +24,40 @@ module Servus
       # @param base [Class] the class including this module (typically {Servus::Base})
       # @api private
       def self.included(base)
-        base.class_attribute :rescuable_errors, default: []
-        base.class_attribute :rescuable_error_type, default: nil
+        base.class_attribute :rescuable_configs, default: []
         base.singleton_class.prepend(CallOverride)
         base.extend(ClassMethods)
       end
 
-      # Class-level methods for configuring error handling.
+      # Context class that provides success/failure methods to rescue_from blocks
+      class BlockContext
+        def initialize
+          @result = nil
+        end
+
+        # Create a success response
+        #
+        # @param data [Object] The success data
+        # @return [Servus::Support::Response] Success response
+        def success(data = nil)
+          @result = Response.new(true, data, nil)
+        end
+
+        # Create a failure response
+        #
+        # @param message [String] The error message
+        # @param type [Class] The error type (defaults to ServiceError)
+        # @return [Servus::Support::Response] Failure response
+        def failure(message = nil, type: Servus::Support::Errors::ServiceError)
+          error = type.new(message)
+          @result = Response.new(false, nil, error)
+        end
+
+        # Get the result set by success or failure
+        attr_reader :result
+      end
+
+      # Class methods for rescue_from
       module ClassMethods
         # Configures automatic error handling for the service.
         #
@@ -39,31 +66,30 @@ module Servus
         # specified ServiceError type with a formatted message including the original
         # exception details.
         #
-        # @param errors [Array<Class>] one or more exception classes to rescue
-        # @param use [Class] ServiceError subclass to use for failures
-        #   (defaults to {Servus::Support::Errors::ServiceError})
-        # @return [void]
+        # @example Basic usage:
+        #   class TestService < Servus::Base
+        #     rescue_from SomeError, use: Servus::Support::Errors::ServiceError
+        #   end
         #
-        # @example Rescuing API errors
-        #   class PaymentService < Servus::Base
-        #     rescue_from Stripe::APIError,
-        #       use: Servus::Support::Errors::ServiceUnavailableError
-        #
-        #     def call
-        #       Stripe::Charge.create(...)
+        # @example With custom error handling block:
+        #   class TestService < Servus::Base
+        #     rescue_from ActiveRecord::RecordInvalid do |e|
+        #       failure("Failed to save record: #{e.message}")
         #     end
         #   end
         #
-        # @example Rescuing multiple error types
-        #   class DataImportService < Servus::Base
-        #     rescue_from CSV::MalformedCSVError, JSON::ParserError,
-        #       use: Servus::Support::Errors::BadRequestError
-        #   end
-        #
-        # @see Servus::Support::Errors
-        def rescue_from(*errors, use: Servus::Support::Errors::ServiceError)
-          self.rescuable_errors = errors
-          self.rescuable_error_type = use
+        # @param [Error] errors One or more errors to rescue from (variadic)
+        # @param [Error] use The error to be used (optional, defaults to Servus::Support::Errors::ServiceError)
+        # @param [Proc] block Optional block for custom error handling
+        def rescue_from(*errors, use: Servus::Support::Errors::ServiceError, &block)
+          config = {
+            errors: errors,
+            error_type: use,
+            handler: block
+          }
+
+          # Add to rescuable_configs array
+          self.rescuable_configs = rescuable_configs + [config]
         end
       end
 
@@ -84,17 +110,50 @@ module Servus
         #
         # @api private
         def call(**args)
-          if rescuable_errors.any?
-            begin
-              super
-            rescue *rescuable_errors => e
-              handle_failure(e, rescuable_error_type)
-            end
-          else
+          return super if rescuable_configs.empty?
+
+          begin
             super
+          rescue StandardError => e
+            handle_rescued_error(e) || raise
           end
         end
 
+        private
+
+        # Handle a rescued error by finding matching config and processing it
+        #
+        # @param error [StandardError] The error to handle
+        # @return [Servus::Support::Response, nil] Response if error was handled, nil otherwise
+        def handle_rescued_error(error)
+          # Find the first matching config
+          config = rescuable_configs.find do |cfg|
+            cfg[:errors].any? { |error_class| error.is_a?(error_class) }
+          end
+
+          return nil unless config
+
+          if config[:handler]
+            # Use the block handler with BlockContext
+            block_context_result(error, config)
+          else
+            # Use the default handling
+            handle_failure(error, config[:error_type])
+          end
+        end
+
+        # Instantiates a block context to handle a rescued error
+        # 
+        # @param error [StandardError] the caught exception
+        # @param config [Hash] The rescue config for the current error
+        #
+        # @api private
+        def block_context_result(error, config)
+            context = BlockContext.new
+            context.instance_exec(error, &config[:handler])
+            context.result
+        end
+        
         # Creates a failure response from a rescued exception.
         #
         # Converts the caught exception into a ServiceError of the specified type,
