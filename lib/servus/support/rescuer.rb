@@ -29,31 +29,56 @@ module Servus
         base.extend(ClassMethods)
       end
 
-      # Context class that provides success/failure methods to rescue_from blocks
+      # Provides success/failure methods to rescue_from blocks.
+      #
+      # This context is used when a rescue_from block is executed. It provides
+      # the same success() and failure() methods available in service call methods,
+      # allowing blocks to create appropriate Response objects.
+      #
+      # @api private
       class BlockContext
         def initialize
           @result = nil
         end
 
-        # Create a success response
+        # Creates a success response.
         #
-        # @param data [Object] The success data
+        # Use this in rescue_from blocks to recover from exceptions and return
+        # successful results despite the error being raised.
+        #
+        # @param data [Hash, Object] The success data to return
         # @return [Servus::Support::Response] Success response
+        #
+        # @example
+        #   rescue_from SomeError do |exception|
+        #     success(recovered: true, original_error: exception.message)
+        #   end
         def success(data = nil)
           @result = Response.new(true, data, nil)
         end
 
-        # Create a failure response
+        # Creates a failure response.
         #
-        # @param message [String] The error message
-        # @param type [Class] The error type (defaults to ServiceError)
+        # Use this in rescue_from blocks to convert exceptions into business failures
+        # with custom messages and error types.
+        #
+        # @param message [String, nil] The error message (uses error type's DEFAULT_MESSAGE if nil)
+        # @param type [Class<Servus::Support::Errors::ServiceError>] The error type
         # @return [Servus::Support::Response] Failure response
+        #
+        # @example
+        #   rescue_from ActiveRecord::RecordInvalid do |exception|
+        #     failure("Database error: #{exception.message}", type: InternalServerError)
+        #   end
         def failure(message = nil, type: Servus::Support::Errors::ServiceError)
           error = type.new(message)
           @result = Response.new(false, nil, error)
         end
 
-        # Get the result set by success or failure
+        # The response created by success() or failure().
+        #
+        # @return [Servus::Support::Response, nil] The response, or nil if neither method was called
+        # @api private
         attr_reader :result
       end
 
@@ -62,25 +87,40 @@ module Servus
         # Configures automatic error handling for the service.
         #
         # Declares which exception classes should be automatically rescued and converted
-        # to failure responses. When a rescued exception occurs, it's wrapped in the
-        # specified ServiceError type with a formatted message including the original
-        # exception details.
+        # to failure responses. Without a block, exceptions are wrapped in the specified
+        # ServiceError type with a formatted message including the original exception details.
         #
-        # @example Basic usage:
+        # When a block is provided, it receives the exception and must return either
+        # `success(data)` or `failure(message, type:)` to create the response.
+        #
+        # @example Basic usage with default error type:
         #   class TestService < Servus::Base
-        #     rescue_from SomeError, use: Servus::Support::Errors::ServiceError
+        #     rescue_from Net::HTTPError, Timeout::Error, use: ServiceUnavailableError
         #   end
         #
-        # @example With custom error handling block:
+        # @example Custom error handling with block:
         #   class TestService < Servus::Base
-        #     rescue_from ActiveRecord::RecordInvalid do |e|
-        #       failure("Failed to save record: #{e.message}")
+        #     rescue_from ActiveRecord::RecordInvalid do |exception|
+        #       failure("Validation failed: #{exception.message}", type: ValidationError)
         #     end
         #   end
         #
-        # @param [Error] errors One or more errors to rescue from (variadic)
-        # @param [Error] use The error to be used (optional, defaults to Servus::Support::Errors::ServiceError)
-        # @param [Proc] block Optional block for custom error handling
+        # @example Recovering from errors with success:
+        #   class TestService < Servus::Base
+        #     rescue_from Stripe::CardError do |exception|
+        #       if exception.code == 'card_declined'
+        #         failure("Card declined", type: BadRequestError)
+        #       else
+        #         success(recovered: true, fallback_used: true)
+        #       end
+        #     end
+        #   end
+        #
+        # @param errors [Class<StandardError>] One or more exception classes to rescue from
+        # @param use [Class<Servus::Support::Errors::ServiceError>] Error class to use when wrapping exceptions (only used without block)
+        # @yield [exception] Optional block for custom error handling
+        # @yieldparam exception [StandardError] The caught exception
+        # @yieldreturn [Servus::Support::Response] Must return success() or failure() response
         def rescue_from(*errors, use: Servus::Support::Errors::ServiceError, &block)
           config = {
             errors: errors,

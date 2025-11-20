@@ -70,6 +70,37 @@ end
 
 The `rescue_from` pattern keeps business logic clean while ensuring consistent error handling across services.
 
+### Custom Error Handling with Blocks
+
+For more control over error handling, provide a block to `rescue_from`. The block receives the exception and can return either success or failure:
+
+```ruby
+class ProcessPayment::Service < Servus::Base
+  # Custom failure with error details
+  rescue_from ActiveRecord::RecordInvalid do |exception|
+    failure("Payment failed: #{exception.record.errors.full_messages.join(', ')}",
+            type: ValidationError)
+  end
+
+  # Recover from certain errors with success
+  rescue_from Stripe::CardError do |exception|
+    if exception.code == 'card_declined'
+      failure("Card was declined", type: BadRequestError)
+    else
+      # Log and continue for other card errors
+      Rails.logger.warn("Stripe error: #{exception.message}")
+      success(recovered: true, fallback_used: true)
+    end
+  end
+
+  def call
+    # Service logic that may raise exceptions
+  end
+end
+```
+
+The block has access to `success(data)` and `failure(message, type:)` methods. This allows conditional error handling and even recovering from exceptions.
+
 ## Custom Errors
 
 Create domain-specific errors by inheriting from `ServiceError`:

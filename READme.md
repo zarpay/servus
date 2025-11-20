@@ -330,6 +330,28 @@ The `rescue_from` method will rescue from the specified errors and use the speci
 the custom error. It helps eliminate the need to manually rescue many errors and create failure responses within the call method of
 a service object.
 
+You can also provide a block for custom error handling:
+
+```ruby
+class SomeServiceObject::Service < Servus::Base
+  # Custom error handling with a block
+  rescue_from ActiveRecord::RecordInvalid do |exception|
+    failure("Validation failed: #{exception.message}", type: ValidationError)
+  end
+
+  rescue_from Net::HTTPError do |exception|
+    # Can even return success to recover from errors
+    success(recovered: true, error_message: exception.message)
+  end
+
+  def call
+    # Service logic
+  end
+end
+```
+
+The block receives the exception and has access to `success` and `failure` methods for creating the response.
+
 ## Controller Helpers
 
 Service objects can be called from controllers using the `run_service` and `render_service_object_error` helpers.

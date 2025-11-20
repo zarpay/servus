@@ -41,11 +41,17 @@ end
 
 ### Declarative Error Handling
 
-Use `rescue_from` to convert exceptions into failures. Original exception details are preserved in error messages.
+Use `rescue_from` to convert exceptions into failures. Provide a custom error type or use a block for custom handling.
 
 ```ruby
 class Service < Servus::Base
+  # Default error type
   rescue_from Net::HTTPError, Timeout::Error, use: ServiceUnavailableError
+
+  # Custom handling with block
+  rescue_from ActiveRecord::RecordInvalid do |exception|
+    failure("Validation failed: #{exception.message}", type: ValidationError)
+  end
 end
 ```
 
