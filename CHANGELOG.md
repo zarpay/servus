@@ -1,4 +1,5 @@
 ## [Unreleased]
+- Added: Added `schema` DSL method for cleaner schema definition. Supports `schema arguments: {...}, result: {...}` syntax. Fully backwards compatible with existing `ARGUMENTS_SCHEMA` and `RESULT_SCHEMA` constants.
 - Added: Added support from blocks on `rescue_from` to override default failure handler.
 
 ## [0.1.3] - 2025-10-10

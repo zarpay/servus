@@ -117,7 +117,8 @@ module Servus
         #   end
         #
         # @param errors [Class<StandardError>] One or more exception classes to rescue from
-        # @param use [Class<Servus::Support::Errors::ServiceError>] Error class to use when wrapping exceptions (only used without block)
+        # @param use [Class<Servus::Support::Errors::ServiceError>] Error class to use when wrapping exceptions
+        #   (only used without block)
         # @yield [exception] Optional block for custom error handling
         # @yieldparam exception [StandardError] The caught exception
         # @yieldreturn [Servus::Support::Response] Must return success() or failure() response

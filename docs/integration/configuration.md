@@ -15,7 +15,7 @@ Servus.configure do |config|
 end
 ```
 
-This affects file-based schemas only - inline schema constants (ARGUMENTS_SCHEMA, RESULT_SCHEMA) are unaffected.
+This affects legacy file-based schemas only - schemas defined via the `schema` DSL method do not use files.
 
 ## Schema Cache
 

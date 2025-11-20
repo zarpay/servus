@@ -54,49 +54,6 @@ module Servus
     Response = Servus::Support::Response
     Validator = Servus::Support::Validator
 
-    # Executes the service with automatic validation, logging, and benchmarking.
-    #
-    # This is the primary entry point for executing services. It handles the complete
-    # service lifecycle including:
-    # - Input argument validation against schema
-    # - Service instantiation
-    # - Execution timing/benchmarking
-    # - Result validation against schema
-    # - Automatic logging of calls, results, and errors
-    #
-    # @param args [Hash] keyword arguments passed to the service's initialize method
-    # @return [Servus::Support::Response] response object with success status and data or error
-    #
-    # @raise [Servus::Support::Errors::ValidationError] if input arguments fail schema validation
-    # @raise [Servus::Support::Errors::ValidationError] if result data fails schema validation
-    # @raise [StandardError] if an uncaught exception occurs during execution
-    #
-    # @example Successful execution
-    #   result = MyService.call(user_id: 123, amount: 50)
-    #   result.success? # => true
-    #   result.data # => { transaction_id: "abc123" }
-    #
-    # @example Failed execution
-    #   result = MyService.call(user_id: 123, amount: -10)
-    #   result.success? # => false
-    #   result.error.message # => "Amount must be positive"
-    #
-    # @see #initialize
-    # @see #call
-    def self.call(**args)
-      before_call(args)
-      result = benchmark(**args) { new(**args).call }
-      after_call(result)
-
-      result
-    rescue ValidationError => e
-      Logger.log_validation_error(self, e)
-      raise e
-    rescue StandardError => e
-      Logger.log_exception(self, e)
-      raise e
-    end
-
     # Creates a successful response with the provided data.
     #
     # Use this method to return successful results from your service's {#call} method.
@@ -185,54 +142,154 @@ module Servus
       raise type, message
     end
 
-    # Executes pre-call hooks including logging and argument validation.
-    #
-    # This method is automatically called before service execution and handles:
-    # - Logging the service call with arguments
-    # - Validating arguments against ARGUMENTS_SCHEMA (if defined)
-    #
-    # @param args [Hash] keyword arguments being passed to the service
-    # @return [void]
-    # @raise [Servus::Support::Errors::ValidationError] if arguments fail validation
-    #
-    # @api private
-    def self.before_call(args)
-      Logger.log_call(self, args)
-      Validator.validate_arguments!(self, args)
-    end
+    class << self
+      # Executes the service with automatic validation, logging, and benchmarking.
+      #
+      # This is the primary entry point for executing services. It handles the complete
+      # service lifecycle including:
+      # - Input argument validation against schema
+      # - Service instantiation
+      # - Execution timing/benchmarking
+      # - Result validation against schema
+      # - Automatic logging of calls, results, and errors
+      #
+      # @param args [Hash] keyword arguments passed to the service's initialize method
+      # @return [Servus::Support::Response] response object with success status and data or error
+      #
+      # @raise [Servus::Support::Errors::ValidationError] if input arguments fail schema validation
+      # @raise [Servus::Support::Errors::ValidationError] if result data fails schema validation
+      # @raise [StandardError] if an uncaught exception occurs during execution
+      #
+      # @example Successful execution
+      #   result = MyService.call(user_id: 123, amount: 50)
+      #   result.success? # => true
+      #   result.data # => { transaction_id: "abc123" }
+      #
+      # @example Failed execution
+      #   result = MyService.call(user_id: 123, amount: -10)
+      #   result.success? # => false
+      #   result.error.message # => "Amount must be positive"
+      #
+      # @see #initialize
+      # @see #call
+      def call(**args)
+        before_call(args)
+        result = benchmark(**args) { new(**args).call }
+        after_call(result)
 
-    # Executes post-call hooks including result validation.
-    #
-    # This method is automatically called after service execution completes and handles:
-    # - Validating the result data against RESULT_SCHEMA (if defined)
-    #
-    # @param result [Servus::Support::Response] the response returned from the service
-    # @return [void]
-    # @raise [Servus::Support::Errors::ValidationError] if result data fails validation
-    #
-    # @api private
-    def self.after_call(result)
-      Validator.validate_result!(self, result)
-    end
+        result
+      rescue Servus::Support::Errors::ValidationError => e
+        Logger.log_validation_error(self, e)
+        raise e
+      rescue StandardError => e
+        Logger.log_exception(self, e)
+        raise e
+      end
 
-    # Measures service execution time and logs the result.
-    #
-    # This method wraps the service execution to capture timing metrics.
-    # The duration is logged along with the success/failure status of the service.
-    #
-    # @param _args [Hash] keyword arguments (unused, kept for method signature compatibility)
-    # @yieldreturn [Servus::Support::Response] the result from executing the service
-    # @return [Servus::Support::Response] the service execution result
-    #
-    # @api private
-    def self.benchmark(**_args)
-      start_time = Time.now.utc
-      result = yield
-      duration = Time.now.utc - start_time
+      # Defines schema validation rules for the service's arguments and/or result.
+      #
+      # This method provides a clean DSL for specifying JSON schemas that will be used
+      # to validate service inputs and outputs. Schemas defined via this method take
+      # precedence over ARGUMENTS_SCHEMA and RESULT_SCHEMA constants. The next major
+      # version will deprecate those constants in favor of this DSL.
+      #
+      # @param arguments [Hash, nil] JSON schema for validating service arguments
+      # @param result [Hash, nil] JSON schema for validating service result data
+      # @return [void]
+      #
+      # @example Defining both arguments and result schemas
+      #   class ProcessPayment::Service < Servus::Base
+      #     schema(
+      #       arguments: {
+      #         type: 'object',
+      #         required: ['user_id', 'amount'],
+      #         properties: {
+      #           user_id: { type: 'integer' },
+      #           amount: { type: 'number', minimum: 0.01 }
+      #         }
+      #       },
+      #       result: {
+      #         type: 'object',
+      #         required: ['transaction_id'],
+      #         properties: {
+      #           transaction_id: { type: 'string' }
+      #         }
+      #       }
+      #     )
+      #   end
+      #
+      # @example Defining only arguments schema
+      #   class SendEmail::Service < Servus::Base
+      #     schema arguments: { type: 'object', required: ['email', 'subject'] }
+      #   end
+      #
+      # @see Servus::Support::Validator
+      def schema(arguments: nil, result: nil)
+        @arguments_schema = arguments.with_indifferent_access if arguments
+        @result_schema    = result.with_indifferent_access    if result
+      end
 
-      Logger.log_result(self, result, duration)
+      # Returns the arguments schema defined via the schema DSL method.
+      #
+      # @return [Hash, nil] the arguments schema or nil if not defined
+      # @api private
+      attr_reader :arguments_schema
 
-      result
+      # Returns the result schema defined via the schema DSL method.
+      #
+      # @return [Hash, nil] the result schema or nil if not defined
+      # @api private
+      attr_reader :result_schema
+
+      # Executes pre-call hooks including logging and argument validation.
+      #
+      # This method is automatically called before service execution and handles:
+      # - Logging the service call with arguments
+      # - Validating arguments against ARGUMENTS_SCHEMA (if defined)
+      #
+      # @param args [Hash] keyword arguments being passed to the service
+      # @return [void]
+      # @raise [Servus::Support::Errors::ValidationError] if arguments fail validation
+      #
+      # @api private
+      def before_call(args)
+        Logger.log_call(self, args)
+        Validator.validate_arguments!(self, args)
+      end
+
+      # Executes post-call hooks including result validation.
+      #
+      # This method is automatically called after service execution completes and handles:
+      # - Validating the result data against RESULT_SCHEMA (if defined)
+      #
+      # @param result [Servus::Support::Response] the response returned from the service
+      # @return [void]
+      # @raise [Servus::Support::Errors::ValidationError] if result data fails validation
+      #
+      # @api private
+      def after_call(result)
+        Validator.validate_result!(self, result)
+      end
+
+      # Measures service execution time and logs the result.
+      #
+      # This method wraps the service execution to capture timing metrics.
+      # The duration is logged along with the success/failure status of the service.
+      #
+      # @param _args [Hash] keyword arguments (unused, kept for method signature compatibility)
+      # @yieldreturn [Servus::Support::Response] the result from executing the service
+      # @return [Servus::Support::Response] the service execution result
+      #
+      # @api private
+      def benchmark(**_args)
+        start_time = Time.now.utc
+        result = yield
+        duration = Time.now.utc - start_time
+
+        Logger.log_result(self, result, duration)
+
+        result
+      end
     end
   end
 end

@@ -51,16 +51,16 @@ Services can define JSON schemas for arguments and results. Validation happens a
 
 ```ruby
 class Service < Servus::Base
-  ARGUMENTS_SCHEMA = {
-    type: "object",
-    required: ["user_id", "amount"],
-    properties: {
-      user_id: { type: "integer" },
-      amount: { type: "number", minimum: 0.01 }
+  schema(
+    arguments: {
+      type: "object",
+      required: ["user_id", "amount"],
+      properties: {
+        user_id: { type: "integer" },
+        amount: { type: "number", minimum: 0.01 }
+      }
     }
-  }.freeze
-
-  # Or use external JSON file: app/schemas/services/service_name/arguments.json
+  )
 end
 ```
 
