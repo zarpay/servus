@@ -8,10 +8,37 @@ module Servus
       #
       # @param base [Class] The base class to include the rescuer module into
       def self.included(base)
-        base.class_attribute :rescuable_errors, default: []
-        base.class_attribute :rescuable_error_type, default: nil
+        base.class_attribute :rescuable_configs, default: []
         base.singleton_class.prepend(CallOverride)
         base.extend(ClassMethods)
+      end
+
+      # Context class that provides success/failure methods to rescue_from blocks
+      class BlockContext
+        def initialize
+          @result = nil
+        end
+
+        # Create a success response
+        #
+        # @param data [Object] The success data
+        # @return [Servus::Support::Response] Success response
+        def success(data = nil)
+          @result = Response.new(true, data, nil)
+        end
+
+        # Create a failure response
+        #
+        # @param message [String] The error message
+        # @param type [Class] The error type (defaults to ServiceError)
+        # @return [Servus::Support::Response] Failure response
+        def failure(message = nil, type: Servus::Support::Errors::ServiceError)
+          error = type.new(message)
+          @result = Response.new(false, nil, error)
+        end
+
+        # Get the result set by success or failure
+        attr_reader :result
       end
 
       # Class methods for rescue_from
@@ -22,16 +49,30 @@ module Servus
         # and return a failure response with a ServiceError and formatted error message. This prevents the need to
         # to have excessive rescue blocks in the call method.
         #
-        # @example:
+        # @example Basic usage:
         #   class TestService < Servus::Base
-        #     rescue_from SomeError, type: Servus::Support::Errors::ServiceError
+        #     rescue_from SomeError, use: Servus::Support::Errors::ServiceError
+        #   end
+        #
+        # @example With custom error handling block:
+        #   class TestService < Servus::Base
+        #     rescue_from ActiveRecord::RecordInvalid do |e|
+        #       failure("Failed to save record: #{e.message}")
+        #     end
         #   end
         #
         # @param [Error] errors One or more errors to rescue from (variadic)
         # @param [Error] use The error to be used (optional, defaults to Servus::Support::Errors::ServiceError)
-        def rescue_from(*errors, use: Servus::Support::Errors::ServiceError)
-          self.rescuable_errors = errors
-          self.rescuable_error_type = use
+        # @param [Proc] block Optional block for custom error handling
+        def rescue_from(*errors, use: Servus::Support::Errors::ServiceError, &block)
+          config = {
+            errors: errors,
+            error_type: use,
+            handler: block
+          }
+
+          # Add to rescuable_configs array
+          self.rescuable_configs = rescuable_configs + [config]
         end
       end
 
@@ -42,14 +83,37 @@ module Servus
         # @param args [Hash] The arguments passed to the call method
         # @return [Servus::Support::Response] The result of the call method
         def call(**args)
-          if rescuable_errors.any?
-            begin
-              super
-            rescue *rescuable_errors => e
-              handle_failure(e, rescuable_error_type)
-            end
-          else
+          return super if rescuable_configs.empty?
+
+          begin
             super
+          rescue StandardError => e
+            handle_rescued_error(e) || raise
+          end
+        end
+
+        private
+
+        # Handle a rescued error by finding matching config and processing it
+        #
+        # @param error [StandardError] The error to handle
+        # @return [Servus::Support::Response, nil] Response if error was handled, nil otherwise
+        def handle_rescued_error(error)
+          # Find the first matching config
+          config = rescuable_configs.find do |cfg|
+            cfg[:errors].any? { |error_class| error.is_a?(error_class) }
+          end
+
+          return nil unless config
+
+          if config[:handler]
+            # Use the block handler with BlockContext
+            context = BlockContext.new
+            context.instance_exec(error, &config[:handler])
+            context.result
+          else
+            # Use the default handling
+            handle_failure(error, config[:error_type])
           end
         end
 
