@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  Module: Servus::Extensions::Async::Call
+  
+    &mdash; Servus | Service Object Framework
+  
+</title>
+
+  <link rel="stylesheet" href="../../../css/style.css" type="text/css" />
+
+  <link rel="stylesheet" href="../../../css/common.css" type="text/css" />
+
+<script type="text/javascript">
+  pathId = "Servus::Extensions::Async::Call";
+  relpath = '../../../';
+</script>
+
+
+  <script type="text/javascript" charset="utf-8" src="../../../js/jquery.js"></script>
+
+  <script type="text/javascript" charset="utf-8" src="../../../js/app.js"></script>
+
+
+  </head>
+  <body>
+    <div class="nav_wrap">
+      <iframe id="nav" src="../../../class_list.html?1"></iframe>
+      <div id="resizer"></div>
+    </div>
+
+    <div id="main" tabindex="-1">
+      <div id="header">
+        <div id="menu">
+  
+    <a href="../../../_index.html">Index (C)</a> &raquo;
+    <span class='title'><span class='object_link'><a href="../../../Servus.html" title="Servus (module)">Servus</a></span></span> &raquo; <span class='title'><span class='object_link'><a href="../../Extensions.html" title="Servus::Extensions (module)">Extensions</a></span></span> &raquo; <span class='title'><span class='object_link'><a href="../Async.html" title="Servus::Extensions::Async (module)">Async</a></span></span>
+     &raquo; 
+    <span class="title">Call</span>
+  
+</div>
+
+        <div id="search">
+  
+    <a class="full_list_link" id="class_list_link"
+        href="../../../class_list.html">
+
+        <svg width="24" height="24">
+          <rect x="0" y="4" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="12" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="20" width="24" height="4" rx="1" ry="1"></rect>
+        </svg>
+    </a>
+  
+</div>
+        <div class="clear"></div>
+      </div>
+
+      <div id="content"><h1>Module: Servus::Extensions::Async::Call
+  
+  
+  
+</h1>
+<div class="box_info">
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+  <dl>
+    <dt>Defined in:</dt>
+    <dd>lib/servus/extensions/async/call.rb</dd>
+  </dl>
+  
+</div>
+
+<h2>Overview</h2><div class="docstring">
+  <div class="discussion">
+    <p>Provides asynchronous service execution via ActiveJob.</p>
+
+<p>This module extends <span class='object_link'><a href="../../Base.html" title="Servus::Base (class)">Base</a></span> with the <span class='object_link'><a href="#call_async-instance_method" title="Servus::Extensions::Async::Call#call_async (method)">#call_async</a></span> method, enabling
+services to be executed in background jobs. Requires ActiveJob to be loaded.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+
+  <p class="tag_title">See Also:</p>
+  <ul class="see">
+    
+      <li><span class='object_link'><a href="#call_async-instance_method" title="Servus::Extensions::Async::Call#call_async (method)">#call_async</a></span></li>
+    
+  </ul>
+
+</div>
+
+
+
+
+
+
+  
+    <h2>
+      Instance Method Summary
+      <small><a href="#" class="summary_toggle">collapse</a></small>
+    </h2>
+
+    <ul class="summary">
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#call_async-instance_method" title="#call_async (instance method)">#<strong>call_async</strong>(**args)  &#x21d2; void </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Enqueues the service for asynchronous execution via ActiveJob.</p>
+</div></span>
+  
+</li>
+
+      
+    </ul>
+  
+
+
+
+  <div id="instance_method_details" class="method_details_list">
+    <h2>Instance Method Details</h2>
+
+    
+      <div class="method_details first">
+  <h3 class="signature first" id="call_async-instance_method">
+  
+    #<strong>call_async</strong>(**args)  &#x21d2; <tt>void</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    
+  <div class="note notetag">
+    <strong>Note:</strong>
+    <div class='inline'><p>Only available when ActiveJob is loaded (typically in Rails applications)</p>
+</div>
+  </div>
+
+<p class="note returns_void">This method returns an undefined value.</p><p>Enqueues the service for asynchronous execution via ActiveJob.</p>
+
+<p>This method schedules the service to run in a background job, supporting
+all standard ActiveJob options for scheduling, queue routing, and priority.</p>
+
+<p>Service arguments are passed as keyword arguments alongside job configuration.
+Job-specific options are extracted and the remaining arguments are passed
+to the service&#39;s initialize method.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+  <div class="examples">
+    <h4 class="tag_title">Examples:</h4>
+    
+      
+        <h5 class="example_title"><div class='inline'><p>Basic async execution</p>
+</div></h5>
+      
+      <pre class="example code"><code><span class='const'>Services</span><span class='op'>::</span><span class='const'>SendEmail</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_call_async'>call_async</span><span class='lparen'>(</span>
+  <span class='label'>user_id:</span> <span class='int'>123</span><span class='comma'>,</span>
+  <span class='label'>template:</span> <span class='symbol'>:welcome</span>
+<span class='rparen'>)</span></code></pre>
+    
+      
+        <h5 class="example_title"><div class='inline'><p>With delay</p>
+</div></h5>
+      
+      <pre class="example code"><code><span class='const'>Services</span><span class='op'>::</span><span class='const'>SendReminder</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_call_async'>call_async</span><span class='lparen'>(</span>
+  <span class='label'>wait:</span> <span class='int'>1</span><span class='period'>.</span><span class='id identifier rubyid_day'>day</span><span class='comma'>,</span>
+  <span class='label'>user_id:</span> <span class='int'>123</span>
+<span class='rparen'>)</span></code></pre>
+    
+      
+        <h5 class="example_title"><div class='inline'><p>With queue and priority</p>
+</div></h5>
+      
+      <pre class="example code"><code><span class='const'>Services</span><span class='op'>::</span><span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_call_async'>call_async</span><span class='lparen'>(</span>
+  <span class='label'>queue:</span> <span class='symbol'>:critical</span><span class='comma'>,</span>
+  <span class='label'>priority:</span> <span class='int'>10</span><span class='comma'>,</span>
+  <span class='label'>order_id:</span> <span class='int'>456</span>
+<span class='rparen'>)</span></code></pre>
+    
+      
+        <h5 class="example_title"><div class='inline'><p>With custom job options</p>
+</div></h5>
+      
+      <pre class="example code"><code><span class='const'>Services</span><span class='op'>::</span><span class='const'>GenerateReport</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_call_async'>call_async</span><span class='lparen'>(</span>
+  <span class='label'>wait_until:</span> <span class='const'>Date</span><span class='period'>.</span><span class='id identifier rubyid_tomorrow'>tomorrow</span><span class='period'>.</span><span class='id identifier rubyid_beginning_of_day'>beginning_of_day</span><span class='comma'>,</span>
+  <span class='label'>job_options:</span> <span class='lbrace'>{</span> <span class='label'>tags:</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>reports</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>daily</span><span class='tstring_end'>&#39;</span></span><span class='rbracket'>]</span> <span class='rbrace'>}</span><span class='comma'>,</span>
+  <span class='label'>report_type:</span> <span class='symbol'>:sales</span>
+<span class='rparen'>)</span></code></pre>
+    
+  </div>
+<p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>args</span>
+      
+      
+        <span class='type'>(<tt>Hash</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>combined service arguments and job configuration options</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+  
+    
+    
+    <p class="tag_title">Options Hash (<tt>**args</tt>):</p>
+    <ul class="option">
+      
+        <li>
+          <span class="name">:wait</span>
+          <span class="type">(<tt>ActiveSupport::Duration</tt>)</span>
+          <span class="default">
+            
+          </span>
+          
+            &mdash; <div class='inline'><p>delay before execution (e.g., 5.minutes)</p>
+</div>
+          
+        </li>
+      
+        <li>
+          <span class="name">:wait_until</span>
+          <span class="type">(<tt>Time</tt>)</span>
+          <span class="default">
+            
+          </span>
+          
+            &mdash; <div class='inline'><p>specific time to execute (e.g., 2.hours.from_now)</p>
+</div>
+          
+        </li>
+      
+        <li>
+          <span class="name">:queue</span>
+          <span class="type">(<tt>Symbol</tt>, <tt>String</tt>)</span>
+          <span class="default">
+            
+          </span>
+          
+            &mdash; <div class='inline'><p>queue name (e.g., :low_priority)</p>
+</div>
+          
+        </li>
+      
+        <li>
+          <span class="name">:priority</span>
+          <span class="type">(<tt>Integer</tt>)</span>
+          <span class="default">
+            
+          </span>
+          
+            &mdash; <div class='inline'><p>job priority (adapter-dependent)</p>
+</div>
+          
+        </li>
+      
+        <li>
+          <span class="name">:job_options</span>
+          <span class="type">(<tt>Hash</tt>)</span>
+          <span class="default">
+            
+          </span>
+          
+            &mdash; <div class='inline'><p>additional ActiveJob options</p>
+</div>
+          
+        </li>
+      
+    </ul>
+  
+
+<p class="tag_title">Raises:</p>
+<ul class="raise">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt><span class='object_link'><a href="Errors/JobEnqueueError.html" title="Servus::Extensions::Async::Errors::JobEnqueueError (class)">Servus::Extensions::Async::Errors::JobEnqueueError</a></span></tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>if job enqueueing fails</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+  <p class="tag_title">See Also:</p>
+  <ul class="see">
+    
+      <li><span class='object_link'><a href="../../Base.html#call-class_method" title="Servus::Base.call (method)">Base.call</a></span></li>
+    
+  </ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/servus/extensions/async/call.rb', line 60</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_call_async'>call_async</span><span class='lparen'>(</span><span class='op'>**</span><span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
+  <span class='comment'># Extract ActiveJob configuration options
+</span>  <span class='id identifier rubyid_job_options'>job_options</span> <span class='op'>=</span> <span class='id identifier rubyid_args'>args</span><span class='period'>.</span><span class='id identifier rubyid_slice'>slice</span><span class='lparen'>(</span><span class='symbol'>:wait</span><span class='comma'>,</span> <span class='symbol'>:wait_until</span><span class='comma'>,</span> <span class='symbol'>:queue</span><span class='comma'>,</span> <span class='symbol'>:priority</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_job_options'>job_options</span><span class='period'>.</span><span class='id identifier rubyid_merge!'>merge!</span><span class='lparen'>(</span><span class='id identifier rubyid_args'>args</span><span class='period'>.</span><span class='id identifier rubyid_delete'>delete</span><span class='lparen'>(</span><span class='symbol'>:job_options</span><span class='rparen'>)</span> <span class='op'>||</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='rparen'>)</span> <span class='comment'># merge custom job options
+</span>
+  <span class='comment'># Remove special keys that shouldn&#39;t be passed to the service
+</span>  <span class='id identifier rubyid_args'>args</span><span class='period'>.</span><span class='id identifier rubyid_except!'>except!</span><span class='lparen'>(</span><span class='symbol'>:wait</span><span class='comma'>,</span> <span class='symbol'>:wait_until</span><span class='comma'>,</span> <span class='symbol'>:queue</span><span class='comma'>,</span> <span class='symbol'>:priority</span><span class='comma'>,</span> <span class='symbol'>:job_options</span><span class='rparen'>)</span>
+
+  <span class='comment'># Build job with optional delay, scheduling, or queue settings
+</span>  <span class='id identifier rubyid_job'>job</span> <span class='op'>=</span> <span class='id identifier rubyid_job_options'>job_options</span><span class='period'>.</span><span class='id identifier rubyid_any?'>any?</span> <span class='op'>?</span> <span class='const'><span class='object_link'><a href="Job.html" title="Servus::Extensions::Async::Job (class)">Job</a></span></span><span class='period'>.</span><span class='id identifier rubyid_set'>set</span><span class='lparen'>(</span><span class='op'>**</span><span class='id identifier rubyid_job_options'>job_options</span><span class='period'>.</span><span class='id identifier rubyid_compact'>compact</span><span class='rparen'>)</span> <span class='op'>:</span> <span class='const'><span class='object_link'><a href="Job.html" title="Servus::Extensions::Async::Job (class)">Job</a></span></span>
+
+  <span class='comment'># Enqueue the job asynchronously
+</span>  <span class='id identifier rubyid_job'>job</span><span class='period'>.</span><span class='id identifier rubyid_perform_later'>perform_later</span><span class='lparen'>(</span><span class='label'>name:</span> <span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='label'>args:</span> <span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
+<span class='kw'>rescue</span> <span class='const'>StandardError</span> <span class='op'>=&gt;</span> <span class='id identifier rubyid_e'>e</span>
+  <span class='id identifier rubyid_raise'>raise</span> <span class='const'><span class='object_link'><a href="Errors.html" title="Servus::Extensions::Async::Errors (module)">Errors</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Errors/JobEnqueueError.html" title="Servus::Extensions::Async::Errors::JobEnqueueError (class)">JobEnqueueError</a></span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Failed to enqueue async job for </span><span class='embexpr_beg'>#{</span><span class='kw'>self</span><span class='embexpr_end'>}</span><span class='tstring_content'>: </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_e'>e</span><span class='period'>.</span><span class='id identifier rubyid_message'>message</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+  </div>
+
+</div>
+
+      <div id="footer">
+  Generated on Thu Nov 20 23:59:21 2025 by
+  <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
+  0.9.37 (ruby-3.3.0).
+</div>
+
+    </div>
+  </body>
+</html>

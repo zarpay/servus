@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  File: Integration / 3. Rails Integration
+  
+    &mdash; Servus | Service Object Framework
+  
+</title>
+
+  <link rel="stylesheet" href="css/style.css" type="text/css" />
+
+  <link rel="stylesheet" href="css/common.css" type="text/css" />
+
+<script type="text/javascript">
+  pathId = "3_rails_integration";
+  relpath = '';
+</script>
+
+
+  <script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+
+  <script type="text/javascript" charset="utf-8" src="js/app.js"></script>
+
+
+  </head>
+  <body>
+    <div class="nav_wrap">
+      <iframe id="nav" src="file_list.html?1"></iframe>
+      <div id="resizer"></div>
+    </div>
+
+    <div id="main" tabindex="-1">
+      <div id="header">
+        <div id="menu">
+  
+    <a href="_index.html">Index</a> &raquo; 
+    <span class="title">File: Integration / 3. Rails Integration</span>
+  
+</div>
+
+        <div id="search">
+  
+    <a class="full_list_link" id="class_list_link"
+        href="class_list.html">
+
+        <svg width="24" height="24">
+          <rect x="0" y="4" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="12" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="20" width="24" height="4" rx="1" ry="1"></rect>
+        </svg>
+    </a>
+  
+</div>
+        <div class="clear"></div>
+      </div>
+
+      <div id="content"><div id='filecontents'><h1 id="rails-integration">Rails Integration</h1>
+
+<p>Servus core works in any Ruby application. Rails-specific features (async, controller helpers, generators) are optional additions that integrate with Rails conventions.</p>
+
+<h2 id="controller-integration">Controller Integration</h2>
+
+<p>Use the <code>run_service</code> helper to call services from controllers with automatic error handling:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='kw'>class</span> <span class='const'>UsersController</span> <span class='op'>&lt;</span> <span class='const'>ApplicationController</span>
+  <span class='id identifier rubyid_include'>include</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Helpers.html" title="Servus::Helpers (module)">Helpers</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Helpers/ControllerHelpers.html" title="Servus::Helpers::ControllerHelpers (module)">ControllerHelpers</a></span></span>
+
+  <span class='kw'>def</span> <span class='id identifier rubyid_create'>create</span>
+    <span class='id identifier rubyid_run_service'>run_service</span><span class='lparen'>(</span><span class='const'>Users</span><span class='op'>::</span><span class='const'>Create</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='id identifier rubyid_user_params'>user_params</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+
+  <span class='comment'># Failures automatically render JSON:
+</span>  <span class='comment'># { &quot;error&quot;: { &quot;code&quot;: &quot;validation_error&quot;, &quot;message&quot;: &quot;...&quot; } }
+</span>  <span class='comment'># with appropriate HTTP status code
+</span>  <span class='comment'>#
+</span>  <span class='comment'># Success will go to view and service result will be available on @result
+</span><span class='kw'>end</span>
+</code></pre>
+
+<p>Without the helper, handle responses manually:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='kw'>def</span> <span class='id identifier rubyid_create'>create</span>
+  <span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='const'>Users</span><span class='op'>::</span><span class='const'>Create</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='id identifier rubyid_user_params'>user_params</span><span class='rparen'>)</span>
+  <span class='kw'>if</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_success?'>success?</span>
+    <span class='id identifier rubyid_render'>render</span> <span class='label'>json:</span> <span class='lbrace'>{</span> <span class='label'>user:</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='lbracket'>[</span><span class='symbol'>:user</span><span class='rbracket'>]</span> <span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>status:</span> <span class='symbol'>:created</span>
+  <span class='kw'>else</span>
+    <span class='id identifier rubyid_render'>render</span> <span class='label'>json:</span> <span class='lbrace'>{</span> <span class='label'>error:</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_error'>error</span><span class='period'>.</span><span class='id identifier rubyid_api_error'>api_error</span> <span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>status:</span> <span class='id identifier rubyid_error_status'>error_status</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_error'>error</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h2 id="generator">Generator</h2>
+
+<p>Generate services with specs and schema files:</p>
+
+<pre class="code bash"><code class="bash">rails generate servus:service process_payment
+
+# Creates:
+# app/services/process_payment/service.rb
+# spec/services/process_payment/service_spec.rb
+# app/schemas/services/process_payment/arguments.json
+# app/schemas/services/process_payment/result.json
+</code></pre>
+
+<p>Schema files are optional - delete them if you don&#39;t need validation.</p>
+
+<h2 id="autoloading">Autoloading</h2>
+
+<p>Servus follows Rails autoloading conventions. Services in <code>app/services/</code> are automatically loaded by Rails:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># app/services/users/create/service.rb
+</span><span class='kw'>module</span> <span class='const'>Users</span>
+  <span class='kw'>module</span> <span class='const'>Create</span>
+    <span class='kw'>class</span> <span class='const'>Service</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+      <span class='comment'># ...
+</span>    <span class='kw'>end</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+
+<span class='comment'># Rails autoloads this as Users::Create::Service
+</span></code></pre>
+
+<h2 id="configuration">Configuration</h2>
+
+<p>Configure Servus in an initializer if needed:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># config/initializers/servus.rb
+</span><span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='period'>.</span><span class='id identifier rubyid_configure'><span class='object_link'><a href="Servus.html#configure-class_method" title="Servus.configure (method)">configure</a></span></span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_config'>config</span><span class='op'>|</span>
+  <span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_schema_root'>schema_root</span> <span class='op'>=</span> <span class='const'>Rails</span><span class='period'>.</span><span class='id identifier rubyid_root'>root</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>config/schemas</span><span class='tstring_end'>&#39;</span></span><span class='rparen'>)</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<p>Most applications don&#39;t need any configuration.</p>
+
+<h2 id="background-jobs">Background Jobs</h2>
+
+<p>Async execution requires ActiveJob setup. Configure your adapter:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># config/application.rb
+</span><span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_active_job'>active_job</span><span class='period'>.</span><span class='id identifier rubyid_queue_adapter'>queue_adapter</span> <span class='op'>=</span> <span class='symbol'>:sidekiq</span>
+</code></pre>
+
+<p>Then use <code>.call_async</code>:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='const'>Users</span><span class='op'>::</span><span class='const'>SendWelcomeEmail</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_call_async'>call_async</span><span class='lparen'>(</span><span class='label'>user_id:</span> <span class='id identifier rubyid_user'>user</span><span class='period'>.</span><span class='id identifier rubyid_id'>id</span><span class='rparen'>)</span>
+</code></pre>
+</div></div>
+
+      <div id="footer">
+  Generated on Thu Nov 20 23:59:21 2025 by
+  <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
+  0.9.37 (ruby-3.3.0).
+</div>
+
+    </div>
+  </body>
+</html>

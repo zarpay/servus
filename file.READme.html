@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  File: READme
+  
+    &mdash; Servus | Service Object Framework
+  
+</title>
+
+  <link rel="stylesheet" href="css/style.css" type="text/css" />
+
+  <link rel="stylesheet" href="css/common.css" type="text/css" />
+
+<script type="text/javascript">
+  pathId = "READme";
+  relpath = '';
+</script>
+
+
+  <script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+
+  <script type="text/javascript" charset="utf-8" src="js/app.js"></script>
+
+
+  </head>
+  <body>
+    <div class="nav_wrap">
+      <iframe id="nav" src="file_list.html?1"></iframe>
+      <div id="resizer"></div>
+    </div>
+
+    <div id="main" tabindex="-1">
+      <div id="header">
+        <div id="menu">
+  
+    <a href="_index.html">Index</a> &raquo; 
+    <span class="title">File: READme</span>
+  
+</div>
+
+        <div id="search">
+  
+    <a class="full_list_link" id="class_list_link"
+        href="class_list.html">
+
+        <svg width="24" height="24">
+          <rect x="0" y="4" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="12" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="20" width="24" height="4" rx="1" ry="1"></rect>
+        </svg>
+    </a>
+  
+</div>
+        <div class="clear"></div>
+      </div>
+
+      <div id="content"><div id='filecontents'><h2 id="servus-gem">Servus Gem</h2>
+
+<p>Servus is a gem for creating and managing service objects. It includes:</p>
+
+<ul>
+<li>A base class for service objects</li>
+<li>Generators for core service objects and specs</li>
+<li>Support for schema validation</li>
+<li>Support for error handling</li>
+<li>Support for logging</li>
+</ul>
+
+<h2 id="generators">Generators</h2>
+
+<p>Service objects can be easily created using the <code>rails g servus:service namespace/service_name [*params]</code> command. For sake of consistency, use this command when generating new service objects.</p>
+
+<h3 id="generate-service">Generate Service</h3>
+
+<pre class="code bash"><code class="bash">$ rails g servus:service namespace/do_something_helpful user
+=&gt;    create  app/services/namespace/do_something_helpful/service.rb
+      create  spec/services/namespace/do_something_helpful/service_spec.rb
+      create  app/schemas/services/namespace/do_something_helpful/result.json
+      create  app/schemas/services/namespace/do_something_helpful/arguments.json
+</code></pre>
+
+<h3 id="destroy-service">Destroy Service</h3>
+
+<pre class="code bash"><code class="bash">$ rails d servus:service namespace/do_something_helpful
+=&gt;    remove  app/services/namespace/do_something_helpful/service.rb
+      remove  spec/services/namespace/do_something_helpful/service_spec.rb
+      remove  app/schemas/services/namespace/do_something_helpful/result.json
+      remove  app/schemas/services/namespace/do_something_helpful/arguments.json
+</code></pre>
+
+<h2 id="arguments">Arguments</h2>
+
+<p>Service objects should use keyword arguments rather than positional arguments for improved clarity and more meaningful error messages.</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># Good ✅
+</span><span class='kw'>class</span> <span class='const'>Services</span><span class='op'>::</span><span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+  <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>user:</span><span class='comma'>,</span> <span class='label'>amount:</span><span class='comma'>,</span> <span class='label'>payment_method:</span><span class='rparen'>)</span>
+    <span class='ivar'>@user</span> <span class='op'>=</span> <span class='id identifier rubyid_user'>user</span>
+    <span class='ivar'>@amount</span> <span class='op'>=</span> <span class='id identifier rubyid_amount'>amount</span>
+    <span class='ivar'>@payment_method</span> <span class='op'>=</span> <span class='id identifier rubyid_payment_method'>payment_method</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+
+<span class='comment'># Bad ❌
+</span><span class='kw'>class</span> <span class='const'>Services</span><span class='op'>::</span><span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+  <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='id identifier rubyid_user'>user</span><span class='comma'>,</span> <span class='id identifier rubyid_amount'>amount</span><span class='comma'>,</span> <span class='id identifier rubyid_payment_method'>payment_method</span><span class='rparen'>)</span>
+    <span class='ivar'>@user</span> <span class='op'>=</span> <span class='id identifier rubyid_user'>user</span>
+    <span class='ivar'>@amount</span> <span class='op'>=</span> <span class='id identifier rubyid_amount'>amount</span>
+    <span class='ivar'>@payment_method</span> <span class='op'>=</span> <span class='id identifier rubyid_payment_method'>payment_method</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h2 id="directory-structure">Directory Structure</h2>
+
+<p>Each service belongs in its own namespace with this structure:</p>
+
+<ul>
+<li><code>app/services/service_name/service.rb</code> - Main class/entry point</li>
+<li><code>app/services/service_name/support/</code> - Service-specific supporting classes</li>
+</ul>
+
+<p>Supporting classes should never be used outside their parent service.</p>
+
+<pre class="code ruby"><code class="ruby">app/services/
+├── process_payment/
+│   ├── service.rb
+│   └── support/
+│       ├── payment_validator.rb
+│       └── receipt_generator.rb
+├── generate_report/
+│   ├── service.rb
+│   └── support/
+│       ├── report_formatter.rb
+│       └── data_collector.rb
+</code></pre>
+
+<h2 id="methods"><strong>Methods</strong></h2>
+
+<p>Every service object must implement:</p>
+
+<ul>
+<li>An <code>initialize</code> method that sets instance variables</li>
+<li>A parameter-less <code>call</code> instance method that executes the service logic</li>
+</ul>
+
+<pre class="code ruby"><code class="ruby"><span class='kw'>class</span> <span class='const'>Services</span><span class='op'>::</span><span class='const'>GenerateReport</span><span class='op'>::</span><span class='const'>Service</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+  <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>user:</span><span class='comma'>,</span> <span class='label'>report_type:</span><span class='comma'>,</span> <span class='label'>date_range:</span><span class='rparen'>)</span>
+    <span class='ivar'>@user</span> <span class='op'>=</span> <span class='id identifier rubyid_user'>user</span>
+    <span class='ivar'>@report_type</span> <span class='op'>=</span> <span class='id identifier rubyid_report_type'>report_type</span>
+    <span class='ivar'>@date_range</span> <span class='op'>=</span> <span class='id identifier rubyid_date_range'>date_range</span>
+  <span class='kw'>end</span>
+
+  <span class='kw'>def</span> <span class='id identifier rubyid_call'>call</span>
+    <span class='id identifier rubyid_data'>data</span> <span class='op'>=</span> <span class='id identifier rubyid_collect_data'>collect_data</span>
+    <span class='kw'>if</span> <span class='id identifier rubyid_data'>data</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+      <span class='kw'>return</span> <span class='id identifier rubyid_failure'>failure</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>No data available for the selected date range</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+    <span class='kw'>end</span>
+
+    <span class='id identifier rubyid_formatted_report'>formatted_report</span> <span class='op'>=</span> <span class='id identifier rubyid_format_report'>format_report</span><span class='lparen'>(</span><span class='id identifier rubyid_data'>data</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_success'>success</span><span class='lparen'>(</span><span class='id identifier rubyid_formatted_report'>formatted_report</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_private'>private</span>
+
+  <span class='kw'>def</span> <span class='id identifier rubyid_collect_data'>collect_data</span>
+        <span class='comment'># Implementation details...
+</span>    <span class='kw'>end</span>
+
+  <span class='kw'>def</span> <span class='id identifier rubyid_format_report'>format_report</span><span class='lparen'>(</span><span class='id identifier rubyid_data'>data</span><span class='rparen'>)</span>
+        <span class='comment'># Implementation details...
+</span>    <span class='kw'>end</span>
+<span class='kw'>end</span>
+
+</code></pre>
+
+<p>Here’s a section you can add to your README for the new <code>.call_async</code> feature, matching the style of your existing <code>## Inheritance</code> section:</p>
+
+<hr>
+
+<h2 id="asynchronous-execution"><strong>Asynchronous Execution</strong></h2>
+
+<p>You can asynchronously execute any service class that inherits from <code>Servus::Base</code> using <code>.call_async</code>. This uses <code>ActiveJob</code> under the hood and supports standard job options (<code>wait</code>, <code>queue</code>, <code>priority</code>, etc.). Only available in environments where <code>ActiveJob</code> is loaded (e.g., Rails apps)</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># Good ✅
+</span><span class='const'>Services</span><span class='op'>::</span><span class='const'>NotifyUser</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_call_async'>call_async</span><span class='lparen'>(</span>
+  <span class='label'>user_id:</span> <span class='id identifier rubyid_current_user'>current_user</span><span class='period'>.</span><span class='id identifier rubyid_id'>id</span><span class='comma'>,</span>
+  <span class='label'>wait:</span> <span class='int'>5</span><span class='period'>.</span><span class='id identifier rubyid_minutes'>minutes</span><span class='comma'>,</span>
+  <span class='label'>queue:</span> <span class='symbol'>:low_priority</span><span class='comma'>,</span>
+  <span class='label'>job_options:</span> <span class='lbrace'>{</span> <span class='label'>tags:</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>notifications</span><span class='tstring_end'>&#39;</span></span><span class='rbracket'>]</span> <span class='rbrace'>}</span>
+<span class='rparen'>)</span>
+
+<span class='comment'># Bad ❌
+</span><span class='const'>Services</span><span class='op'>::</span><span class='const'>NotifyUser</span><span class='op'>::</span><span class='const'>Support</span><span class='op'>::</span><span class='const'>MessageBuilder</span><span class='period'>.</span><span class='id identifier rubyid_call_async'>call_async</span><span class='lparen'>(</span>
+  <span class='comment'># Invalid: support classes don&#39;t inherit from Servus::Base
+</span><span class='rparen'>)</span>
+</code></pre>
+
+<h2 id="inheritance"><strong>Inheritance</strong></h2>
+
+<ul>
+<li>Every main service class (<code>service.rb</code>) must inherit from <code>Servus::Base</code></li>
+<li>Supporting classes should NOT inherit from <code>Servus::Base</code></li>
+</ul>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># Good ✅
+</span><span class='kw'>class</span> <span class='const'>Services</span><span class='op'>::</span><span class='const'>NotifyUser</span><span class='op'>::</span><span class='const'>Service</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+    <span class='comment'># Service implementation
+</span><span class='kw'>end</span>
+
+<span class='kw'>class</span> <span class='const'>Services</span><span class='op'>::</span><span class='const'>NotifyUser</span><span class='op'>::</span><span class='const'>Support</span><span class='op'>::</span><span class='const'>MessageBuilder</span>
+    <span class='comment'># Support class implementation (does NOT inherit from BaseService)
+</span><span class='kw'>end</span>
+
+<span class='comment'># Bad ❌
+</span><span class='kw'>class</span> <span class='const'>Services</span><span class='op'>::</span><span class='const'>NotifyUser</span><span class='op'>::</span><span class='const'>Support</span><span class='op'>::</span><span class='const'>MessageBuilder</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+    <span class='comment'># Incorrect: support classes should not inherit from Base class
+</span><span class='kw'>end</span>
+</code></pre>
+
+<h2 id="call-chain"><strong>Call Chain</strong></h2>
+
+<p>Always use the class method <code>call</code> instead of manual instantiation. The <code>call</code> method:</p>
+
+<ol>
+<li>Initializes an instance of the service using provided keyword arguments</li>
+<li>Calls the instance-level <code>call</code> method</li>
+<li>Handles schema validation of inputs and outputs</li>
+<li>Handles logging of inputs and results</li>
+<li>Automatically benchmarks execution time for performance monitoring</li>
+</ol>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># Good ✅
+</span><span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='const'>Services</span><span class='op'>::</span><span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span>
+  <span class='label'>amount:</span> <span class='int'>50</span><span class='comma'>,</span>
+  <span class='label'>user_id:</span> <span class='int'>123</span><span class='comma'>,</span>
+  <span class='label'>payment_method:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>credit_card</span><span class='tstring_end'>&quot;</span></span>
+<span class='rparen'>)</span>
+
+<span class='comment'># Bad ❌ - bypasses logging and other class-level functionality
+</span><span class='id identifier rubyid_service'>service</span> <span class='op'>=</span> <span class='const'>Services</span><span class='op'>::</span><span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span>
+  <span class='label'>amount:</span> <span class='int'>50</span><span class='comma'>,</span>
+  <span class='label'>user_id:</span> <span class='int'>123</span><span class='comma'>,</span>
+  <span class='label'>payment_method:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>credit_card</span><span class='tstring_end'>&quot;</span></span>
+<span class='rparen'>)</span>
+<span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='id identifier rubyid_service'>service</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span>
+
+</code></pre>
+
+<p>When services call other services, always use the class-level <code>call</code> method:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='kw'>def</span> <span class='id identifier rubyid_process_order'>process_order</span>
+<span class='comment'># Good ✅
+</span>  <span class='id identifier rubyid_payment_result'>payment_result</span> <span class='op'>=</span> <span class='const'>Services</span><span class='op'>::</span><span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span>
+    <span class='label'>amount:</span> <span class='ivar'>@order</span><span class='period'>.</span><span class='id identifier rubyid_total'>total</span><span class='comma'>,</span>
+    <span class='label'>payment_method:</span> <span class='ivar'>@payment_details</span>
+  <span class='rparen'>)</span>
+
+<span class='comment'># Bad ❌
+</span>  <span class='id identifier rubyid_payment_service'>payment_service</span> <span class='op'>=</span> <span class='const'>Services</span><span class='op'>::</span><span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span>
+    <span class='label'>amount:</span> <span class='ivar'>@order</span><span class='period'>.</span><span class='id identifier rubyid_total'>total</span><span class='comma'>,</span>
+    <span class='label'>payment_method:</span> <span class='ivar'>@payment_details</span>
+  <span class='rparen'>)</span>
+  <span class='id identifier rubyid_payment_result'>payment_result</span> <span class='op'>=</span> <span class='id identifier rubyid_payment_service'>payment_service</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span>
+<span class='kw'>end</span>
+
+</code></pre>
+
+<h2 id="responses"><strong>Responses</strong></h2>
+
+<p>The <code>Servus::Base</code> provides standardized response methods:</p>
+
+<ul>
+<li><code>success(data)</code> - Returns success with data as a single argument</li>
+<li><code>failure(message, **options)</code> - Logs error and returns failure response</li>
+<li><code>error!(message)</code> - Logs error and raises exception</li>
+</ul>
+
+<pre class="code ruby"><code class="ruby"><span class='kw'>def</span> <span class='id identifier rubyid_call'>call</span>
+    <span class='comment'># Return failure with message
+</span>    <span class='kw'>return</span> <span class='id identifier rubyid_failure'>failure</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Order is not in a pending state</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='kw'>unless</span> <span class='ivar'>@order</span><span class='period'>.</span><span class='id identifier rubyid_pending?'>pending?</span>
+
+    <span class='comment'># Do something important
+</span>
+    <span class='comment'># Process and return success with single data object
+</span>    <span class='id identifier rubyid_success'>success</span><span class='lparen'>(</span><span class='lbrace'>{</span>
+        <span class='label'>order_id:</span> <span class='ivar'>@order</span><span class='period'>.</span><span class='id identifier rubyid_id'>id</span><span class='comma'>,</span>
+        <span class='label'>status:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>processed</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+        <span class='label'>timestamp:</span> <span class='const'>Time</span><span class='period'>.</span><span class='id identifier rubyid_now'>now</span>
+    <span class='rbrace'>}</span><span class='rparen'>)</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<p>All responses are <code>Servus::Support::Response</code> objects with a <code>success?</code> boolean attribute and either <code>data</code> (for success) or <code>error</code> (for error) attributes.</p>
+
+<h3 id="service-error-returns-and-handling">Service Error Returns and Handling</h3>
+
+<p>By default, the <code>failure(...)</code> method creates an instance of <code>ServiceError</code> and adds it to the response type&#39;s <code>error</code> attribute. Standard and custom error types should inherit from the <code>ServiceError</code> class and optionally implement a custom <code>api_error</code> method. This enables developers to choose between using an API-specific error or generic error message in the calling context.</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># Called from within a Service Object
+</span><span class='kw'>class</span> <span class='const'>SomeServiceObject</span><span class='op'>::</span><span class='const'>Service</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+    <span class='kw'>def</span> <span class='id identifier rubyid_call'>call</span>
+        <span class='comment'># Return default ServiceError with custom message
+</span>        <span class='id identifier rubyid_failure'>failure</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>That didn&#39;t work for some reason</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+        <span class='comment'>#=&gt; Response(false, nil, Servus::Support::Errors::ServiceError(&quot;That didn&#39;t work for some reason&quot;))
+</span>        <span class='comment'>#
+</span>        <span class='comment'># OR
+</span>        <span class='comment'>#
+</span>        <span class='comment'># Specify ServiceError type with custom message
+</span>        <span class='id identifier rubyid_failure'>failure</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Custom message</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>type:</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Support.html" title="Servus::Support (module)">Support</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Support/Errors.html" title="Servus::Support::Errors (module)">Errors</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Support/Errors/NotFoundError.html" title="Servus::Support::Errors::NotFoundError (class)">NotFoundError</a></span></span><span class='rparen'>)</span>
+        <span class='comment'>#=&gt; Response(false, nil, Servus::Support::Errors::NotFoundError(&quot;Custom message&quot;))
+</span>        <span class='comment'>#
+</span>        <span class='comment'># OR
+</span>        <span class='comment'>#
+</span>        <span class='comment'># Specify ServiceError type with default message
+</span>        <span class='id identifier rubyid_failure'>failure</span><span class='lparen'>(</span><span class='label'>type:</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Support.html" title="Servus::Support (module)">Support</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Support/Errors.html" title="Servus::Support::Errors (module)">Errors</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Support/Errors/NotFoundError.html" title="Servus::Support::Errors::NotFoundError (class)">NotFoundError</a></span></span><span class='rparen'>)</span>
+        <span class='comment'>#=&gt; Response(false, nil, Servus::Support::Errors::NotFoundError(&quot;Not found&quot;))
+</span>        <span class='comment'>#
+</span>        <span class='comment'># OR
+</span>        <span class='comment'>#
+</span>        <span class='comment'># Accept all defaults
+</span>        <span class='id identifier rubyid_failure'>failure</span>
+        <span class='comment'>#=&gt; Response(false, nil, Servus::Support::Errors::ServiceError(&quot;An error occurred&quot;))
+</span>    <span class='kw'>end</span>
+<span class='kw'>end</span>
+
+<span class='comment'># Error handling in parent context
+</span><span class='kw'>class</span> <span class='const'>SomeController</span> <span class='op'>&lt;</span> <span class='const'>AppController</span>
+    <span class='kw'>def</span> <span class='id identifier rubyid_controller_action'>controller_action</span>
+      <span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='const'>SomeServiceObject</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='label'>arg:</span> <span class='int'>1</span><span class='rparen'>)</span>
+
+      <span class='kw'>return</span> <span class='kw'>if</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_success?'>success?</span>
+
+      <span class='comment'># If you just want the error message
+</span>      <span class='id identifier rubyid_bad_request'>bad_request</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_error'>error</span><span class='period'>.</span><span class='id identifier rubyid_message'>message</span><span class='rparen'>)</span>
+
+      <span class='comment'># If you want the API error
+</span>      <span class='id identifier rubyid_service_object_error'>service_object_error</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_error'>error</span><span class='period'>.</span><span class='id identifier rubyid_api_error'>api_error</span><span class='rparen'>)</span>
+    <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h3 id="rescue_from-for-service-errors"><code>rescue_from</code> for service errors</h3>
+
+<p>Services can configure default error handling using the <code>rescue_from</code> method.</p>
+
+<pre class="code ruby"><code class="ruby">class SomeServiceObject::Service &lt; Servus::Base
+  class SomethingBroke &lt; StandardError; end
+  class SomethingGlitched &lt; StandardError; end
+
+  # Rescue from standard errors and use custom error
+  rescue_from
+    SomethingBroke,
+    SomethingGlitched,
+    use: Servus::Support::Errors::ServiceUnavailableError # this is optional
+
+  def call
+    do_something
+  end
+
+  private
+
+  def do_something
+    make_and_api_call
+    rescue Net::HTTPError =&gt; e
+      raise SomethingGlitched, &quot;Whoaaaa, something went wrong! #{e.message}&quot;
+    end
+  end
+end
+</code></pre>
+
+<pre class="code sh"><code class="sh">result = SomeServiceObject::Service.call
+# Failure response
+result.error.class
+=&gt; Servus::Support::Errors::ServiceUnavailableError
+result.error.message
+=&gt; &quot;[SomeServiceObject::Service::SomethingGlitched]: Whoaaaa, something went wrong! Net::HTTPError (503)&quot;
+result.error.api_error
+=&gt; { code: :service_unavailable, message: &quot;[SomeServiceObject::Service::SomethingGlitched]: Whoaaaa, something went wrong! Net::HTTPError (503)&quot; }
+</code></pre>
+
+<p>The <code>rescue_from</code> method will rescue from the specified errors and use the specified error type to create a failure response object with
+the custom error. It helps eliminate the need to manually rescue many errors and create failure responses within the call method of
+a service object.</p>
+
+<p>You can also provide a block for custom error handling:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='kw'>class</span> <span class='const'>SomeServiceObject</span><span class='op'>::</span><span class='const'>Service</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+  <span class='comment'># Custom error handling with a block
+</span>  <span class='id identifier rubyid_rescue_from'>rescue_from</span> <span class='const'>ActiveRecord</span><span class='op'>::</span><span class='const'>RecordInvalid</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_exception'>exception</span><span class='op'>|</span>
+    <span class='id identifier rubyid_failure'>failure</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Validation failed: </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_exception'>exception</span><span class='period'>.</span><span class='id identifier rubyid_message'>message</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>type:</span> <span class='const'>ValidationError</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_rescue_from'>rescue_from</span> <span class='const'>Net</span><span class='op'>::</span><span class='const'>HTTPError</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_exception'>exception</span><span class='op'>|</span>
+    <span class='comment'># Can even return success to recover from errors
+</span>    <span class='id identifier rubyid_success'>success</span><span class='lparen'>(</span><span class='label'>recovered:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>error_message:</span> <span class='id identifier rubyid_exception'>exception</span><span class='period'>.</span><span class='id identifier rubyid_message'>message</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+
+  <span class='kw'>def</span> <span class='id identifier rubyid_call'>call</span>
+    <span class='comment'># Service logic
+</span>  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<p>The block receives the exception and has access to <code>success</code> and <code>failure</code> methods for creating the response.</p>
+
+<h2 id="controller-helpers">Controller Helpers</h2>
+
+<p>Service objects can be called from controllers using the <code>run_service</code> and <code>render_service_object_error</code> helpers.</p>
+
+<h3 id="run_service">run_service</h3>
+
+<p><code>run_service</code> calls the service object with the provided parameters and set&#39;s an instance variable <code>@result</code> to the
+result of the service object if the result is successful. If the result is not successful, it will pass the result
+to error to the <code>render_service_object_error</code> helper. This allows for easy error handling in the controller for
+repetetive usecases.</p>
+
+<pre class="code ruby"><code class="ruby"><span class='kw'>class</span> <span class='const'>SomeController</span> <span class='op'>&lt;</span> <span class='const'>AppController</span>
+  <span class='comment'># Before
+</span>  <span class='kw'>def</span> <span class='id identifier rubyid_controller_action'>controller_action</span>
+    <span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='const'>Services</span><span class='op'>::</span><span class='const'>SomeServiceObject</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='id identifier rubyid_my_params'>my_params</span><span class='rparen'>)</span>
+    <span class='kw'>return</span> <span class='kw'>if</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_success?'>success?</span>
+    <span class='id identifier rubyid_render_service_object_error'>render_service_object_error</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_error'>error</span><span class='period'>.</span><span class='id identifier rubyid_api_error'>api_error</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+
+  <span class='comment'># After
+</span>  <span class='kw'>def</span> <span class='id identifier rubyid_controller_action_refactored'>controller_action_refactored</span>
+    <span class='id identifier rubyid_run_service'>run_service</span> <span class='const'>Services</span><span class='op'>::</span><span class='const'>SomeServiceObject</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='id identifier rubyid_my_params'>my_params</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h3 id="render_service_object_error">render_service_object_error</h3>
+
+<p><code>render_service_object_error</code> renders the error of a service object. It expects a hash with a <code>message</code> key and a <code>code</code> key from
+the api_error method of the service error. This is all setup by default for a JSON API response, thought the method can be
+overridden if needed to handle different usecases.</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># Behind the scenes, render_service_object_error calls the following:
+</span><span class='comment'>#
+</span><span class='comment'>#  error = result.error.api_error
+</span><span class='comment'>#  =&gt; { message: &quot;Error message&quot;, code: 400 }
+</span><span class='comment'>#
+</span><span class='comment'>#  render json: { message: error[:message], code: error[:code] }, status: error[:code]
+</span>
+<span class='kw'>class</span> <span class='const'>SomeController</span> <span class='op'>&lt;</span> <span class='const'>AppController</span>
+  <span class='kw'>def</span> <span class='id identifier rubyid_controller_action'>controller_action</span>
+    <span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='const'>Services</span><span class='op'>::</span><span class='const'>SomeServiceObject</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='id identifier rubyid_my_params'>my_params</span><span class='rparen'>)</span>
+    <span class='kw'>return</span> <span class='kw'>if</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_success?'>success?</span>
+
+    <span class='id identifier rubyid_render_service_object_error'>render_service_object_error</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_error'>error</span><span class='period'>.</span><span class='id identifier rubyid_api_error'>api_error</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h2 id="schema-validation"><strong>Schema Validation</strong></h2>
+
+<p>Service objects support two methods for schema validation: JSON Schema files and inline schema declarations.</p>
+
+<h3 id="1-file-based-schema-validation">1. File-based Schema Validation</h3>
+
+<p>Every service can have corresponding schema files in the centralized schema directory:</p>
+
+<ul>
+<li><code>app/schemas/services/service_name/arguments.json</code> - Validates input arguments</li>
+<li><code>app/schemas/services/service_name/result.json</code> - Validates success response data</li>
+</ul>
+
+<p>Example <code>arguments.json</code>:</p>
+
+<pre class="code json"><code class="json">{
+  &quot;type&quot;: &quot;object&quot;,
+  &quot;required&quot;: [&quot;user_id&quot;, &quot;amount&quot;, &quot;payment_method&quot;],
+  &quot;properties&quot;: {
+    &quot;user_id&quot;: { &quot;type&quot;: &quot;integer&quot; },
+    &quot;amount&quot;: {
+      &quot;type&quot;: &quot;integer&quot;,
+      &quot;minimum&quot;: 1
+    },
+    &quot;payment_method&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;enum&quot;: [&quot;credit_card&quot;, &quot;paypal&quot;, &quot;bank_transfer&quot;]
+    },
+    &quot;currency&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;default&quot;: &quot;USD&quot;
+    }
+  },
+  &quot;additionalProperties&quot;: false
+}
+
+</code></pre>
+
+<p>Example <code>result.json</code>:</p>
+
+<pre class="code json"><code class="json">{
+  &quot;type&quot;: &quot;object&quot;,
+  &quot;required&quot;: [&quot;transaction_id&quot;, &quot;status&quot;],
+  &quot;properties&quot;: {
+    &quot;transaction_id&quot;: { &quot;type&quot;: &quot;string&quot; },
+    &quot;status&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;enum&quot;: [&quot;approved&quot;, &quot;pending&quot;, &quot;declined&quot;]
+    },
+    &quot;receipt_url&quot;: { &quot;type&quot;: &quot;string&quot; }
+  }
+}
+
+</code></pre>
+
+<h3 id="2-inline-schema-validation">2. Inline Schema Validation</h3>
+
+<p>Schemas can be declared directly within the service class using the <code>schema</code> DSL method:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='kw'>class</span> <span class='const'>Services</span><span class='op'>::</span><span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+  <span class='id identifier rubyid_schema'>schema</span><span class='lparen'>(</span>
+    <span class='label'>arguments:</span> <span class='lbrace'>{</span>
+      <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>object</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+      <span class='label'>required:</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>user_id</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>amount</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>payment_method</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span><span class='comma'>,</span>
+      <span class='label'>properties:</span> <span class='lbrace'>{</span>
+        <span class='label'>user_id:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>integer</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span><span class='comma'>,</span>
+        <span class='label'>amount:</span> <span class='lbrace'>{</span>
+          <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>integer</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+          <span class='label'>minimum:</span> <span class='int'>1</span>
+        <span class='rbrace'>}</span><span class='comma'>,</span>
+        <span class='label'>payment_method:</span> <span class='lbrace'>{</span>
+          <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+          <span class='label'>enum:</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>credit_card</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>paypal</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bank_transfer</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span>
+        <span class='rbrace'>}</span><span class='comma'>,</span>
+        <span class='label'>currency:</span> <span class='lbrace'>{</span>
+          <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+          <span class='label'>default:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>USD</span><span class='tstring_end'>&quot;</span></span>
+        <span class='rbrace'>}</span>
+      <span class='rbrace'>}</span><span class='comma'>,</span>
+      <span class='label'>additionalProperties:</span> <span class='kw'>false</span>
+    <span class='rbrace'>}</span><span class='comma'>,</span>
+    <span class='label'>result:</span> <span class='lbrace'>{</span>
+      <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>object</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+      <span class='label'>required:</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>transaction_id</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>status</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span><span class='comma'>,</span>
+      <span class='label'>properties:</span> <span class='lbrace'>{</span>
+        <span class='label'>transaction_id:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span><span class='comma'>,</span>
+        <span class='label'>status:</span> <span class='lbrace'>{</span>
+          <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+          <span class='label'>enum:</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>approved</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>pending</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>declined</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span>
+        <span class='rbrace'>}</span><span class='comma'>,</span>
+        <span class='label'>receipt_url:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span>
+      <span class='rbrace'>}</span>
+    <span class='rbrace'>}</span>
+  <span class='rparen'>)</span>
+
+  <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>user_id:</span><span class='comma'>,</span> <span class='label'>amount:</span><span class='comma'>,</span> <span class='label'>payment_method:</span><span class='comma'>,</span> <span class='label'>currency:</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>USD</span><span class='tstring_end'>&#39;</span></span><span class='rparen'>)</span>
+    <span class='ivar'>@user_id</span> <span class='op'>=</span> <span class='id identifier rubyid_user_id'>user_id</span>
+    <span class='ivar'>@amount</span> <span class='op'>=</span> <span class='id identifier rubyid_amount'>amount</span>
+    <span class='ivar'>@payment_method</span> <span class='op'>=</span> <span class='id identifier rubyid_payment_method'>payment_method</span>
+    <span class='ivar'>@currency</span> <span class='op'>=</span> <span class='id identifier rubyid_currency'>currency</span>
+  <span class='kw'>end</span>
+
+  <span class='kw'>def</span> <span class='id identifier rubyid_call'>call</span>
+    <span class='comment'># Service logic...
+</span>    <span class='id identifier rubyid_success'>success</span><span class='lparen'>(</span><span class='lbrace'>{</span>
+      <span class='label'>transaction_id:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>txn_1</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+      <span class='label'>status:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>approved</span><span class='tstring_end'>&quot;</span></span>
+    <span class='rbrace'>}</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<hr>
+
+<p>These schemas use JSON Schema format to enforce type safety and input/output contracts. For detailed information on authoring JSON Schema files, refer to the official specification at: <a href="https://json-schema.org/specification.html">https://json-schema.org/specification.html</a></p>
+
+<h3 id="schema-resolution">Schema Resolution</h3>
+
+<p>The validation system follows this precedence:</p>
+
+<ol>
+<li>Schemas defined via <code>schema</code> DSL method (recommended)</li>
+<li>Inline schema constants (<code>ARGUMENTS_SCHEMA</code> or <code>RESULT_SCHEMA</code>) - legacy support</li>
+<li>JSON files in schema_root directory - legacy support</li>
+<li>Returns nil if no schema is found (validation is opt-in)</li>
+</ol>
+
+<h3 id="schema-caching">Schema Caching</h3>
+
+<p>Both file-based and inline schemas are automatically cached:</p>
+
+<ul>
+<li>First validation request loads and caches the schema</li>
+<li>Subsequent validations use the cached version</li>
+<li>Cache can be cleared using <code>Servus::Support::Validator.clear_cache!</code></li>
+</ul>
+
+<h2 id="logging"><strong>Logging</strong></h2>
+
+<p>Servus automatically logs service execution details, making it easy to track and debug service calls.</p>
+
+<h3 id="automatic-logging">Automatic Logging</h3>
+
+<p>Every service call automatically logs:</p>
+
+<ul>
+<li><strong>Service invocation</strong> with input arguments</li>
+<li><strong>Success results</strong> with execution duration</li>
+<li><strong>Failure results</strong> with error details and duration</li>
+<li><strong>Validation errors</strong> for schema violations</li>
+<li><strong>Uncaught exceptions</strong> with error messages</li>
+</ul>
+
+<h3 id="logger-configuration">Logger Configuration</h3>
+
+<p>The logger automatically adapts to your environment:</p>
+
+<ul>
+<li><strong>Rails applications</strong>: Uses <code>Rails.logger</code></li>
+<li><strong>Non-Rails applications</strong>: Uses stdout logger</li>
+</ul>
+
+<h3 id="log-output-examples">Log Output Examples</h3>
+
+<pre class="code ruby"><code class="ruby"># Success
+INFO -- : Calling Services::ProcessPayment::Service with args: {:user_id=&gt;123, :amount=&gt;50}
+INFO -- : Services::ProcessPayment::Service succeeded in 0.245s
+
+# Failure
+INFO -- : Calling Services::ProcessPayment::Service with args: {:user_id=&gt;123, :amount=&gt;50}
+WARN -- : Services::ProcessPayment::Service failed in 0.156s with error: Insufficient funds
+
+# Validation Error
+ERROR -- : Services::ProcessPayment::Service validation error: The property &#39;#/amount&#39; value -10 was less than minimum value 1
+
+# Exception
+ERROR -- : Services::ProcessPayment::Service uncaught exception: NoMethodError - undefined method &#39;charge&#39; for nil:NilClass
+</code></pre>
+
+<p>All logging happens transparently when using the class-level <code>.call</code> method. This is one of the reasons why direct instantiation (bypassing <code>.call</code>) is discouraged.</p>
+
+<h2 id="configuration"><strong>Configuration</strong></h2>
+
+<p>Servus can be configured to customize behavior for your application needs.</p>
+
+<h3 id="schema-root-directory">Schema Root Directory</h3>
+
+<p>By default, Servus looks for schema files in <code>app/schemas/services/</code>. You can customize this location:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># config/initializers/servus.rb
+</span><span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='period'>.</span><span class='id identifier rubyid_configure'><span class='object_link'><a href="Servus.html#configure-class_method" title="Servus.configure (method)">configure</a></span></span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_config'>config</span><span class='op'>|</span>
+  <span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_schema_root'>schema_root</span> <span class='op'>=</span> <span class='const'>Rails</span><span class='period'>.</span><span class='id identifier rubyid_root'>root</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>lib/schemas</span><span class='tstring_end'>&#39;</span></span><span class='rparen'>)</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h3 id="default-behavior">Default Behavior</h3>
+
+<p>Without explicit configuration:</p>
+
+<ul>
+<li><strong>Rails applications</strong>: Schema root defaults to <code>Rails.root/app/schemas/services</code></li>
+<li><strong>Non-Rails applications</strong>: Schema root defaults to <code>./app/schemas/services</code> relative to the gem installation</li>
+</ul>
+
+<p>The configuration is accessed through the singleton <code>Servus.config</code> instance and can be modified using <code>Servus.configure</code>.</p>
+</div></div>
+
+      <div id="footer">
+  Generated on Thu Nov 20 23:59:21 2025 by
+  <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
+  0.9.37 (ruby-3.3.0).
+</div>
+
+    </div>
+  </body>
+</html>
