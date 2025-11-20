@@ -6,7 +6,7 @@ module Servus
   # This class provides the foundational functionality for implementing the Service Object pattern,
   # including automatic validation, logging, benchmarking, and error handling.
   #
-  # @abstract Subclass and implement {#initialize} and {#call} to create a service
+  # @abstract Subclass and implement initialize and call methods to create a service
   #
   # @example Creating a basic service
   #   class Services::ProcessPayment::Service < Servus::Base
@@ -56,7 +56,7 @@ module Servus
 
     # Creates a successful response with the provided data.
     #
-    # Use this method to return successful results from your service's {#call} method.
+    # Use this method to return successful results from your service's call method.
     # The data will be validated against the RESULT_SCHEMA if one is defined.
     #
     # @param data [Object] the data to return in the response (typically a Hash)
@@ -81,7 +81,7 @@ module Servus
 
     # Creates a failure response with an error.
     #
-    # Use this method to return failure results from your service's {#call} method.
+    # Use this method to return failure results from your service's call method.
     # The failure is logged automatically and returns a response containing the error.
     #
     # @param message [String, nil] custom error message (uses error type's default if nil)

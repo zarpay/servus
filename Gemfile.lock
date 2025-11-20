@@ -134,6 +134,7 @@ GEM
       erb
       psych (>= 4.0.0)
       tsort
+    redcarpet (3.6.1)
     regexp_parser (2.11.3)
     reline (0.6.2)
       io-console (~> 0.5)
@@ -172,6 +173,10 @@ GEM
     rubocop-ast (1.48.0)
       parser (>= 3.3.7.2)
       prism (~> 1.4)
+    rubocop-yard (1.0.0)
+      lint_roller
+      rubocop (~> 1.72)
+      yard
     ruby-progressbar (1.13.0)
     securerandom (0.4.1)
     stringio (3.1.7)
@@ -184,6 +189,10 @@ GEM
     unicode-emoji (4.1.0)
     uri (1.0.3)
     useragent (0.16.11)
+    webrick (1.9.1)
+    yard (0.9.37)
+    yardstick (0.9.9)
+      yard (~> 0.8, >= 0.8.7.2)
     zeitwerk (2.7.3)
 
 PLATFORMS
@@ -198,10 +207,15 @@ DEPENDENCIES
   json-schema
   railties
   rake (~> 13.0)
+  redcarpet
   rspec (~> 3.0)
   rspec-rails
   rubocop
+  rubocop-yard
   servus!
+  webrick
+  yard
+  yardstick
 
 BUNDLED WITH
    2.5.18

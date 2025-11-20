@@ -18,5 +18,13 @@ group :development, :test do
   gem 'rspec', '~> 3.0'
   gem 'rspec-rails' # gives you `have_enqueued_job` matcher
 
-  gem 'rubocop'
+  # Yard
+  gem 'redcarpet', require: false
+  gem 'webrick', require: false # Required for yard server
+  gem 'yard', require: false
+  gem 'yardstick', require: false
+
+  # Rubocop
+  gem 'rubocop', require: false
+  gem 'rubocop-yard', require: false
 end

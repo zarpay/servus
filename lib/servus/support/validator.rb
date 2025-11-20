@@ -31,7 +31,7 @@ module Servus
       # Validates service arguments against the ARGUMENTS_SCHEMA.
       #
       # Checks arguments against either an inline ARGUMENTS_SCHEMA constant or
-      # a file-based schema at app/schemas/services/{namespace}/arguments.json.
+      # a file-based schema at app/schemas/services/namespace/arguments.json.
       # Validation is skipped if no schema is defined.
       #
       # @param service_class [Class] the service class being validated
@@ -61,7 +61,7 @@ module Servus
       # Validates service result data against the RESULT_SCHEMA.
       #
       # Checks the result.data against either an inline RESULT_SCHEMA constant or
-      # a file-based schema at app/schemas/services/{namespace}/result.json.
+      # a file-based schema at app/schemas/services/namespace/result.json.
       # Only validates successful responses; failures are skipped.
       #
       # @param service_class [Class] the service class being validated
@@ -95,7 +95,7 @@ module Servus
       # Implements a three-tier lookup strategy:
       # 1. Check for schema defined via DSL method (service_class.arguments_schema/result_schema)
       # 2. Check for inline constant (ARGUMENTS_SCHEMA or RESULT_SCHEMA)
-      # 3. Fall back to JSON file in app/schemas/services/{namespace}/{type}.json
+      # 3. Fall back to JSON file in app/schemas/services/namespace/type.json
       #
       # Schemas are cached after first load for performance.
       #
@@ -161,7 +161,7 @@ module Servus
       # 3. File at schema_path (if exists)
       # 4. nil (no schema found)
       #
-      # @param dsl_schema [Hash, nil] schema from DSL method (e.g., schema arguments: {...})
+      # @param dsl_schema [Hash, nil] schema from DSL method (e.g., schema arguments: Hash)
       # @param inline_schema_constant [Hash, nil] inline schema constant (e.g., ARGUMENTS_SCHEMA)
       # @param schema_path [String] file path to external schema JSON
       # @return [Hash, nil] schema with indifferent access, or nil if not found
