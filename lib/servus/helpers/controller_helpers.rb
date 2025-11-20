@@ -2,62 +2,98 @@
 
 module Servus
   module Helpers
-    # Controller helpers
+    # Rails controller helper methods for service integration.
+    #
+    # Provides convenient methods for calling services from controllers and
+    # handling their responses. Automatically included in ActionController::Base
+    # when Servus is loaded in a Rails application.
+    #
+    # @example Including in a controller
+    #   class ApplicationController < ActionController::Base
+    #     include Servus::Helpers::ControllerHelpers
+    #   end
+    #
+    # @see #run_service
+    # @see #render_service_object_error
     module ControllerHelpers
-      # Run a service object and return the result
+      # Executes a service and handles success/failure automatically.
       #
-      # This method is a helper method for controllers to run a service object and return the result.
-      # Servus errors (Servus::Support::Errors::*) all impliment an api_error method that returns a hash with
-      # a code and message. The service_object_error method and any custom implimentation, can be used to
-      # automatically format and return an API error response.
+      # This method runs the service with the provided parameters. On success,
+      # it stores the result in @result for use in views. On failure, it
+      # automatically calls {#render_service_object_error} with the error details.
       #
-      # @example:
-      #   class TestController < ApplicationController
-      #     def index
-      #       run_service MyService::Service, params
+      # The result is always stored in the @result instance variable, making it
+      # available in views for rendering successful responses.
+      #
+      # @param klass [Class] service class to execute (must inherit from {Servus::Base})
+      # @param params [Hash] keyword arguments to pass to the service
+      # @return [Servus::Support::Response, nil] the service result, or nil if error rendered
+      #
+      # @example Basic usage
+      #   class UsersController < ApplicationController
+      #     def create
+      #       run_service Services::CreateUser::Service, user_params
+      #       # If successful, @result is available for rendering
+      #       # If failed, error response is automatically rendered
       #     end
       #   end
       #
-      # The result of the service is stored in the instance variable @result, which can be used
-      # in views to template a response.
-      #
-      # @example:
-      #   json.data do
-      #     json.some_key @result.data[:some_key]
+      # @example Using @result in views
+      #   # In your Jbuilder view (create.json.jbuilder)
+      #   json.user do
+      #     json.id @result.data[:user_id]
+      #     json.email @result.data[:email]
       #   end
       #
-      # When investigating the servus error classes, you can see the api_error method implimentation
-      # for each error type. Below is an example implementation of the service_object_error method, which
-      # could be overwritten to meet a specific applications needs.
+      # @example Manual success handling
+      #   class UsersController < ApplicationController
+      #     def create
+      #       run_service Services::CreateUser::Service, user_params
+      #       return unless @result.success?
       #
-      # @example:
-      #   # Example implementation of api_error on Servus::Support::Errors::ServiceError
-      #   # def api_error
-      #   #   { code: :bad_request, message: message }
-      #   # end
-      #
-      #   Example implementation of service_object_error
-      #   def service_object_error(api_error)
-      #     render json: api_error, status: api_error[:code]
+      #       # Custom success handling
+      #       redirect_to user_path(@result.data[:user_id])
+      #     end
       #   end
       #
-      # @param klass [Class] The service class
-      # @param params [Hash] The parameters to pass to the service
-      # @return [Servus::Support::Response] The result of the service
-      #
-      # @see Servus::Support::Errors::ServiceError
+      # @see #render_service_object_error
+      # @see Servus::Base.call
       def run_service(klass, params)
         @result = klass.call(**params)
         render_service_object_error(@result.error.api_error) unless @result.success?
       end
 
-      # Service object error renderer
+      # Renders a service error as a JSON response.
       #
-      # This method is a helper method for controllers to render service object errors.
+      # This method is called automatically by {#run_service} when a service fails,
+      # but can also be called manually for custom error handling. It renders the
+      # error's api_error hash with the appropriate HTTP status code.
       #
-      # @param api_error [Hash] The API error response
+      # Override this method in your controller to customize error response format.
       #
-      # @see Servus::Support::Errors::ServiceError
+      # @param api_error [Hash] error hash with :code and :message keys from {Servus::Support::Errors::ServiceError#api_error}
+      # @return [void]
+      #
+      # @example Default behavior
+      #   # Renders: { code: :not_found, message: "User not found" }
+      #   # With status: 404
+      #   render_service_object_error(result.error.api_error)
+      #
+      # @example Custom error rendering
+      #   class ApplicationController < ActionController::Base
+      #     def render_service_object_error(api_error)
+      #       render json: {
+      #         error: {
+      #           type: api_error[:code],
+      #           details: api_error[:message],
+      #           timestamp: Time.current
+      #         }
+      #       }, status: api_error[:code]
+      #     end
+      #   end
+      #
+      # @see Servus::Support::Errors::ServiceError#api_error
+      # @see #run_service
       def render_service_object_error(api_error)
         render json: api_error, status: api_error[:code]
       end

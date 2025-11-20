@@ -5,15 +5,18 @@ source 'https://rubygems.org'
 # Specify your gem's dependencies in servus.gemspec
 gemspec
 
-gem 'json-schema'
-gem 'activesupport'
 gem 'active_model_serializers'
+gem 'activesupport'
+gem 'json-schema'
 gem 'rake', '~> 13.0'
-gem 'rspec', '~> 3.0'
 
-# Test only
-group :test do
+# Development and test dependencies
+group :development, :test do
   gem 'activejob'
   gem 'railties'
+
+  gem 'rspec', '~> 3.0'
   gem 'rspec-rails' # gives you `have_enqueued_job` matcher
+
+  gem 'rubocop'
 end
