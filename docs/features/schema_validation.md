@@ -15,21 +15,23 @@ class ProcessPayment::Service < Servus::Base
       type: "object",
       required: ["user_id", "amount"],
       properties: {
-        user_id: { type: "integer" },
-        amount: { type: "number", minimum: 0.01 }
+        user_id: { type: "integer", example: 123 },
+        amount: { type: "number", minimum: 0.01, example: 100.0 }
       }
     },
     result: {
       type: "object",
       required: ["transaction_id", "new_balance"],
       properties: {
-        transaction_id: { type: "string" },
-        new_balance: { type: "number" }
+        transaction_id: { type: "string", example: "txn_abc123" },
+        new_balance: { type: "number", example: 950.0 }
       }
     }
   )
 end
 ```
+
+**Pro tip:** Add `example` or `examples` keywords to your schemas. These values can be automatically extracted in tests using `servus_arguments_example()` and `servus_result_example()` helpers. See the [Testing documentation](../integration/testing.md#schema-example-helpers) for details.
 
 You can define just one schema if needed:
 

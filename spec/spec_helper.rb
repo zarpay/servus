@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'servus'
+require 'servus/testing'
 require 'spec_support/active_job_loader'
 
 RSpec.configure do |config|

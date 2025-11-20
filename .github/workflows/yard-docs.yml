@@ -1,0 +1,28 @@
+name: Deploy YARD docs
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  yard-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.3.0
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Generate YARD Documentation
+        run: bundle exec yard doc
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          publish_dir: ./doc

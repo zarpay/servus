@@ -2,6 +2,95 @@
 
 Services are designed for easy testing with explicit inputs (arguments) and outputs (Response objects). No special test infrastructure needed.
 
+## Schema Example Helpers
+
+Servus provides test helpers that extract `example` values from your JSON schemas, making it easy to generate test fixtures without maintaining separate factories.
+
+### Setup
+
+Include the helpers in your test suite:
+
+```ruby
+# spec/spec_helper.rb
+require 'servus/testing'
+
+RSpec.configure do |config|
+  config.include Servus::Testing::ExampleBuilders
+end
+```
+
+### Using Schema Examples
+
+Add `example` or `examples` keywords to your schemas:
+
+```ruby
+class ProcessPayment::Service < Servus::Base
+  schema(
+    arguments: {
+      type: "object",
+      properties: {
+        user_id: { type: "integer", example: 123 },
+        amount: { type: "number", example: 100.0 },
+        currency: { type: "string", examples: ["USD", "EUR", "GBP"] }
+      }
+    },
+    result: {
+      type: "object",
+      properties: {
+        transaction_id: { type: "string", example: "txn_abc123" },
+        status: { type: "string", example: "approved" }
+      }
+    }
+  )
+end
+```
+
+Then use the helpers in your tests:
+
+```ruby
+RSpec.describe ProcessPayment::Service do
+  it "processes payment successfully" do
+    # Extract examples from schema and override specific values
+    args = servus_arguments_example(ProcessPayment::Service, amount: 50.0)
+    # => { user_id: 123, amount: 50.0, currency: "USD" }
+
+    result = ProcessPayment::Service.call(**args)
+
+    expect(result).to be_success
+    expect(result.data.keys).to match_array(
+      servus_result_example(ProcessPayment::Service).data.keys
+    )
+  end
+
+  it "handles different currencies" do
+    %w[USD EUR GBP].each do |currency|
+      result = ProcessPayment::Service.call(
+        **servus_arguments_example(ProcessPayment::Service, currency: currency)
+      )
+      expect(result).to be_success
+    end
+  end
+end
+```
+
+### Deep Merging
+
+Overrides are deep-merged with schema examples, allowing you to override nested values:
+
+```ruby
+# Schema has nested structure
+args = servus_arguments_example(
+  CreateUser::Service,
+  user: { profile: { age: 35 } }
+)
+# => { user: { id: 1, profile: { name: 'Alice', age: 35 } } }
+```
+
+### Available Helpers
+
+- `servus_arguments_example(ServiceClass, **overrides)` - Returns hash of argument examples
+- `servus_result_example(ServiceClass, **overrides)` - Returns Response object with result examples
+
 ## Basic Testing Pattern
 
 ```ruby
