@@ -1,4 +1,5 @@
 ## [Unreleased]
+- Added: Added support from blocks on `rescue_from` to override default failure handler.
 
 ## [0.1.3] - 2025-10-10
 - Added: Added `call_async` method to `Servus::Base` to enqueue a job for calling the service asynchronously

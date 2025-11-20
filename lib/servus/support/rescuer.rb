@@ -143,17 +143,17 @@ module Servus
         end
 
         # Instantiates a block context to handle a rescued error
-        # 
+        #
         # @param error [StandardError] the caught exception
         # @param config [Hash] The rescue config for the current error
         #
         # @api private
         def block_context_result(error, config)
-            context = BlockContext.new
-            context.instance_exec(error, &config[:handler])
-            context.result
+          context = BlockContext.new
+          context.instance_exec(error, &config[:handler])
+          context.result
         end
-        
+
         # Creates a failure response from a rescued exception.
         #
         # Converts the caught exception into a ServiceError of the specified type,
