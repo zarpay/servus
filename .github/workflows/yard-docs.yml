@@ -19,7 +19,7 @@ jobs:
         run: bundle install
 
       - name: Generate YARD Documentation
-        run: bundle exec yard doc --output-dir ./docs/yard
+        run: bundle exec yard doc
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3

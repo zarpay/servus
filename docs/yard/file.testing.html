@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  File: Integration / Testing
+  
+    &mdash; Servus | Service Object Framework
+  
+</title>
+
+  <link rel="stylesheet" href="css/style.css" type="text/css" />
+
+  <link rel="stylesheet" href="css/common.css" type="text/css" />
+
+<script type="text/javascript">
+  pathId = "testing";
+  relpath = '';
+</script>
+
+
+  <script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+
+  <script type="text/javascript" charset="utf-8" src="js/app.js"></script>
+
+
+  </head>
+  <body>
+    <div class="nav_wrap">
+      <iframe id="nav" src="file_list.html?1"></iframe>
+      <div id="resizer"></div>
+    </div>
+
+    <div id="main" tabindex="-1">
+      <div id="header">
+        <div id="menu">
+  
+    <a href="_index.html">Index</a> &raquo; 
+    <span class="title">File: Integration / Testing</span>
+  
+</div>
+
+        <div id="search">
+  
+    <a class="full_list_link" id="class_list_link"
+        href="class_list.html">
+
+        <svg width="24" height="24">
+          <rect x="0" y="4" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="12" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="20" width="24" height="4" rx="1" ry="1"></rect>
+        </svg>
+    </a>
+  
+</div>
+        <div class="clear"></div>
+      </div>
+
+      <div id="content"><div id='filecontents'><h1 id="testing">Testing</h1>
+
+<p>Services are designed for easy testing with explicit inputs (arguments) and outputs (Response objects). No special test infrastructure needed.</p>
+
+<h2 id="schema-example-helpers">Schema Example Helpers</h2>
+
+<p>Servus provides test helpers that extract <code>example</code> values from your JSON schemas, making it easy to generate test fixtures without maintaining separate factories.</p>
+
+<h3 id="setup">Setup</h3>
+
+<p>Include the helpers in your test suite:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># spec/spec_helper.rb
+</span><span class='id identifier rubyid_require'>require</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>servus/testing</span><span class='tstring_end'>&#39;</span></span>
+
+<span class='const'>RSpec</span><span class='period'>.</span><span class='id identifier rubyid_configure'>configure</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_config'>config</span><span class='op'>|</span>
+  <span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_include'>include</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Testing.html" title="Servus::Testing (module)">Testing</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Testing/ExampleBuilders.html" title="Servus::Testing::ExampleBuilders (module)">ExampleBuilders</a></span></span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h3 id="using-schema-examples">Using Schema Examples</h3>
+
+<p>Add <code>example</code> or <code>examples</code> keywords to your schemas:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='kw'>class</span> <span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+  <span class='id identifier rubyid_schema'>schema</span><span class='lparen'>(</span>
+    <span class='label'>arguments:</span> <span class='lbrace'>{</span>
+      <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>object</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+      <span class='label'>properties:</span> <span class='lbrace'>{</span>
+        <span class='label'>user_id:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>integer</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>example:</span> <span class='int'>123</span> <span class='rbrace'>}</span><span class='comma'>,</span>
+        <span class='label'>amount:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>number</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>example:</span> <span class='float'>100.0</span> <span class='rbrace'>}</span><span class='comma'>,</span>
+        <span class='label'>currency:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>examples:</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>USD</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>EUR</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>GBP</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span> <span class='rbrace'>}</span>
+      <span class='rbrace'>}</span>
+    <span class='rbrace'>}</span><span class='comma'>,</span>
+    <span class='label'>result:</span> <span class='lbrace'>{</span>
+      <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>object</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+      <span class='label'>properties:</span> <span class='lbrace'>{</span>
+        <span class='label'>transaction_id:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>example:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>txn_abc123</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span><span class='comma'>,</span>
+        <span class='label'>status:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>example:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>approved</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span>
+      <span class='rbrace'>}</span>
+    <span class='rbrace'>}</span>
+  <span class='rparen'>)</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<p>Then use the helpers in your tests:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='const'>RSpec</span><span class='period'>.</span><span class='id identifier rubyid_describe'>describe</span> <span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span> <span class='kw'>do</span>
+  <span class='id identifier rubyid_it'>it</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>processes payment successfully</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>do</span>
+    <span class='comment'># Extract examples from schema and override specific values
+</span>    <span class='id identifier rubyid_args'>args</span> <span class='op'>=</span> <span class='id identifier rubyid_servus_arguments_example'>servus_arguments_example</span><span class='lparen'>(</span><span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='label'>amount:</span> <span class='float'>50.0</span><span class='rparen'>)</span>
+    <span class='comment'># =&gt; { user_id: 123, amount: 50.0, currency: &quot;USD&quot; }
+</span>
+    <span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='op'>**</span><span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
+
+    <span class='id identifier rubyid_expect'>expect</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to'>to</span> <span class='id identifier rubyid_be_success'>be_success</span>
+    <span class='id identifier rubyid_expect'>expect</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='period'>.</span><span class='id identifier rubyid_keys'>keys</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to'>to</span> <span class='id identifier rubyid_match_array'>match_array</span><span class='lparen'>(</span>
+      <span class='id identifier rubyid_servus_result_example'>servus_result_example</span><span class='lparen'>(</span><span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='period'>.</span><span class='id identifier rubyid_keys'>keys</span>
+    <span class='rparen'>)</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_it'>it</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>handles different currencies</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>do</span>
+    <span class='qwords_beg'>%w[</span><span class='tstring_content'>USD</span><span class='words_sep'> </span><span class='tstring_content'>EUR</span><span class='words_sep'> </span><span class='tstring_content'>GBP</span><span class='tstring_end'>]</span></span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_currency'>currency</span><span class='op'>|</span>
+      <span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span>
+        <span class='op'>**</span><span class='id identifier rubyid_servus_arguments_example'>servus_arguments_example</span><span class='lparen'>(</span><span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='label'>currency:</span> <span class='id identifier rubyid_currency'>currency</span><span class='rparen'>)</span>
+      <span class='rparen'>)</span>
+      <span class='id identifier rubyid_expect'>expect</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to'>to</span> <span class='id identifier rubyid_be_success'>be_success</span>
+    <span class='kw'>end</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h3 id="deep-merging">Deep Merging</h3>
+
+<p>Overrides are deep-merged with schema examples, allowing you to override nested values:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># Schema has nested structure
+</span><span class='id identifier rubyid_args'>args</span> <span class='op'>=</span> <span class='id identifier rubyid_servus_arguments_example'>servus_arguments_example</span><span class='lparen'>(</span>
+  <span class='const'>CreateUser</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span>
+  <span class='label'>user:</span> <span class='lbrace'>{</span> <span class='label'>profile:</span> <span class='lbrace'>{</span> <span class='label'>age:</span> <span class='int'>35</span> <span class='rbrace'>}</span> <span class='rbrace'>}</span>
+<span class='rparen'>)</span>
+<span class='comment'># =&gt; { user: { id: 1, profile: { name: &#39;Alice&#39;, age: 35 } } }
+</span></code></pre>
+
+<h3 id="available-helpers">Available Helpers</h3>
+
+<ul>
+<li><code>servus_arguments_example(ServiceClass, **overrides)</code> - Returns hash of argument examples</li>
+<li><code>servus_result_example(ServiceClass, **overrides)</code> - Returns Response object with result examples</li>
+</ul>
+
+<h2 id="basic-testing-pattern">Basic Testing Pattern</h2>
+
+<pre class="code ruby"><code class="ruby"><span class='const'>RSpec</span><span class='period'>.</span><span class='id identifier rubyid_describe'>describe</span> <span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span> <span class='kw'>do</span>
+  <span class='id identifier rubyid_describe'>describe</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>.call</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>do</span>
+    <span class='id identifier rubyid_let'>let</span><span class='lparen'>(</span><span class='symbol'>:user</span><span class='rparen'>)</span> <span class='lbrace'>{</span> <span class='id identifier rubyid_create'>create</span><span class='lparen'>(</span><span class='symbol'>:user</span><span class='comma'>,</span> <span class='label'>balance:</span> <span class='int'>1000</span><span class='rparen'>)</span> <span class='rbrace'>}</span>
+
+    <span class='id identifier rubyid_subject'>subject</span><span class='lparen'>(</span><span class='symbol'>:result</span><span class='rparen'>)</span> <span class='lbrace'>{</span> <span class='id identifier rubyid_described_class'>described_class</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='label'>user_id:</span> <span class='id identifier rubyid_user'>user</span><span class='period'>.</span><span class='id identifier rubyid_id'>id</span><span class='comma'>,</span> <span class='label'>amount:</span> <span class='id identifier rubyid_amount'>amount</span><span class='rparen'>)</span> <span class='rbrace'>}</span>
+
+    <span class='id identifier rubyid_context'>context</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>with sufficient balance</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>do</span>
+      <span class='id identifier rubyid_let'>let</span><span class='lparen'>(</span><span class='symbol'>:amount</span><span class='rparen'>)</span> <span class='lbrace'>{</span> <span class='int'>50</span> <span class='rbrace'>}</span>
+
+      <span class='id identifier rubyid_it'>it</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>processes payment</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>do</span>
+        <span class='id identifier rubyid_expect'>expect</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_success?'>success?</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to'>to</span> <span class='id identifier rubyid_be'>be</span> <span class='kw'>true</span>
+        <span class='id identifier rubyid_expect'>expect</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='lbracket'>[</span><span class='symbol'>:new_balance</span><span class='rbracket'>]</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to'>to</span> <span class='id identifier rubyid_eq'>eq</span><span class='lparen'>(</span><span class='int'>950</span><span class='rparen'>)</span>
+        <span class='id identifier rubyid_expect'>expect</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_reload'>reload</span><span class='period'>.</span><span class='id identifier rubyid_balance'>balance</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to'>to</span> <span class='id identifier rubyid_eq'>eq</span><span class='lparen'>(</span><span class='int'>950</span><span class='rparen'>)</span>
+      <span class='kw'>end</span>
+    <span class='kw'>end</span>
+
+    <span class='id identifier rubyid_context'>context</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>with insufficient balance</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>do</span>
+      <span class='id identifier rubyid_let'>let</span><span class='lparen'>(</span><span class='symbol'>:amount</span><span class='rparen'>)</span> <span class='lbrace'>{</span> <span class='int'>2000</span> <span class='rbrace'>}</span>
+
+      <span class='id identifier rubyid_it'>it</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>returns failure</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>do</span>
+        <span class='id identifier rubyid_expect'>expect</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_success?'>success?</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to'>to</span> <span class='id identifier rubyid_be'>be</span> <span class='kw'>false</span>
+        <span class='id identifier rubyid_expect'>expect</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_error'>error</span><span class='period'>.</span><span class='id identifier rubyid_message'>message</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to'>to</span> <span class='id identifier rubyid_eq'>eq</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Insufficient funds</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+        <span class='id identifier rubyid_expect'>expect</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_error'>error</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to'>to</span> <span class='id identifier rubyid_be_a'>be_a</span><span class='lparen'>(</span><span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Support.html" title="Servus::Support (module)">Support</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Support/Errors.html" title="Servus::Support::Errors (module)">Errors</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Support/Errors/ServiceError.html" title="Servus::Support::Errors::ServiceError (class)">ServiceError</a></span></span><span class='rparen'>)</span>
+      <span class='kw'>end</span>
+    <span class='kw'>end</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h2 id="testing-service-composition">Testing Service Composition</h2>
+
+<p>When testing services that call other services, mock the child services:</p>
+
+<pre class="code ruby"><code class="ruby">describe Users::CreateWithAccount::Service do
+  # Make local or global helpers to clean up tests
+  def servus_success_result(data)
+    Servus::Support::Response.new(success: true, data: data, error: nil)
+  end
+
+  it &quot;calls both create services&quot; do
+    # Mock child services
+    allow(Users::Create::Service).to receive(:call).and_return(servus_success_result{ user: user })
+    allow(Accounts::Create::Service).to receive(:call).and_return(servus_success_result{ account: account })
+
+    result = described_class.call(email: &quot;test@example.com&quot;, plan: &quot;premium&quot;)
+
+    expect(Users::Create::Service).to have_received(:call)
+    expect(Accounts::Create::Service).to have_received(:call)
+
+    expect(result.success?).to be true
+  end
+end
+</code></pre>
+
+<h2 id="testing-schema-validation">Testing Schema Validation</h2>
+
+<p>Don&#39;t test that valid arguments pass validation - that&#39;s testing the framework. Do test that your schema catches invalid inputs:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='id identifier rubyid_it'>it</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>validates required fields</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>do</span>
+  <span class='id identifier rubyid_expect'>expect</span> <span class='lbrace'>{</span>
+    <span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='label'>invalid:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>params</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+  <span class='rbrace'>}</span><span class='period'>.</span><span class='id identifier rubyid_to'>to</span> <span class='id identifier rubyid_raise_error'>raise_error</span><span class='lparen'>(</span><span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Support.html" title="Servus::Support (module)">Support</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Support/Errors.html" title="Servus::Support::Errors (module)">Errors</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Support/Errors/ValidationError.html" title="Servus::Support::Errors::ValidationError (class)">ValidationError</a></span></span><span class='comma'>,</span> <span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>required</span><span class='regexp_end'>/</span></span><span class='rparen'>)</span>
+<span class='kw'>end</span>
+</code></pre>
+</div></div>
+
+      <div id="footer">
+  Generated on Fri Nov 21 00:30:04 2025 by
+  <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
+  0.9.37 (ruby-3.4.4).
+</div>
+
+    </div>
+  </body>
+</html>

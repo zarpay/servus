@@ -1,5 +1,6 @@
 --output-dir ./docs/yard
 --readme READme.md
+--files docs/**/*.md
 --markup markdown
 --markup-provider redcarpet
 --title "Servus | Service Object Framework"
