@@ -3,28 +3,60 @@
 module Servus
   module Extensions
     module Async
-      # Calls the service asynchronously using AsyncCallerJob.
+      # Provides asynchronous service execution via ActiveJob.
       #
-      # Supports all standard ActiveJob scheduling and routing options:
-      #   - wait:        <ActiveSupport::Duration>   (e.g., 5.minutes)
-      #   - wait_until:  <Time>                      (e.g., 2.hours.from_now)
-      #   - queue:       <Symbol/String>             (e.g., :critical, 'low_priority')
-      #   - priority:    <Integer>                   (depends on adapter support)
-      #   - retry:       <Boolean>                   (custom control for job retry)
-      #   - job_options: <Hash>                      (extra options, merged in)
+      # This module extends {Servus::Base} with the {#call_async} method, enabling
+      # services to be executed in background jobs. Requires ActiveJob to be loaded.
       #
-      # Example:
-      #   call_async(
-      #     wait: 10.minutes,
-      #     queue: :low_priority,
-      #     priority: 20,
-      #     job_options: { tags: ['user_graduation'] },
-      #     user_id: current_user.id
-      #   )
-      #
+      # @see Call#call_async
       module Call
-        # @param args [Hash] The arguments to pass to the service and job options.
+        # Enqueues the service for asynchronous execution via ActiveJob.
+        #
+        # This method schedules the service to run in a background job, supporting
+        # all standard ActiveJob options for scheduling, queue routing, and priority.
+        #
+        # Service arguments are passed as keyword arguments alongside job configuration.
+        # Job-specific options are extracted and the remaining arguments are passed
+        # to the service's initialize method.
+        #
+        # @param args [Hash] combined service arguments and job configuration options
+        # @option args [ActiveSupport::Duration] :wait delay before execution (e.g., 5.minutes)
+        # @option args [Time] :wait_until specific time to execute (e.g., 2.hours.from_now)
+        # @option args [Symbol, String] :queue queue name (e.g., :low_priority)
+        # @option args [Integer] :priority job priority (adapter-dependent)
+        # @option args [Hash] :job_options additional ActiveJob options
+        #
         # @return [void]
+        # @raise [Servus::Extensions::Async::Errors::JobEnqueueError] if job enqueueing fails
+        #
+        # @example Basic async execution
+        #   Services::SendEmail::Service.call_async(
+        #     user_id: 123,
+        #     template: :welcome
+        #   )
+        #
+        # @example With delay
+        #   Services::SendReminder::Service.call_async(
+        #     wait: 1.day,
+        #     user_id: 123
+        #   )
+        #
+        # @example With queue and priority
+        #   Services::ProcessPayment::Service.call_async(
+        #     queue: :critical,
+        #     priority: 10,
+        #     order_id: 456
+        #   )
+        #
+        # @example With custom job options
+        #   Services::GenerateReport::Service.call_async(
+        #     wait_until: Date.tomorrow.beginning_of_day,
+        #     job_options: { tags: ['reports', 'daily'] },
+        #     report_type: :sales
+        #   )
+        #
+        # @note Only available when ActiveJob is loaded (typically in Rails applications)
+        # @see Servus::Base.call
         def call_async(**args)
           # Extract ActiveJob configuration options
           job_options = args.slice(:wait, :wait_until, :queue, :priority)
