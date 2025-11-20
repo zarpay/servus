@@ -460,43 +460,59 @@ Example `result.json`:
 
 ### 2. Inline Schema Validation
 
-Alternatively, schemas can be declared directly within the service class using `ARGUMENTS_SCHEMA` and `RESULT_SCHEMA` constants.
+Schemas can be declared directly within the service class using the `schema` DSL method:
 
 ```ruby
 class Services::ProcessPayment::Service < Servus::Base
-  ARGUMENTS_SCHEMA = {
-	  type: "object",
-	  required: ["user_id", "amount", "payment_method"],
-	  properties: {
-	    user_id: { type: "integer" },
-	    amount: {
-	      type: "integer",
-	      minimum: 1
-	    },
-	    payment_method: {
-	      type: "string",
-	      enum: ["credit_card", "paypal", "bank_transfer"]
-	    },
-	    currency: {
-	      type: "string",
-	      default: "USD"
-	    }
-	  },
-	  additionalProperties: false
-	}
+  schema(
+    arguments: {
+      type: "object",
+      required: ["user_id", "amount", "payment_method"],
+      properties: {
+        user_id: { type: "integer" },
+        amount: {
+          type: "integer",
+          minimum: 1
+        },
+        payment_method: {
+          type: "string",
+          enum: ["credit_card", "paypal", "bank_transfer"]
+        },
+        currency: {
+          type: "string",
+          default: "USD"
+        }
+      },
+      additionalProperties: false
+    },
+    result: {
+      type: "object",
+      required: ["transaction_id", "status"],
+      properties: {
+        transaction_id: { type: "string" },
+        status: {
+          type: "string",
+          enum: ["approved", "pending", "declined"]
+        },
+        receipt_url: { type: "string" }
+      }
+    }
+  )
 
-  RESULT_SCHEMA = {
-	  type: "object",
-	  required: ["transaction_id", "status"],
-	  properties: {
-	    transaction_id: { type: "string" },
-	    status: {
-	      type: "string",
-	      enum: ["approved", "pending", "declined"]
-	    },
-	    receipt_url: { type: "string" }
-	  }
-	}
+  def initialize(user_id:, amount:, payment_method:, currency: 'USD')
+    @user_id = user_id
+    @amount = amount
+    @payment_method = payment_method
+    @currency = currency
+  end
+
+  def call
+    # Service logic...
+    success({
+      transaction_id: "txn_1",
+      status: "approved"
+    })
+  end
 end
 ```
 
@@ -508,9 +524,10 @@ These schemas use JSON Schema format to enforce type safety and input/output con
 
 The validation system follows this precedence:
 
-1. Checks for inline schema constants (`ARGUMENTS_SCHEMA` or `RESULT_SCHEMA`)
-2. Falls back to JSON files if no inline schema is found
-3. Returns nil if neither exists
+1. Schemas defined via `schema` DSL method (recommended)
+2. Inline schema constants (`ARGUMENTS_SCHEMA` or `RESULT_SCHEMA`) - legacy support
+3. JSON files in schema_root directory - legacy support
+4. Returns nil if no schema is found (validation is opt-in)
 
 ### Schema Caching
 

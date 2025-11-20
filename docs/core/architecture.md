@@ -30,12 +30,14 @@ The framework intercepts the `.call` class method to inject cross-cutting concer
 
 ### Schema Validation
 
-Define `ARGUMENTS_SCHEMA` or `RESULT_SCHEMA` constants, or create JSON files at `app/schemas/services/service_name/arguments.json`.
+Use the `schema` DSL method to define JSON Schema validation for arguments and results:
 
 ```ruby
 class Service < Servus::Base
-  ARGUMENTS_SCHEMA = { type: "object", required: ["user_id"] }.freeze
-  RESULT_SCHEMA = { type: "object", required: ["user"] }.freeze
+  schema(
+    arguments: { type: "object", required: ["user_id"] },
+    result: { type: "object", required: ["user"] }
+  )
 end
 ```
 

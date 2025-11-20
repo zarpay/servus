@@ -92,9 +92,10 @@ module Servus
 
       # Loads and caches a schema for a service.
       #
-      # Implements a two-tier lookup strategy:
-      # 1. Check for inline constant (ARGUMENTS_SCHEMA or RESULT_SCHEMA)
-      # 2. Fall back to JSON file in app/schemas/services/{namespace}/{type}.json
+      # Implements a three-tier lookup strategy:
+      # 1. Check for schema defined via DSL method (service_class.arguments_schema/result_schema)
+      # 2. Check for inline constant (ARGUMENTS_SCHEMA or RESULT_SCHEMA)
+      # 3. Fall back to JSON file in app/schemas/services/{namespace}/{type}.json
       #
       # Schemas are cached after first load for performance.
       #
@@ -103,6 +104,7 @@ module Servus
       # @return [Hash, nil] the schema hash, or nil if no schema found
       #
       # @api private
+      # rubocop:disable Metrics/MethodLength
       def self.load_schema(service_class, type)
         # Get service path based on class name (e.g., "process_payment" from "Servus::ProcessPayment::Service")
         service_namespace = parse_service_namespace(service_class)
@@ -111,14 +113,22 @@ module Servus
         # Return from cache if available
         return @schema_cache[schema_path] if @schema_cache.key?(schema_path)
 
+        # Check for DSL-defined schema first
+        dsl_schema = if type == 'arguments'
+                       service_class.arguments_schema
+                     else
+                       service_class.result_schema
+                     end
+
         inline_schema_constant_name = "#{service_class}::#{type.upcase}_SCHEMA"
         inline_schema_constant = if Object.const_defined?(inline_schema_constant_name)
                                    Object.const_get(inline_schema_constant_name)
                                  end
 
-        @schema_cache[schema_path] = fetch_schema_from_sources(inline_schema_constant, schema_path)
+        @schema_cache[schema_path] = fetch_schema_from_sources(dsl_schema, inline_schema_constant, schema_path)
         @schema_cache[schema_path]
       end
+      # rubocop:enable Metrics/MethodLength
 
       # Clears the schema cache.
       #
@@ -143,20 +153,24 @@ module Servus
         @schema_cache
       end
 
-      # Fetches schema from inline constant or file.
+      # Fetches schema from DSL, inline constant, or file.
       #
       # Implements the schema resolution precedence:
-      # 1. Inline constant (if provided)
-      # 2. File at schema_path (if exists)
-      # 3. nil (no schema found)
+      # 1. DSL-defined schema (if provided)
+      # 2. Inline constant (if provided)
+      # 3. File at schema_path (if exists)
+      # 4. nil (no schema found)
       #
+      # @param dsl_schema [Hash, nil] schema from DSL method (e.g., schema arguments: {...})
       # @param inline_schema_constant [Hash, nil] inline schema constant (e.g., ARGUMENTS_SCHEMA)
       # @param schema_path [String] file path to external schema JSON
       # @return [Hash, nil] schema with indifferent access, or nil if not found
       #
       # @api private
-      def self.fetch_schema_from_sources(inline_schema_constant, schema_path)
-        if inline_schema_constant
+      def self.fetch_schema_from_sources(dsl_schema, inline_schema_constant, schema_path)
+        if dsl_schema
+          dsl_schema.with_indifferent_access
+        elsif inline_schema_constant
           inline_schema_constant.with_indifferent_access
         elsif File.exist?(schema_path)
           JSON.load_file(schema_path).with_indifferent_access

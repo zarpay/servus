@@ -4,7 +4,51 @@ Servus provides optional JSON Schema validation for service arguments and result
 
 ## How It Works
 
-Define schemas as constants or JSON files. The framework validates arguments before execution and results after execution. Invalid data raises `ValidationError`.
+Define schemas using the `schema` DSL method (recommended) or as constants. The framework validates arguments before execution and results after execution. Invalid data raises `ValidationError`.
+
+### Preferred: Schema DSL Method
+
+```ruby
+class ProcessPayment::Service < Servus::Base
+  schema(
+    arguments: {
+      type: "object",
+      required: ["user_id", "amount"],
+      properties: {
+        user_id: { type: "integer" },
+        amount: { type: "number", minimum: 0.01 }
+      }
+    },
+    result: {
+      type: "object",
+      required: ["transaction_id", "new_balance"],
+      properties: {
+        transaction_id: { type: "string" },
+        new_balance: { type: "number" }
+      }
+    }
+  )
+end
+```
+
+You can define just one schema if needed:
+
+```ruby
+class SendEmail::Service < Servus::Base
+  schema arguments: {
+    type: "object",
+    required: ["email", "subject"],
+    properties: {
+      email: { type: "string", format: "email" },
+      subject: { type: "string" }
+    }
+  }
+end
+```
+
+### Alternative: Inline Constants
+
+Constants are still supported for backwards compatibility:
 
 ```ruby
 class ProcessPayment::Service < Servus::Base
@@ -30,11 +74,18 @@ end
 
 ## File-Based Schemas
 
-For complex schemas, use JSON files instead of inline constants. Create files at:
+For complex schemas, use JSON files instead of inline definitions. Create files at:
 - `app/schemas/services/service_name/arguments.json`
 - `app/schemas/services/service_name/result.json`
 
-Servus checks for inline constants first, then JSON files. Schemas are cached after first load for performance.
+### Schema Lookup Precedence
+
+Servus checks for schemas in this order:
+1. **schema DSL method** (if defined)
+2. **Inline constants** (ARGUMENTS_SCHEMA, RESULT_SCHEMA)
+3. **JSON files** (in schema_root directory)
+
+Schemas are cached after first load for performance.
 
 ## Three Layers of Validation
 
