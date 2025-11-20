@@ -212,7 +212,7 @@ module Servus
     #
     # @api private
     def self.after_call(result)
-      Validator.validate_result!(self, args)
+      Validator.validate_result!(self, result)
     end
 
     # Measures service execution time and logs the result.
