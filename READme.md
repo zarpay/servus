@@ -171,6 +171,7 @@ Always use the class method `call` instead of manual instantiation. The `call
 2. Calls the instance-level `call` method
 3. Handles schema validation of inputs and outputs
 4. Handles logging of inputs and results
+5. Automatically benchmarks execution time for performance monitoring
 
 ```ruby
 # Good ✅
@@ -246,25 +247,25 @@ class SomeServiceObject::Service < Servus::Base
 	def call
 		# Return default ServiceError with custom message
 		failure("That didn't work for some reason")
-		#=> Response(false, nil, ApplicationService::Support::Errors::ServiceError("That didn't work for some reason"))
+		#=> Response(false, nil, Servus::Support::Errors::ServiceError("That didn't work for some reason"))
 		#
 		# OR
 		#
 		# Specify ServiceError type with custom message
 		failure("Custom message", type: Servus::Support::Errors::NotFoundError)
-		#=> Response(false, nil, ApplicationService::Support::Errors::NotFoundError("Custom message"))
+		#=> Response(false, nil, Servus::Support::Errors::NotFoundError("Custom message"))
 		#
 		# OR
 		#
 		# Specify ServiceError type with default message
 		failure(type: Servus::Support::Errors::NotFoundError)
-		#=> Response(false, nil, ApplicationService::Support::Errors::NotFoundError("Record not found"))
+		#=> Response(false, nil, Servus::Support::Errors::NotFoundError("Not found"))
 		#
 		# OR
 		#
 		# Accept all defaults
 		failure
-		#=> Response(false, nil, ApplicationService::Support::Errors::ServiceError("An error occurred"))
+		#=> Response(false, nil, Servus::Support::Errors::ServiceError("An error occurred"))
 	end
 end
 
@@ -495,4 +496,69 @@ Both file-based and inline schemas are automatically cached:
 
 - First validation request loads and caches the schema
 - Subsequent validations use the cached version
-- Cache can be cleared using `SchemaValidation.clear_cache!`
+- Cache can be cleared using `Servus::Support::Validator.clear_cache!`
+
+## **Logging**
+
+Servus automatically logs service execution details, making it easy to track and debug service calls.
+
+### Automatic Logging
+
+Every service call automatically logs:
+
+- **Service invocation** with input arguments
+- **Success results** with execution duration
+- **Failure results** with error details and duration
+- **Validation errors** for schema violations
+- **Uncaught exceptions** with error messages
+
+### Logger Configuration
+
+The logger automatically adapts to your environment:
+
+- **Rails applications**: Uses `Rails.logger`
+- **Non-Rails applications**: Uses stdout logger
+
+### Log Output Examples
+
+```ruby
+# Success
+INFO -- : Calling Services::ProcessPayment::Service with args: {:user_id=>123, :amount=>50}
+INFO -- : Services::ProcessPayment::Service succeeded in 0.245s
+
+# Failure
+INFO -- : Calling Services::ProcessPayment::Service with args: {:user_id=>123, :amount=>50}
+WARN -- : Services::ProcessPayment::Service failed in 0.156s with error: Insufficient funds
+
+# Validation Error
+ERROR -- : Services::ProcessPayment::Service validation error: The property '#/amount' value -10 was less than minimum value 1
+
+# Exception
+ERROR -- : Services::ProcessPayment::Service uncaught exception: NoMethodError - undefined method 'charge' for nil:NilClass
+```
+
+All logging happens transparently when using the class-level `.call` method. This is one of the reasons why direct instantiation (bypassing `.call`) is discouraged.
+
+## **Configuration**
+
+Servus can be configured to customize behavior for your application needs.
+
+### Schema Root Directory
+
+By default, Servus looks for schema files in `app/schemas/services/`. You can customize this location:
+
+```ruby
+# config/initializers/servus.rb
+Servus.configure do |config|
+  config.schema_root = Rails.root.join('lib/schemas')
+end
+```
+
+### Default Behavior
+
+Without explicit configuration:
+
+- **Rails applications**: Schema root defaults to `Rails.root/app/schemas/services`
+- **Non-Rails applications**: Schema root defaults to `./app/schemas/services` relative to the gem installation
+
+The configuration is accessed through the singleton `Servus.config` instance and can be modified using `Servus.configure`.

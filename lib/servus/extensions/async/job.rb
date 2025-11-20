@@ -3,21 +3,32 @@
 module Servus
   module Extensions
     module Async
-      # Job to run a service class with given arguments.
+      # ActiveJob for executing Servus services asynchronously.
       #
-      # This job will be migrated to Servus once it's stable as a .call_async method.
-      # It takes the fully-qualified class name of the service as a string and any keyword arguments
-      # required by the service's .call method.
+      # This job is used by {Call#call_async} to execute services in the background.
+      # It receives the service class name and arguments, instantiates the service,
+      # and executes it via {Servus::Base.call}.
       #
-      # Example usage:
-      #   RunServiceJob.perform_later('SomeModule::SomeService', arg1: value1, arg2: value2)
+      # @example Enqueued by call_async
+      #   Services::SendEmail::Service.call_async(user_id: 123)
+      #   # Internally enqueues:
+      #   #   Job.perform_later(name: "Services::SendEmail::Service", args: { user_id: 123 })
       #
-      # This will invoke SomeModule::SomeService.call(arg1: value1, arg2: value2) in a background job.
-      #
-      # Errors during service execution are logged.
+      # @api private
       class Job < ActiveJob::Base
         queue_as :default
 
+        # Executes the service with the provided arguments.
+        #
+        # Dynamically loads the service class by name and calls it with the
+        # provided keyword arguments.
+        #
+        # @param name [String] fully-qualified service class name
+        # @param args [Hash] keyword arguments to pass to the service
+        # @return [Servus::Support::Response] the service execution result
+        # @raise [Servus::Extensions::Async::Errors::ServiceNotFoundError] if service class doesn't exist
+        #
+        # @api private
         def perform(name:, args:)
           constantize!(name).call(**args)
         end
@@ -26,6 +37,16 @@ module Servus
 
         attr_reader :klass
 
+        # Safely constantizes a class name string.
+        #
+        # Converts a string class name to its corresponding class constant,
+        # raising an error if the class doesn't exist.
+        #
+        # @param class_name [String] the service class name
+        # @return [Class] the service class
+        # @raise [Servus::Extensions::Async::Errors::ServiceNotFoundError] if class not found
+        #
+        # @api private
         def constantize!(class_name)
           "::#{class_name}".safe_constantize ||
             (raise Errors::ServiceNotFoundError, "Service class '#{class_name}' not found.")

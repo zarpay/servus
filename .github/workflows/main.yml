@@ -1,11 +1,13 @@
 name: Ruby
 
+# On all pushes and pull requests, run the workflow
 on:
   push:
     branches:
-      - master
-
+      - '**'
   pull_request:
+    branches:
+      - '**'
 
 jobs:
   build:
@@ -23,5 +25,12 @@ jobs:
       with:
         ruby-version: ${{ matrix.ruby }}
         bundler-cache: true
-    - name: Run the default task
-      run: bundle exec rake
+    # Install dependencies
+    - name: Install Dependencies
+      run: bundle install
+    # Run linters and static analysis
+    - name: Run RuboCop
+      run: bundle exec rubocop
+    # Run the test suite
+    - name: Run the Specs
+      run: bundle exec rspec
