@@ -3,22 +3,21 @@
 require_relative 'lib/servus/version'
 
 Gem::Specification.new do |spec|
-  spec.name = 'servus'
+  spec.name    = 'servus'
   spec.version = Servus::VERSION
   spec.authors = ['Sebastian Scholl']
-  spec.email = ['sebscholl@gmail.com']
+  spec.email   = ['sebscholl@gmail.com']
 
-  spec.summary = 'A gem for managing service objects.'
-  spec.description = 'A gem for managing service objects.'
-  spec.homepage = 'https://github.com/zarpay/servus'
-  spec.license = 'MIT'
+  spec.license     = 'MIT'
+  spec.homepage    = 'https://github.com/zarpay/servus'
+  spec.summary     = 'A gem for managing service objects.'
+  spec.description = 'Servus is a Ruby gem that provides a structured way to create and manage service objects, promoting clean code architecture and separation of concerns in your applications.'
+
   spec.required_ruby_version = '>= 3.0.0'
 
   spec.metadata['allowed_push_host'] = 'https://rubygems.org'
-
-  spec.metadata['homepage_uri'] = spec.homepage
-  spec.metadata['source_code_uri'] = 'https://github.com/zarpay/servus'
-  spec.metadata['changelog_uri'] = 'https://github.com/zarpay/servus/blob/main/CHANGELOG.md'
+  spec.metadata['source_code_uri']   = 'https://github.com/zarpay/servus'
+  spec.metadata['changelog_uri']     = 'https://github.com/zarpay/servus/blob/main/CHANGELOG.md'
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
@@ -35,11 +34,11 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   # Uncomment to register a new dependency of your gem
-  spec.add_dependency 'active_model_serializers'
-  spec.add_dependency 'activesupport'
-  spec.add_dependency 'json-schema'
+  spec.add_dependency 'active_model_serializers', '~> 0.10.0'
+  spec.add_dependency 'activesupport', '~> 8.0'
+  spec.add_dependency 'json-schema', '~> 5'
 
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html
-  spec.add_development_dependency 'actionpack'
+  spec.add_development_dependency 'actionpack', '~> 8.0'
 end

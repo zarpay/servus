@@ -2,9 +2,9 @@ PATH
   remote: .
   specs:
     servus (0.1.3)
-      active_model_serializers
-      activesupport
-      json-schema
+      active_model_serializers (~> 0.10.0)
+      activesupport (~> 8.0)
+      json-schema (~> 5)
 
 GEM
   remote: https://rubygems.org/
@@ -200,7 +200,7 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
-  actionpack
+  actionpack (~> 8.0)
   active_model_serializers
   activejob
   activesupport
