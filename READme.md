@@ -1,5 +1,6 @@
 ## Servus Gem
 
+
 Servus is a gem for creating and managing service objects. It includes:
 
 - A base class for service objects
@@ -8,7 +9,7 @@ Servus is a gem for creating and managing service objects. It includes:
 - Support for error handling
 - Support for logging
 
-
+👉🏽 [View the docs](https://zarpay.github.io/servus/)
 
 ## Generators
 
