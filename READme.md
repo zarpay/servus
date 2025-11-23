@@ -120,10 +120,6 @@ end
 
 ```
 
-Here’s a section you can add to your README for the new `.call_async` feature, matching the style of your existing `## Inheritance` section:
-
----
-
 ## **Asynchronous Execution**
 
 You can asynchronously execute any service class that inherits from `Servus::Base` using `.call_async`. This uses `ActiveJob` under the hood and supports standard job options (`wait`, `queue`, `priority`, etc.). Only available in environments where `ActiveJob` is loaded (e.g., Rails apps)
