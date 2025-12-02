@@ -25,6 +25,10 @@ require_relative 'servus/support/validator'
 require_relative 'servus/support/errors'
 require_relative 'servus/support/rescuer'
 
+# Events
+require_relative 'servus/events/bus'
+require_relative 'servus/events/emitter'
+
 # Core
 require_relative 'servus/version'
 require_relative 'servus/base'

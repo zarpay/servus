@@ -1,0 +1,1 @@
+We're going to go over #$ARGUMENTS with a fine-tooth comb. I want detailed explanations and no edits unless I ask for them. Start by identifying the first thing that looks wrong and explain why.

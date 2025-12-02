@@ -1,0 +1,1 @@
+Are the latest changes consistent with the way that similar functionality has been implemented in the rest of the codebase? #$ARGUMENTS

@@ -9,3 +9,7 @@ Metrics/BlockLength:
 
 Lint/ConstantDefinitionInBlock:
   Enabled: false
+
+Lint/MissingSuper:
+  Exclude:
+    - 'spec/**/*'

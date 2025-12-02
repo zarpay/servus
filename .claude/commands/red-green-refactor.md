@@ -1,0 +1,5 @@
+During this session we will be practicing TDD in the red-green-refactor cycle. The first step in the cycle is to write a test for the smallest possible unit of functionality. Once the test is written, run the test and it should fail. This is the red phase. The next step is to write the code to make the test pass. This is the green phase. Once the test passes, the code is refactored to be more readable and maintainable. This is the refactor phase.
+
+If we get into a situation where more than one test fails, we will focus on the test that is most important to fix first. During that fix phase, we will only run the test that is failing until it passes.
+
+While we're in this mode, you will not use your TODO tool to track tasks. You will rely on me (the human user) to tell you what the next step is.
