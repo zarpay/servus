@@ -49,10 +49,10 @@ RSpec::Matchers.define :emit_event do |handler_class_or_symbol|
   failure_message do
     if @matching_event.nil?
       "expected event :#{@event_name} to be emitted, but it was not.\n" \
-      "Emitted: #{@captured_events.map { |e| e[:name] }}"
+        "Emitted: #{@captured_events.map { |e| e[:name] }}"
     else
       "expected event :#{@event_name} payload to match #{@expected_payload.inspect}, " \
-      "got: #{@matching_event[:payload].inspect}"
+        "got: #{@matching_event[:payload].inspect}"
     end
   end
 end

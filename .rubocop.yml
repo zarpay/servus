@@ -1,17 +1,25 @@
 AllCops:
+  NewCops: enable
   Include:
     - 'lib/**/*.rb'
     - 'spec/**/*.rb'
   Exclude:
     - 'spec/dummy/**/*'
 
-Metrics/BlockLength:
-  Exclude:
-    - 'spec/**/*'
-
 Lint/ConstantDefinitionInBlock:
   Enabled: false
+
+Lint/ConstantReassignment:
+  Exclude:
+    - 'spec/**/*'
 
 Lint/MissingSuper:
   Exclude:
     - 'spec/**/*'
+
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*'
+
+Naming/PredicateMethod:
+  Enabled: false

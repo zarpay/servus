@@ -25,7 +25,7 @@ module Servus
 
       # Eager load all event handlers
       events_path = Rails.root.join(Servus.config.events_dir)
-      Dir[File.join(events_path, '**/*_handler.rb')].sort.each do |handler_file|
+      Dir[File.join(events_path, '**/*_handler.rb')].each do |handler_file|
         require_dependency handler_file
       end
     end
