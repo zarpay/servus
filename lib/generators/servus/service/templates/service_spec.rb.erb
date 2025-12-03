@@ -1,9 +1,70 @@
-require "rails_helper"
+# frozen_string_literal: true
+
+require 'rails_helper'
 
 RSpec.describe <%= service_full_class_name %> do
-  describe "#call" do
-    it "does something" do
-      # Add expectations here
-    end
+<%- unless options[:no_docs] -%>
+  # Test the service by calling it with valid arguments and asserting on the result.
+  #
+  # Example test patterns:
+  #
+  #   it 'returns success with expected data' do
+  #     result = described_class.call(<%= parameters.empty? ? '' : parameters.map { |p| "#{p}: #{p}_value" }.join(', ') %>)
+  #
+  #     expect(result).to be_success
+  #     expect(result.data).to include(expected_key: expected_value)
+  #   end
+  #
+  #   it 'returns failure when validation fails' do
+  #     result = described_class.call(<%= parameters.empty? ? '' : parameters.map { |p| "#{p}: invalid_value" }.join(', ') %>)
+  #
+  #     expect(result).to be_failure
+  #     expect(result.error.message).to eq('Expected error message')
+  #   end
+  #
+  # For testing async execution:
+  #   it 'enqueues the service job' do
+  #     expect {
+  #       described_class.call_async(<%= parameters.empty? ? '' : parameters.map { |p| "#{p}: #{p}_value" }.join(', ') %>)
+  #     }.to have_enqueued_job(Servus::ServiceJob)
+  #   end
+  #
+  # For testing event emissions:
+  #   include Servus::Testing::EventHelpers
+  #
+  #   it 'emits expected event on success' do
+  #     servus_expect_event(:event_name)
+  #       .with_payload(hash_including(key: value))
+  #       .when { described_class.call(<%= parameters.empty? ? '' : parameters.map { |p| "#{p}: value" }.join(', ') %>) }
+  #   end
+
+<%- end -%>
+<%- if parameters.any? -%>
+  let(:<%= parameters.first %>) { nil } # TODO: Set valid test value
+<%- parameters[1..-1]&.each do |param| -%>
+  let(:<%= param %>) { nil } # TODO: Set valid test value
+<%- end -%>
+
+<%- end -%>
+  describe '#call' do
+<%- unless options[:no_docs] -%>
+    # TODO: Add success case test
+    # it 'returns success with expected data' do
+    #   result = described_class.call(<%= parameters.empty? ? '' : parameters.map { |p| "#{p}: #{p}" }.join(', ') %>)
+    #
+    #   expect(result).to be_success
+    #   expect(result.data).to include(key: value)
+    # end
+
+    # TODO: Add failure case test
+    # it 'returns failure when conditions are not met' do
+    #   result = described_class.call(<%= parameters.empty? ? '' : parameters.map { |p| "#{p}: invalid_#{p}" }.join(', ') %>)
+    #
+    #   expect(result).to be_failure
+    #   expect(result.error.message).to eq('Expected error')
+    # end
+<%- else -%>
+    # Add your tests here
+<%- end -%>
   end
 end

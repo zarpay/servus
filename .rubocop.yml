@@ -2,6 +2,8 @@ AllCops:
   Include:
     - 'lib/**/*.rb'
     - 'spec/**/*.rb'
+  Exclude:
+    - 'spec/dummy/**/*'
 
 Metrics/BlockLength:
   Exclude:

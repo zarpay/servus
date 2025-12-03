@@ -1,15 +1,24 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "<%= service_class_name %> Arguments",
+  "description": "JSON Schema for validating <%= service_class_name %> input arguments",
   "type": "object",
   "properties": {
-    <%- parameters.each do |param| %>
-      "<%= param %>": {
-        "type": "UNDECLARED_TYPE"
-      }
-    <% end %>
+<%- parameters.each_with_index do |param, index| -%>
+    "<%= param %>": {
+      "type": "string",
+      "description": "TODO: Describe the <%= param %> parameter"
+    }<%= index < parameters.length - 1 ? ',' : '' %>
+<%- end -%>
+<%- if parameters.empty? -%>
   },
+<%- else -%>
+  },
+<%- end -%>
   "required": [
-    <%- parameters.each do |param| %>
-      "<%= param %>",
-    <% end %>
-  ]
+<%- parameters.each_with_index do |param, index| -%>
+    "<%= param %>"<%= index < parameters.length - 1 ? ',' : '' %>
+<%- end -%>
+  ],
+  "additionalProperties": false
 }

@@ -8,6 +8,7 @@ Servus is a gem for creating and managing service objects. It includes:
 - Support for schema validation
 - Support for error handling
 - Support for logging
+- Event-driven architecture with EventHandlers
 
 👉🏽 [View the docs](https://zarpay.github.io/servus/)
 
@@ -602,3 +603,153 @@ Without explicit configuration:
 - **Non-Rails applications**: Schema root defaults to `./app/schemas/services` relative to the gem installation
 
 The configuration is accessed through the singleton `Servus.config` instance and can be modified using `Servus.configure`.
+
+## **Event Bus**
+
+Servus includes an event-driven architecture for decoupling service logic from side effects. Services emit events, and EventHandlers subscribe to them and invoke downstream services.
+
+### Emitting Events from Services
+
+Services can declare events that are emitted on success or failure:
+
+```ruby
+class CreateUser::Service < Servus::Base
+  emits :user_created, on: :success
+  emits :user_creation_failed, on: :failure
+
+  def initialize(email:, name:)
+    @email = email
+    @name = name
+  end
+
+  def call
+    user = User.create!(email: @email, name: @name)
+    success(user: user)
+  rescue ActiveRecord::RecordInvalid => e
+    failure(e.message)
+  end
+end
+```
+
+Custom payloads can be provided via blocks or method references:
+
+```ruby
+emits :user_created, on: :success do |result|
+  { user_id: result.data[:user].id, email: result.data[:user].email }
+end
+```
+
+### Event Handlers
+
+EventHandlers subscribe to events and invoke services in response. They live in `app/events/`:
+
+```ruby
+# app/events/user_created_handler.rb
+class UserCreatedHandler < Servus::EventHandler
+  handles :user_created
+
+  invoke SendWelcomeEmail::Service, async: true do |payload|
+    { user_id: payload[:user_id], email: payload[:email] }
+  end
+
+  invoke TrackAnalytics::Service, async: true do |payload|
+    { event: 'user_created', user_id: payload[:user_id] }
+  end
+end
+```
+
+### Generate Event Handler
+
+```bash
+$ rails g servus:event_handler user_created
+=>    create  app/events/user_created_handler.rb
+      create  spec/events/user_created_handler_spec.rb
+```
+
+### Invocation Options
+
+```ruby
+# Synchronous (default)
+invoke NotifyAdmin::Service do |payload|
+  { message: "New user: #{payload[:email]}" }
+end
+
+# Async via ActiveJob
+invoke SendEmail::Service, async: true do |payload|
+  { user_id: payload[:user_id] }
+end
+
+# Async with specific queue
+invoke SendEmail::Service, async: true, queue: :mailers do |payload|
+  { user_id: payload[:user_id] }
+end
+
+# Conditional invocation
+invoke GrantRewards::Service, if: ->(p) { p[:premium] } do |payload|
+  { user_id: payload[:user_id] }
+end
+```
+
+### Emitting Events Directly
+
+EventHandlers provide an `emit` class method for emitting events from controllers, jobs, or other code:
+
+```ruby
+class UsersController < ApplicationController
+  def create
+    user = User.create!(user_params)
+    UserCreatedHandler.emit({ user_id: user.id, email: user.email })
+    redirect_to user
+  end
+end
+```
+
+### Payload Schema Validation
+
+Define JSON schemas to validate event payloads:
+
+```ruby
+class UserCreatedHandler < Servus::EventHandler
+  handles :user_created
+
+  schema payload: {
+    type: 'object',
+    required: ['user_id', 'email'],
+    properties: {
+      user_id: { type: 'integer' },
+      email: { type: 'string', format: 'email' }
+    }
+  }
+
+  invoke SendWelcomeEmail::Service, async: true do |payload|
+    { user_id: payload[:user_id], email: payload[:email] }
+  end
+end
+```
+
+### Testing Events
+
+Servus provides RSpec matchers for testing events:
+
+```ruby
+# Test that a service emits an event
+it 'emits user_created event' do
+  expect {
+    CreateUser::Service.call(email: 'test@example.com', name: 'Test')
+  }.to emit_event(:user_created)
+end
+
+# Test payload content
+it 'emits event with expected payload' do
+  expect {
+    CreateUser::Service.call(email: 'test@example.com', name: 'Test')
+  }.to emit_event(:user_created).with(hash_including(email: 'test@example.com'))
+end
+
+# Test handler invokes service
+it 'invokes SendWelcomeEmail' do
+  expect {
+    UserCreatedHandler.handle(payload)
+  }.to call_service(SendWelcomeEmail::Service).with(user_id: 123)
+end
+```

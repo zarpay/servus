@@ -7,12 +7,12 @@ Servus wraps service execution with automatic validation, logging, and error han
 ## Execution Flow
 
 ```
-Arguments → Validation → Service#call → Result Validation → Logging → Response
-                ↓                              ↓                ↓
-          ValidationError                ValidationError     Benchmark
+Arguments → Validation → Service#call → Result Validation → Event Emission → Logging → Response
+                ↓                              ↓                   ↓              ↓
+          ValidationError                ValidationError      EventHandlers   Benchmark
 ```
 
-The framework intercepts the `.call` class method to inject cross-cutting concerns before and after your business logic runs. Your `call` instance method contains only business logic - validation, logging, and timing happen automatically.
+The framework intercepts the `.call` class method to inject cross-cutting concerns before and after your business logic runs. Your `call` instance method contains only business logic - validation, logging, event emission, and timing happen automatically.
 
 ## Core Components
 
@@ -27,6 +27,12 @@ The framework intercepts the `.call` class method to inject cross-cutting concer
 **Support::Rescuer** (`lib/servus/support/rescuer.rb`): Declarative exception handling via `rescue_from` class method
 
 **Support::Errors** (`lib/servus/support/errors.rb`): HTTP-aligned error hierarchy (ServiceError, NotFoundError, ValidationError, etc.)
+
+**Events::Emitter** (`lib/servus/events/emitter.rb`): DSL for declaring events that services emit on success/failure
+
+**Events::Bus** (`lib/servus/events/bus.rb`): Central event router using ActiveSupport::Notifications for thread-safe dispatch
+
+**EventHandler** (`lib/servus/event_handler.rb`): Base class for handlers that subscribe to events and invoke services
 
 ## Extension Points
 
@@ -83,6 +89,28 @@ ProcessPayment::Service.call_async(
   wait: 5.minutes
 )
 ```
+
+## Event-Driven Architecture
+
+Services can emit events that trigger downstream handlers. This decouples services from their side effects.
+
+```ruby
+# Service emits events
+class CreateUser::Service < Servus::Base
+  emits :user_created, on: :success
+end
+
+# Handler reacts to events
+class UserCreatedHandler < Servus::EventHandler
+  handles :user_created
+
+  invoke SendWelcomeEmail::Service, async: true do |payload|
+    { user_id: payload[:user_id] }
+  end
+end
+```
+
+See {file:docs/features/5_event_bus.md Event Bus} for full documentation.
 
 ## Performance
 

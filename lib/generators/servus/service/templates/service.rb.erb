@@ -1,12 +1,109 @@
+# frozen_string_literal: true
+
+<%- unless options[:no_docs] -%>
+# Performs <%= file_name.humanize.downcase %> operations.
+#
+# Services encapsulate business logic with automatic validation, logging,
+# benchmarking, and error handling. They return Response objects indicating
+# success or failure.
+#
+# @example Basic usage
+#   result = <%= service_full_class_name %>.call(<%= parameters.empty? ? '' : parameters.map { |p| "#{p}: value" }.join(', ') %>)
+#
+#   if result.success?
+#     result.data # => { ... }
+#   else
+#     result.error.message # => "Error description"
+#   end
+#
+<%- unless parameters.empty? -%>
+# @example With all parameters
+#   result = <%= service_full_class_name %>.call(
+<%- parameters.each do |param| -%>
+#     <%= param %>: <%= param %>_value<%= param == parameters.last ? '' : ',' %>
+<%- end -%>
+#   )
+#
+<%- end -%>
+# @example Async execution (via ActiveJob)
+#   <%= service_full_class_name %>.call_async(<%= parameters.empty? ? '' : parameters.map { |p| "#{p}: value" }.join(', ') %>)
+#
+# @example With event emission
+#   class <%= service_class_name %> < Servus::Base
+#     emits :completed, on: :success
+#     emits :failed, on: :failure
+#     # ...
+#   end
+#
+# @see Servus::Base
+# @see Servus::Support::Response
+<%- end -%>
 module <%= class_name %>
   class Service < Servus::Base
+<%- unless options[:no_docs] -%>
+    # TODO: Define argument validation schema (optional but recommended)
+    # schema arguments: {
+    #   type: 'object',
+<%- if parameters.any? -%>
+    #   required: [<%= parameters.map { |p| "'#{p}'" }.join(', ') %>],
+<%- else -%>
+    #   required: [],
+<%- end -%>
+    #   properties: {
+<%- parameters.each do |param| -%>
+    #     <%= param %>: { type: 'string' }<%= param == parameters.last ? '' : ',' %>
+<%- end -%>
+<%- if parameters.empty? -%>
+    #     # property_name: { type: 'string' }
+<%- end -%>
+    #   }
+    # }
+
+    # TODO: Define result validation schema (optional)
+    # schema result: {
+    #   type: 'object',
+    #   required: [],
+    #   properties: {
+    #     # result_field: { type: 'string' }
+    #   }
+    # }
+
+<%- end -%>
+<%- unless options[:no_docs] -%>
+    # Initializes the service with required parameters.
+    #
+<%- parameters.each do |param| -%>
+    # @param <%= param %> [Object] TODO: document this parameter
+<%- end -%>
+<%- if parameters.empty? -%>
+    # @param args [Hash] service arguments
+<%- end -%>
+<%- end -%>
     def initialize<%= parameter_list %>
-      <%= initialize_params %>
+      <%= initialize_params.empty? ? '# TODO: Initialize instance variables' : initialize_params %>
     end
+
+<%- unless options[:no_docs] -%>
+    # Executes the service logic.
+    #
+    # @return [Servus::Support::Response] success or failure response
+    #
+    # @example Returning success
+    #   success({ user_id: 123, status: 'active' })
+    #
+    # @example Returning failure
+    #   failure('Something went wrong')
+    #
+    # @example Returning typed failure
+    #   failure('Not found', type: Servus::Support::Errors::NotFoundError)
+<%- end -%>
     def call
-      # Implement service logic here
+      # TODO: Implement service logic here
       success({})
     end
-    <%= attr_readers %>
+
+    private
+
+    <%= attr_readers.empty? ? '# TODO: Add attr_readers for instance variables' : attr_readers %>
   end
 end

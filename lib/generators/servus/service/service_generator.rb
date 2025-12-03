@@ -24,6 +24,10 @@ module Servus
 
       argument :parameters, type: :array, default: [], banner: 'parameter'
 
+      class_option :no_docs, type: :boolean,
+                             default: false,
+                             desc: 'Skip documentation comments in generated files'
+
       # Creates all service-related files.
       #
       # Generates the service class, spec file, and schema files from templates.

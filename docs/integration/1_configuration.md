@@ -2,22 +2,27 @@
 
 # Configuration
 
-Servus works without configuration. One optional setting exists for schema file location.
+Servus works without configuration. Optional settings exist for customizing directories and event validation.
 
-## Schema Root
+## Directory Configuration
 
-By default, Servus looks for schema JSON files in `Rails.root/app/schemas/services` (or `./app/schemas/services` in non-Rails apps).
-
-Change the location if needed:
+Configure where Servus looks for schemas, services, and event handlers:
 
 ```ruby
 # config/initializers/servus.rb
 Servus.configure do |config|
-  config.schema_root = Rails.root.join('config/schemas')
+  # Default: 'app/schemas'
+  config.schemas_dir = 'app/schemas'
+
+  # Default: 'app/services'
+  config.services_dir = 'app/services'
+
+  # Default: 'app/events'
+  config.events_dir = 'app/events'
 end
 ```
 
-This affects legacy file-based schemas only - schemas defined via the `schema` DSL method do not use files.
+These affect legacy file-based schemas and handler auto-loading. Schemas defined via the `schema` DSL method do not use files.
 
 ## Schema Cache
 
@@ -49,3 +54,51 @@ config.active_job.default_queue_name = :default
 ```
 
 Servus respects ActiveJob queue configuration - no Servus-specific setup needed.
+
+## Event Bus Configuration
+
+### Strict Event Validation
+
+Enable strict validation to catch handlers subscribing to events that aren't emitted by any service:
+
+```ruby
+# config/initializers/servus.rb
+Servus.configure do |config|
+  # Default: true
+  config.strict_event_validation = true
+end
+```
+
+When enabled, you can validate handlers at boot or in CI:
+
+```ruby
+# In a rake task or initializer
+Servus::EventHandler.validate_all_handlers!
+```
+
+This raises `Servus::Events::OrphanedHandlerError` if any handler subscribes to a non-existent event.
+
+### Handler Auto-Loading
+
+In Rails, handlers in `app/events/` are automatically loaded. The Railtie:
+- Clears the event bus on reload in development
+- Eager-loads all `*_handler.rb` files from `config.events_dir`
+
+```
+app/events/
+├── user_created_handler.rb
+├── payment_processed_handler.rb
+└── order_completed_handler.rb
+```
+
+### Event Instrumentation
+
+Events are instrumented via ActiveSupport::Notifications with the prefix `servus.events.`:
+
+```ruby
+# Subscribe to all Servus events
+ActiveSupport::Notifications.subscribe(/^servus\.events\./) do |name, *args|
+  event_name = name.sub('servus.events.', '')
+  Rails.logger.info "Event: #{event_name}"
+end
+```

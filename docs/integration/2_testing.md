@@ -162,3 +162,126 @@ it "validates required fields" do
   }.to raise_error(Servus::Support::Errors::ValidationError, /required/)
 end
 ```
+
+## Testing Event Emission
+
+Servus provides RSpec matchers for testing that services emit events.
+
+### Setup
+
+Include the matchers in your test suite:
+
+```ruby
+# spec/spec_helper.rb
+require 'servus/testing'
+```
+
+### emit_event Matcher
+
+Assert that a block emits an event:
+
+```ruby
+RSpec.describe CreateUser::Service do
+  it 'emits user_created event on success' do
+    expect {
+      described_class.call(email: 'test@example.com', name: 'Test')
+    }.to emit_event(:user_created)
+  end
+
+  it 'emits event with expected payload' do
+    expect {
+      described_class.call(email: 'test@example.com', name: 'Test')
+    }.to emit_event(:user_created).with(hash_including(email: 'test@example.com'))
+  end
+
+  # Using handler class instead of symbol
+  it 'emits to UserCreatedHandler' do
+    expect {
+      described_class.call(email: 'test@example.com', name: 'Test')
+    }.to emit_event(UserCreatedHandler)
+  end
+end
+```
+
+### call_service Matcher
+
+Assert that a handler invokes a service:
+
+```ruby
+RSpec.describe UserCreatedHandler do
+  let(:payload) { { user_id: 123, email: 'test@example.com' } }
+
+  it 'invokes SendWelcomeEmail::Service' do
+    expect {
+      described_class.handle(payload)
+    }.to call_service(SendWelcomeEmail::Service).with(user_id: 123)
+  end
+
+  it 'invokes service asynchronously' do
+    expect {
+      described_class.handle(payload)
+    }.to call_service(SendWelcomeEmail::Service).async
+  end
+end
+```
+
+### Testing EventHandler Directly
+
+Test handlers by calling their `handle` class method:
+
+```ruby
+RSpec.describe UserCreatedHandler do
+  let(:payload) { { user_id: 123, email: 'test@example.com' } }
+
+  before do
+    allow(SendWelcomeEmail::Service).to receive(:call_async)
+    allow(TrackAnalytics::Service).to receive(:call_async)
+  end
+
+  it 'invokes SendWelcomeEmail with mapped arguments' do
+    described_class.handle(payload)
+
+    expect(SendWelcomeEmail::Service)
+      .to have_received(:call_async)
+      .with(user_id: 123, email: 'test@example.com')
+  end
+
+  it 'invokes TrackAnalytics with event data' do
+    described_class.handle(payload)
+
+    expect(TrackAnalytics::Service)
+      .to have_received(:call_async)
+      .with(event: 'user_created', user_id: 123)
+  end
+
+  context 'with conditional invocation' do
+    it 'skips premium rewards for non-premium users' do
+      allow(GrantPremiumRewards::Service).to receive(:call)
+
+      described_class.handle(payload.merge(premium: false))
+
+      expect(GrantPremiumRewards::Service).not_to have_received(:call)
+    end
+  end
+end
+```
+
+### Testing Event Emission from Handler
+
+Test the `emit` class method:
+
+```ruby
+RSpec.describe UserCreatedHandler do
+  it 'emits the user_created event' do
+    expect {
+      described_class.emit({ user_id: 123, email: 'test@example.com' })
+    }.to emit_event(:user_created)
+  end
+
+  it 'validates payload against schema' do
+    expect {
+      described_class.emit({ invalid: 'payload' })
+    }.to raise_error(Servus::Support::Errors::ValidationError)
+  end
+end
+```
