@@ -352,4 +352,56 @@ RSpec.describe Servus::EventHandler do
         .to raise_error(RuntimeError, /No event configured/)
     end
   end
+
+  describe 'schema' do
+    it 'defines payload schema for validation' do
+      handler_class = Class.new(described_class) do
+        handles :user_created
+
+        schema payload: {
+          type: 'object',
+          required: ['user_id'],
+          properties: {
+            user_id: { type: 'integer' }
+          }
+        }
+      end
+
+      expect(handler_class.payload_schema).to include('type' => 'object')
+      expect(handler_class.payload_schema['required']).to eq(['user_id'])
+    end
+
+    it 'validates payload when emitting' do
+      handler_class = Class.new(described_class) do
+        handles :user_created
+
+        schema payload: {
+          type: 'object',
+          required: ['user_id'],
+          properties: {
+            user_id: { type: 'integer' }
+          }
+        }
+      end
+
+      expect { handler_class.emit({ user_id: 123 }) }.not_to raise_error
+    end
+
+    it 'raises ValidationError for invalid payload' do
+      handler_class = Class.new(described_class) do
+        handles :user_created
+
+        schema payload: {
+          type: 'object',
+          required: ['user_id'],
+          properties: {
+            user_id: { type: 'integer' }
+          }
+        }
+      end
+
+      expect { handler_class.emit({ user_id: 'not-an-integer' }) }
+        .to raise_error(Servus::Support::Errors::ValidationError, /user_id/)
+    end
+  end
 end

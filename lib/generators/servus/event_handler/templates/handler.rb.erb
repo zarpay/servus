@@ -1,0 +1,86 @@
+# frozen_string_literal: true
+
+<%- unless options[:no_docs] -%>
+# Handles the :<%= file_name %> event by invoking configured services.
+#
+# EventHandlers subscribe to a single event and declaratively map it to one or
+# more service invocations. This provides clean separation between event emission
+# (what happened) and event handling (what to do about it).
+#
+# @example Basic usage
+#   class <%= handler_class_name %> < Servus::EventHandler
+#     handles :<%= file_name %>
+#
+#     # Invoke a service when this event fires
+#     invoke SendEmail::Service, async: true do |payload|
+#       { user_id: payload[:user_id], email: payload[:email] }
+#     end
+#   end
+#
+# @example Multiple service invocations
+#   invoke SendWelcomeEmail::Service, async: true, queue: :mailers do |payload|
+#     { user_id: payload[:user_id] }
+#   end
+#
+#   invoke TrackAnalytics::Service, async: true do |payload|
+#     { event: '<%= file_name %>', user_id: payload[:user_id] }
+#   end
+#
+# @example Conditional invocation
+#   invoke GrantRewards::Service, if: ->(payload) { payload[:premium] } do |payload|
+#     { user_id: payload[:user_id] }
+#   end
+#
+# @example With payload schema validation
+#   schema payload: {
+#     type: 'object',
+#     required: ['user_id'],
+#     properties: {
+#       user_id: { type: 'integer' },
+#       email: { type: 'string', format: 'email' }
+#     }
+#   }
+#
+# @example Emit this event from anywhere
+#   # From controllers, jobs, rake tasks, etc.
+#   <%= handler_class_name %>.emit({ user_id: 123, email: 'user@example.com' })
+#
+# Available options for `invoke`:
+# - async: true          - Invoke service asynchronously via ActiveJob
+# - queue: :queue_name   - Specify ActiveJob queue (requires async: true)
+# - if: ->(payload) {}   - Condition that must be true to invoke
+# - unless: ->(payload) {} - Condition that must be false to invoke
+#
+# @see Servus::EventHandler
+# @see Servus::Events::Bus
+<%- end -%>
+class <%= handler_class_name %> < Servus::EventHandler
+  handles :<%= file_name %>
+
+<%- unless options[:no_docs] -%>
+  # TODO: Define payload schema (optional but recommended)
+  # schema payload: {
+  #   type: 'object',
+  #   required: ['required_field'],
+  #   properties: {
+  #     required_field: { type: 'string' }
+  #   }
+  # }
+
+  # TODO: Add service invocations
+  # invoke YourService, async: true do |payload|
+  #   {
+  #     # Map event payload to service arguments
+  #     argument_name: payload[:field_name]
+  #   }
+  # end
+<%- end -%>
+  schema payload: {
+    type: 'object',
+    description: 'JSON schema for the <%= handler_class_name %> event payload',
+  }
+
+  # invoke ExampleService, async: true do |payload|
+  #   { example_arg: payload[:example_field] }
+  # end
+end

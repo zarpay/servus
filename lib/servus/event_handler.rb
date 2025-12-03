@@ -94,6 +94,34 @@ module Servus
         @invocations || []
       end
 
+      # Defines the JSON schema for validating event payloads.
+      #
+      # @param payload [Hash, nil] JSON schema for validating event payloads
+      # @return [void]
+      #
+      # @example
+      #   class UserCreatedHandler < Servus::EventHandler
+      #     handles :user_created
+      #
+      #     schema payload: {
+      #       type: 'object',
+      #       required: ['user_id', 'email'],
+      #       properties: {
+      #         user_id: { type: 'integer' },
+      #         email: { type: 'string', format: 'email' }
+      #       }
+      #     }
+      #   end
+      def schema(payload: nil)
+        @payload_schema = payload.with_indifferent_access if payload
+      end
+
+      # Returns the payload schema.
+      #
+      # @return [Hash, nil] the payload schema or nil if not defined
+      # @api private
+      attr_reader :payload_schema
+
       # Emits the event this handler is subscribed to.
       #
       # Provides a type-safe, discoverable way to emit events from anywhere in
@@ -121,6 +149,8 @@ module Servus
       #   end
       def emit(payload)
         raise 'No event configured. Call handles :event_name first.' unless @event_name
+
+        Servus::Support::Validator.validate_event_payload!(self, payload)
 
         Servus::Events::Bus.emit(@event_name, payload)
       end

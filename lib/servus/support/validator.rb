@@ -90,6 +90,33 @@ module Servus
         result
       end
 
+      # Validates event payload against the handler's payload schema.
+      #
+      # @param handler_class [Class] the event handler class
+      # @param payload [Hash] the event payload to validate
+      # @return [Boolean] true if validation passes
+      # @raise [Servus::Support::Errors::ValidationError] if payload fails validation
+      #
+      #
+      # @example
+      #   Validator.validate_event_payload!(MyEventHandler, { user_id: 123 })
+      #
+      # @api private
+      def self.validate_event_payload!(handler_class, payload)
+        schema = handler_class.payload_schema
+        return true unless schema
+
+        serialized_payload = payload.as_json
+        validation_errors = JSON::Validator.fully_validate(schema, serialized_payload)
+
+        if validation_errors.any?
+          raise Servus::Support::Errors::ValidationError,
+                "Invalid payload for event :#{handler_class.event_name}: #{validation_errors.join(', ')}"
+        end
+
+        true
+      end
+
       # Loads and caches a schema for a service.
       #
       # Implements a three-tier lookup strategy:
