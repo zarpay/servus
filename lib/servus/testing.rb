@@ -15,3 +15,4 @@ end
 
 require_relative 'testing/example_extractor'
 require_relative 'testing/example_builders'
+require_relative 'testing/event_helpers'

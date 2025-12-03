@@ -18,5 +18,15 @@ module Servus
         Servus::Base.extend Servus::Extensions::Async::Call
       end
     end
+
+    # Clear event handlers on code reload in development
+    config.to_prepare do
+      Servus::Events::Bus.clear if Rails.env.development?
+    end
+
+    # Validate event handlers after application loads
+    config.after_initialize do
+      Servus::EventHandler.validate_all_handlers!
+    end
   end
 end

@@ -23,12 +23,21 @@ module Servus
     # @return [String] the schema root directory path
     attr_reader :schema_root
 
+    # Whether to validate that all event handlers subscribe to events that are actually emitted by services.
+    #
+    # When enabled, raises an error on boot if handlers subscribe to non-existent events.
+    # Helps catch typos and orphaned handlers.
+    #
+    # @return [Boolean] true to validate, false to skip validation
+    attr_accessor :strict_event_validation
+
     # Initializes a new configuration with default values.
     #
     # @api private
     def initialize
       # Default to Rails.root if available, otherwise use current working directory
       @schema_root = File.join(root_path, 'app/schemas/services')
+      @strict_event_validation = true
     end
 
     # Returns the full path to a service's schema file.
