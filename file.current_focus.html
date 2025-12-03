@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  File: current_focus
+  
+    &mdash; Servus | Service Object Framework
+  
+</title>
+
+  <link rel="stylesheet" href="css/style.css" type="text/css" />
+
+  <link rel="stylesheet" href="css/common.css" type="text/css" />
+
+<script type="text/javascript">
+  pathId = "current_focus";
+  relpath = '';
+</script>
+
+
+  <script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+
+  <script type="text/javascript" charset="utf-8" src="js/app.js"></script>
+
+
+  </head>
+  <body>
+    <div class="nav_wrap">
+      <iframe id="nav" src="file_list.html?1"></iframe>
+      <div id="resizer"></div>
+    </div>
+
+    <div id="main" tabindex="-1">
+      <div id="header">
+        <div id="menu">
+  
+    <a href="_index.html">Index</a> &raquo; 
+    <span class="title">File: current_focus</span>
+  
+</div>
+
+        <div id="search">
+  
+    <a class="full_list_link" id="class_list_link"
+        href="class_list.html">
+
+        <svg width="24" height="24">
+          <rect x="0" y="4" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="12" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="20" width="24" height="4" rx="1" ry="1"></rect>
+        </svg>
+    </a>
+  
+</div>
+        <div class="clear"></div>
+      </div>
+
+      <div id="content"><div id='filecontents'><h1 id="servus-event-bus-specification">Servus Event Bus Specification</h1>
+
+<h2 id="1-overview-philosophy">1. Overview &amp; Philosophy</h2>
+
+<p>This document specifies the design and API for a native event bus within the Servus gem. The core philosophy is <strong>clean separation of concerns</strong>, ensuring that services remain focused on business logic, while a dedicated, lightweight layer handles the routing of events to service invocations.</p>
+
+<p>This approach is defined by three distinct layers:</p>
+
+<ol>
+<li><p><strong>The Emitter (</strong><strong><code>Servus::Base</code></strong><strong>)</strong>: A service that performs a business function and declares the events it emits upon completion.</p></li>
+<li><p><strong>The Mapper (</strong><strong><code>Servus::EventHandler</code></strong><strong>)</strong>: A new, lightweight class whose sole responsibility is to subscribe to a single event and declaratively map it to one or more service invocations.</p></li>
+<li><p><strong>The Consumer (</strong><strong><code>Servus::Base</code></strong><strong>)</strong>: A service that is invoked by the event handler and performs a subsequent business function, without needing any awareness of the eventing system.</p></li>
+</ol>
+
+<p>This design avoids overloading service classes with subscription logic and eliminates the need for auto-generated code, resulting in a system that is explicit, discoverable, and highly maintainable.</p>
+
+<hr>
+
+<h2 id="2-core-components">2. Core Components</h2>
+
+<h3 id="2-1-the-emitter-servus-base">2.1. The Emitter: <code>Servus::Base</code></h3>
+
+<p>Services that emit events will use a class-level <code>emits</code> method to declare them.</p>
+
+<h4 id="api-emits-event_name-on-with-nil"><strong>API: **</strong><code>emits(event_name, on:, with: nil)</code>**</h4>
+
+<ul>
+<li><p><strong><code>event_name</code></strong>** (Symbol)**: The unique name of the event (e.g., <code>:referral_created</code>).</p></li>
+<li><p><strong><code>on</code></strong>** (Symbol)**: The trigger for automatic emission. Must be <code>:success</code> or <code>:failure</code>.</p></li>
+<li><p><strong><code>with</code></strong>** (Symbol, Optional)**: The name of an instance method on the service that will build the event payload. This method receives the service&#39;s <code>Servus::Support::Response</code> object as its only argument.</p></li>
+</ul>
+
+<p>If the <code>with:</code> option is omitted, the payload will be <code>result.data</code> for a success event or <code>{ error: result.error }</code> for a failure event.</p>
+
+<h4 id="example-service-declaration"><strong>Example: Service Declaration</strong></h4>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># app/services/referrals/create_referral/service.rb
+</span><span class='kw'>class</span> <span class='const'>Referrals</span><span class='op'>::</span><span class='const'>CreateReferral</span><span class='op'>::</span><span class='const'>Service</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+  <span class='comment'># On success, emit :referral_created, building the payload with the
+</span>  <span class='comment'># :referral_payload instance method.
+</span>  <span class='id identifier rubyid_emits'>emits</span> <span class='symbol'>:referral_created</span><span class='comma'>,</span> <span class='label'>on:</span> <span class='symbol'>:success</span><span class='comma'>,</span> <span class='label'>with:</span> <span class='symbol'>:referral_payload</span>
+
+  <span class='comment'># On failure, emit :referral_failed with a default error payload.
+</span>  <span class='id identifier rubyid_emits'>emits</span> <span class='symbol'>:referral_failed</span><span class='comma'>,</span> <span class='label'>on:</span> <span class='symbol'>:failure</span>
+
+  <span class='comment'># On error, emit :referral_error with a default error payload
+</span>  <span class='id identifier rubyid_emits'>emits</span> <span class='symbol'>:referral_error</span><span class='comma'>,</span> <span class='label'>on:</span> <span class='symbol'>:error</span>
+
+  <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>referee_id:</span><span class='rparen'>)</span>
+    <span class='ivar'>@referee_id</span> <span class='op'>=</span> <span class='id identifier rubyid_referee_id'>referee_id</span>
+  <span class='kw'>end</span>
+
+  <span class='kw'>def</span> <span class='id identifier rubyid_call'>call</span>
+    <span class='comment'># ... business logic ...
+</span>
+    <span class='comment'># The :referral_created event is automatically emitted here upon success.
+</span>    <span class='id identifier rubyid_success'>success</span><span class='lparen'>(</span><span class='lbrace'>{</span> <span class='label'>referral:</span> <span class='ivar'>@referral</span><span class='comma'>,</span> <span class='label'>referee:</span> <span class='ivar'>@referee</span><span class='comma'>,</span> <span class='label'>referrer:</span> <span class='ivar'>@referrer</span> <span class='rbrace'>}</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_private'>private</span>
+
+  <span class='comment'># This method is called by the event system to build the payload.
+</span>  <span class='kw'>def</span> <span class='id identifier rubyid_referral_payload'>referral_payload</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='rparen'>)</span>
+    <span class='lbrace'>{</span>
+      <span class='label'>referral_id:</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='lbracket'>[</span><span class='symbol'>:referral</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_id'>id</span><span class='comma'>,</span>
+      <span class='label'>referee_id:</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='lbracket'>[</span><span class='symbol'>:referee</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_id'>id</span><span class='comma'>,</span>
+      <span class='label'>referrer_id:</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='lbracket'>[</span><span class='symbol'>:referrer</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_id'>id</span><span class='comma'>,</span>
+      <span class='label'>created_at:</span> <span class='const'>Time</span><span class='period'>.</span><span class='id identifier rubyid_current'>current</span>
+    <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h3 id="2-2-the-mapper-servus-eventhandler">2.2. The Mapper: <code>Servus::EventHandler</code></h3>
+
+<p>This is a new, lightweight class that lives in the <code>app/events</code> directory. Each handler subscribes to a single event and maps it to one or more service invocations.</p>
+
+<h4 id="api-handles-event_name"><strong>API: **</strong><code>handles(event_name)</code>**</h4>
+
+<ul>
+<li><strong><code>event_name</code></strong>** (Symbol)**: The unique name of the event this class handles.</li>
+</ul>
+
+<h4 id="api-invoke-service_class-options-block"><strong>API: **</strong><code>invoke(service_class, options = {}, &amp;block)</code>**</h4>
+
+<ul>
+<li><p><strong><code>service_class</code></strong>** (Class)**: The <code>Servus::Base</code> subclass to be invoked.</p></li>
+<li><p><strong><code>options</code></strong>** (Hash, Optional)**: A hash of options for the invocation.</p>
+
+<ul>
+<li><code>:async</code> (Boolean): If <code>true</code>, invokes the service using <code>.call_async</code>. Defaults to <code>false</code>.</li>
+<li><code>:queue</code> (Symbol): The queue name to use for async jobs.</li>
+<li><code>:if</code> (Proc): A lambda that receives the payload and must return <code>true</code> for the invocation to proceed.</li>
+<li><code>:unless</code> (Proc): A lambda that receives the payload and must return <code>false</code> for the invocation to proceed.</li>
+</ul></li>
+<li><p><strong><code>&amp;block</code></strong>** (Block)<strong>: A block that receives the event payload and **must</strong> return a hash of keyword arguments for the target service&#39;s <code>initialize</code> method.</p></li>
+</ul>
+
+<h4 id="example-event-handler"><strong>Example: Event Handler</strong></h4>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># app/events/referral_created_handler.rb
+</span><span class='kw'>class</span> <span class='const'>ReferralCreatedHandler</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/EventHandler.html" title="Servus::EventHandler (class)">EventHandler</a></span></span>
+  <span class='comment'># Subscribe to the :referral_created event.
+</span>  <span class='id identifier rubyid_handles'>handles</span> <span class='symbol'>:referral_created</span>
+
+  <span class='comment'># Define an invocation for the Rewards::GrantReferralRewards::Service.
+</span>  <span class='id identifier rubyid_invoke'>invoke</span> <span class='const'>Rewards</span><span class='op'>::</span><span class='const'>GrantReferralRewards</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='label'>async:</span> <span class='kw'>true</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_payload'>payload</span><span class='op'>|</span>
+    <span class='comment'># Map the event payload to the service&#39;s required arguments.
+</span>    <span class='lbrace'>{</span> <span class='label'>user_id:</span> <span class='id identifier rubyid_payload'>payload</span><span class='lbracket'>[</span><span class='symbol'>:referrer_id</span><span class='rbracket'>]</span> <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+
+  <span class='comment'># Define another invocation for the Referrals::ActivityNotifier::Service.
+</span>  <span class='id identifier rubyid_invoke'>invoke</span> <span class='const'>Referrals</span><span class='op'>::</span><span class='const'>ActivityNotifier</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='label'>async:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>queue:</span> <span class='symbol'>:notifications</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_payload'>payload</span><span class='op'>|</span>
+    <span class='lbrace'>{</span> <span class='label'>referral_id:</span> <span class='id identifier rubyid_payload'>payload</span><span class='lbracket'>[</span><span class='symbol'>:referral_id</span><span class='rbracket'>]</span> <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h3 id="2-3-automatic-registration">2.3. Automatic Registration</h3>
+
+<p>All classes inheriting from <code>Servus::EventHandler</code> within the <code>app/events</code> directory will be automatically discovered and registered by the gem at boot time. No manual configuration is required.</p>
+
+<hr>
+
+<h2 id="3-directory-structure">3. Directory Structure</h2>
+
+<p>The introduction of <code>EventHandler</code> classes establishes a new conventional directory:</p>
+
+<pre class="code ruby"><code class="ruby">app/
+├── events/                          # New directory for event handlers
+│   ├── referral_created_handler.rb
+│   └── user_graduated_handler.rb
+├── services/
+│   ├── referrals/
+│   │   └── create_referral/
+│   │       └── service.rb          # Emitter
+│   └── rewards/
+│       └── grant_referral_rewards/
+│           └── service.rb          # Consumer
+└── ...
+</code></pre>
+
+<hr>
+
+<h2 id="4-generators">4. Generators</h2>
+
+<p>A Rails generator will be provided to facilitate the creation of <code>EventHandler</code> classes.</p>
+
+<h4 id="command"><strong>Command</strong></h4>
+
+<pre class="code bash"><code class="bash">$ rails g servus:event_handler referral_created
+</code></pre>
+
+<h4 id="output"><strong>Output</strong></h4>
+
+<p>This command will generate two files:</p>
+
+<ol>
+<li><p><code>app/events/referral_created_handler.rb</code></p></li>
+<li><p><code>spec/events/referral_created_handler_spec.rb</code></p></li>
+</ol>
+
+<h4 id="generated-handler-template"><strong>Generated Handler Template</strong></h4>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># app/events/referral_created_handler.rb
+</span><span class='kw'>class</span> <span class='const'>ReferralCreatedHandler</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/EventHandler.html" title="Servus::EventHandler (class)">EventHandler</a></span></span>
+  <span class='id identifier rubyid_handles'>handles</span> <span class='symbol'>:referral_created</span>
+
+  <span class='comment'># TODO: Add service invocations using the `invoke` DSL.
+</span>  <span class='comment'>#
+</span>  <span class='comment'># Example:
+</span>  <span class='comment'># invoke SomeService, async: true do |payload|
+</span>  <span class='comment'>#   { argument_name: payload[:some_key] }
+</span>  <span class='comment'># end
+</span><span class='kw'>end</span>
+</code></pre>
+
+<hr>
+
+<h2 id="5-testing-strategy">5. Testing Strategy</h2>
+
+<p>The separation of concerns enables focused and decoupled testing.</p>
+
+<h3 id="5-1-testing-event-emission">5.1. Testing Event Emission</h3>
+
+<p>When testing a service, you should only assert that the correct event was emitted with the expected payload. A test helper will be provided for this.</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># spec/services/referrals/create_referral/service_spec.rb
+</span><span class='const'>RSpec</span><span class='period'>.</span><span class='id identifier rubyid_describe'>describe</span> <span class='const'>Referrals</span><span class='op'>::</span><span class='const'>CreateReferral</span><span class='op'>::</span><span class='const'>Service</span> <span class='kw'>do</span>
+  <span class='id identifier rubyid_include'>include</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Events.html" title="Servus::Events (module)">Events</a></span></span><span class='op'>::</span><span class='const'>TestHelpers</span>
+
+  <span class='id identifier rubyid_it'>it</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>emits a :referral_created event on success</span><span class='tstring_end'>&#39;</span></span> <span class='kw'>do</span>
+    <span class='comment'># Assert that the block will cause the specified event to be emitted.
+</span>    <span class='id identifier rubyid_expect_event'>expect_event</span><span class='lparen'>(</span><span class='symbol'>:referral_created</span><span class='rparen'>)</span>
+      <span class='period'>.</span><span class='id identifier rubyid_with_payload'>with_payload</span><span class='lparen'>(</span><span class='id identifier rubyid_hash_including'>hash_including</span><span class='lparen'>(</span><span class='symbol'>:referral_id</span><span class='comma'>,</span> <span class='symbol'>:referee_id</span><span class='comma'>,</span> <span class='symbol'>:referrer_id</span><span class='rparen'>)</span><span class='rparen'>)</span>
+      <span class='period'>.</span><span class='id identifier rubyid_when'>when</span> <span class='lbrace'>{</span> <span class='id identifier rubyid_described_class'>described_class</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='label'>referee_id:</span> <span class='id identifier rubyid_referee'>referee</span><span class='period'>.</span><span class='id identifier rubyid_id'>id</span><span class='rparen'>)</span> <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h3 id="5-2-testing-an-event-handler">5.2. Testing an Event Handler</h3>
+
+<p>When testing a handler, you should provide a sample payload and assert that the correct services are invoked with the correctly mapped arguments.</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># spec/events/referral_created_handler_spec.rb
+</span><span class='const'>RSpec</span><span class='period'>.</span><span class='id identifier rubyid_describe'>describe</span> <span class='const'>ReferralCreatedHandler</span> <span class='kw'>do</span>
+  <span class='id identifier rubyid_let'>let</span><span class='lparen'>(</span><span class='symbol'>:payload</span><span class='rparen'>)</span> <span class='kw'>do</span>
+    <span class='lbrace'>{</span>
+      <span class='label'>referral_id:</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>referral-123</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span>
+      <span class='label'>referrer_id:</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>user-456</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span>
+      <span class='label'>referee_id:</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>user-789</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span>
+      <span class='label'>created_at:</span> <span class='const'>Time</span><span class='period'>.</span><span class='id identifier rubyid_current'>current</span>
+    <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_it'>it</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>invokes the GrantReferralRewards service with the correct user ID</span><span class='tstring_end'>&#39;</span></span> <span class='kw'>do</span>
+    <span class='id identifier rubyid_expect'>expect</span><span class='lparen'>(</span><span class='const'>Rewards</span><span class='op'>::</span><span class='const'>GrantReferralRewards</span><span class='op'>::</span><span class='const'>Service</span><span class='rparen'>)</span>
+      <span class='period'>.</span><span class='id identifier rubyid_to'>to</span> <span class='id identifier rubyid_receive'>receive</span><span class='lparen'>(</span><span class='symbol'>:call_async</span><span class='rparen'>)</span>
+      <span class='period'>.</span><span class='id identifier rubyid_with'>with</span><span class='lparen'>(</span><span class='label'>user_id:</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>user-456</span><span class='tstring_end'>&#39;</span></span><span class='rparen'>)</span>
+
+    <span class='comment'># Trigger the handler with the test payload.
+</span>    <span class='id identifier rubyid_described_class'>described_class</span><span class='period'>.</span><span class='id identifier rubyid_handle'>handle</span><span class='lparen'>(</span><span class='id identifier rubyid_payload'>payload</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_it'>it</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>invokes the ActivityNotifier service with the correct referral ID</span><span class='tstring_end'>&#39;</span></span> <span class='kw'>do</span>
+    <span class='id identifier rubyid_expect'>expect</span><span class='lparen'>(</span><span class='const'>Referrals</span><span class='op'>::</span><span class='const'>ActivityNotifier</span><span class='op'>::</span><span class='const'>Service</span><span class='rparen'>)</span>
+      <span class='period'>.</span><span class='id identifier rubyid_to'>to</span> <span class='id identifier rubyid_receive'>receive</span><span class='lparen'>(</span><span class='symbol'>:call_async</span><span class='rparen'>)</span>
+      <span class='period'>.</span><span class='id identifier rubyid_with'>with</span><span class='lparen'>(</span><span class='label'>referral_id:</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>referral-123</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='label'>queue:</span> <span class='symbol'>:notifications</span><span class='rparen'>)</span>
+
+    <span class='id identifier rubyid_described_class'>described_class</span><span class='period'>.</span><span class='id identifier rubyid_handle'>handle</span><span class='lparen'>(</span><span class='id identifier rubyid_payload'>payload</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<hr>
+
+<h2 id="6-implementation-plan">6. Implementation Plan</h2>
+
+<p>This section provides a detailed, phase-by-phase breakdown of tasks required to implement the event bus feature. Each phase builds upon the previous one, and tasks are organized by logical implementation order.</p>
+
+<h3 id="phase-1-core-event-infrastructure">Phase 1: Core Event Infrastructure</h3>
+
+<p><strong>Goal</strong>: Establish the foundational event emission capability in <code>Servus::Base</code>.</p>
+
+<ul>
+<li><p>[ ] <strong>Create Event Bus/Registry</strong> (<code>lib/servus/events/bus.rb</code>)</p>
+
+<ul>
+<li>Create <code>Servus::Events::Bus</code> singleton class</li>
+<li>Implement event registration: <code>Bus.register_handler(event_name, handler_class)</code></li>
+<li>Implement event emission: <code>Bus.emit(event_name, payload)</code></li>
+<li>Store handlers in a thread-safe Hash: <code>@handlers = Concurrent::Hash.new { |h, k| h[k] = [] }</code></li>
+<li>Add method to dispatch event to all registered handlers</li>
+<li><strong>Files</strong>: <code>lib/servus/events/bus.rb</code>, <code>spec/servus/events/bus_spec.rb</code></li>
+</ul></li>
+<li><p>[ ] <strong>Add <code>emits</code> DSL to Servus::Base</strong> (<code>lib/servus/base.rb</code>)</p>
+
+<ul>
+<li>Create class-level <code>emits(event_name, on:, with: nil)</code> method</li>
+<li>Store event declarations in class instance variable: <code>@event_emissions ||= []</code></li>
+<li>Validate <code>on:</code> parameter is one of: <code>:success</code>, <code>:failure</code>, <code>:error</code></li>
+<li>Store event config as: <code>{ event_name:, trigger:, payload_builder: }</code></li>
+<li>Add accessor method: <code>def self.event_emissions; @event_emissions || []; end</code></li>
+<li><strong>Files</strong>: <code>lib/servus/base.rb:30-50</code></li>
+</ul></li>
+<li><p>[ ] <strong>Implement Automatic Event Emission</strong> (<code>lib/servus/base.rb</code>)</p>
+
+<ul>
+<li>In <code>#call</code> method, after executing user&#39;s <code>#call</code> (around line 120):</li>
+<li>After success: trigger events where <code>on: :success</code></li>
+<li>After failure: trigger events where <code>on: :failure</code></li>
+<li>In rescue blocks: trigger events where <code>on: :error</code></li>
+<li>Create private method <code>#emit_events_for(trigger_type, result)</code></li>
+<li><strong>Files</strong>: <code>lib/servus/base.rb:120-140</code></li>
+</ul></li>
+<li><p>[ ] <strong>Implement Payload Builder Logic</strong> (<code>lib/servus/base.rb</code>)</p>
+
+<ul>
+<li>Create private method <code>#build_event_payload(event_config, result)</code></li>
+<li>If <code>with:</code> option present: call instance method with <code>result</code> as argument</li>
+<li>If <code>with:</code> absent and success: return <code>result.data</code></li>
+<li>If <code>with:</code> absent and failure/error: return <code>{ error: result.error }</code></li>
+<li>Handle case where custom payload builder returns nil (log warning, use default)</li>
+<li><strong>Files</strong>: <code>lib/servus/base.rb:250-270</code></li>
+</ul></li>
+<li><p>[ ] <strong>Write Comprehensive Specs</strong></p>
+
+<ul>
+<li>Test <code>emits</code> DSL declaration and storage</li>
+<li>Test automatic emission on success/failure/error</li>
+<li>Test custom payload builders via <code>with:</code> option</li>
+<li>Test default payloads when <code>with:</code> omitted</li>
+<li>Test multiple event declarations on same service</li>
+<li>Test events inherited by subclasses</li>
+<li><strong>Files</strong>: <code>spec/servus/base_spec.rb:450-600</code> (new section)</li>
+</ul></li>
+</ul>
+
+<h3 id="phase-2-eventhandler-base-class">Phase 2: EventHandler Base Class</h3>
+
+<p><strong>Goal</strong>: Create the <code>Servus::EventHandler</code> class with the <code>handles</code> and <code>invoke</code> DSL.</p>
+
+<ul>
+<li><p>[ ] <strong>Create EventHandler Base Class</strong> (<code>lib/servus/event_handler.rb</code>)</p>
+
+<ul>
+<li>Create <code>Servus::EventHandler</code> class</li>
+<li>Add class instance variable: <code>@event_name</code> for event subscription</li>
+<li>Add class instance variable: <code>@invocations = []</code> for service mappings</li>
+<li>Add reader: <code>def self.event_name; @event_name; end</code></li>
+<li>Add reader: <code>def self.invocations; @invocations || []; end</code></li>
+<li><strong>Files</strong>: <code>lib/servus/event_handler.rb</code>, <code>spec/servus/event_handler_spec.rb</code></li>
+</ul></li>
+<li><p>[ ] <strong>Implement <code>handles</code> DSL Method</strong> (<code>lib/servus/event_handler.rb</code>)</p>
+
+<ul>
+<li>Create class method: <code>def self.handles(event_name)</code></li>
+<li>Store event name: <code>@event_name = event_name</code></li>
+<li>Automatically register with Bus: <code>Servus::Events::Bus.register_handler(event_name, self)</code></li>
+<li>Raise error if <code>handles</code> called multiple times in same class</li>
+<li><strong>Files</strong>: <code>lib/servus/event_handler.rb:20-30</code></li>
+</ul></li>
+<li><p>[ ] <strong>Implement <code>invoke</code> DSL Method</strong> (<code>lib/servus/event_handler.rb</code>)</p>
+
+<ul>
+<li>Create class method: <code>def self.invoke(service_class, options = {}, &amp;block)</code></li>
+<li>Validate <code>service_class</code> is a subclass of <code>Servus::Base</code></li>
+<li>Validate <code>options</code> keys are valid: <code>:async</code>, <code>:queue</code>, <code>:if</code>, <code>:unless</code></li>
+<li>Require block to be present (raise error if missing)</li>
+<li>Store invocation config: <code>@invocations &lt;&lt; { service_class:, options:, mapper: block }</code></li>
+<li><strong>Files</strong>: <code>lib/servus/event_handler.rb:40-60</code></li>
+</ul></li>
+<li><p>[ ] <strong>Implement Event Handling Dispatcher</strong> (<code>lib/servus/event_handler.rb</code>)</p>
+
+<ul>
+<li>Create class method: <code>def self.handle(payload)</code></li>
+<li>Iterate over <code>@invocations</code></li>
+<li>For each invocation:</li>
+<li>Check <code>:if</code> condition (skip if returns false)</li>
+<li>Check <code>:unless</code> condition (skip if returns true)</li>
+<li>Call mapper block with payload to get service kwargs</li>
+<li>Invoke service: <code>service_class.call(**kwargs)</code> or <code>.call_async(**kwargs.merge(queue: options[:queue]))</code></li>
+<li>Return array of results from all invocations</li>
+<li><strong>Files</strong>: <code>lib/servus/event_handler.rb:70-95</code></li>
+</ul></li>
+<li><p>[ ] <strong>Handle Async Options</strong> (<code>lib/servus/event_handler.rb</code>)</p>
+
+<ul>
+<li>When <code>async: true</code>, use <code>service_class.call_async(**kwargs)</code></li>
+<li>Pass <code>:queue</code> option to <code>call_async</code> if present</li>
+<li>Ensure async calls work with existing <code>Servus::Extensions::Async</code> module</li>
+<li><strong>Files</strong>: <code>lib/servus/event_handler.rb:85-90</code></li>
+</ul></li>
+<li><p>[ ] <strong>Implement Conditional Logic</strong> (<code>lib/servus/event_handler.rb</code>)</p>
+
+<ul>
+<li>Create private method: <code>def self.should_invoke?(payload, options)</code></li>
+<li>Check <code>:if</code> proc: <code>return false if options[:if] &amp;&amp; !options[:if].call(payload)</code></li>
+<li>Check <code>:unless</code> proc: <code>return false if options[:unless] &amp;&amp; options[:unless].call(payload)</code></li>
+<li>Return true if all conditions pass</li>
+<li><strong>Files</strong>: <code>lib/servus/event_handler.rb:100-110</code></li>
+</ul></li>
+<li><p>[ ] <strong>Write Comprehensive Specs</strong></p>
+
+<ul>
+<li>Test <code>handles</code> DSL declaration and registration</li>
+<li>Test <code>invoke</code> DSL with various options</li>
+<li>Test <code>.handle(payload)</code> dispatches to services correctly</li>
+<li>Test conditional execution (<code>:if</code>, <code>:unless</code>)</li>
+<li>Test sync vs async invocation</li>
+<li>Test queue routing for async jobs</li>
+<li>Test multiple invocations in single handler</li>
+<li>Test payload mapping via block</li>
+<li><strong>Files</strong>: <code>spec/servus/event_handler_spec.rb</code></li>
+</ul></li>
+</ul>
+
+<h3 id="phase-3-automatic-handler-discovery">Phase 3: Automatic Handler Discovery</h3>
+
+<p><strong>Goal</strong>: Auto-discover and register all EventHandler classes in <code>app/events/</code> at Rails boot.</p>
+
+<ul>
+<li><p>[ ] <strong>Create Railtie for Initialization</strong> (<code>lib/servus/railtie.rb</code>)</p>
+
+<ul>
+<li>Update existing railtie or create if doesn&#39;t exist</li>
+<li>Add initializer: <code>initializer &#39;servus.discover_event_handlers&#39;, after: :load_config_initializers</code></li>
+<li>In initializer, call <code>Servus::Events::Loader.discover_handlers</code></li>
+<li><strong>Files</strong>: <code>lib/servus/railtie.rb:20-30</code></li>
+</ul></li>
+<li><p>[ ] <strong>Create Handler Discovery Loader</strong> (<code>lib/servus/events/loader.rb</code>)</p>
+
+<ul>
+<li>Create <code>Servus::Events::Loader</code> module</li>
+<li>Method: <code>def self.discover_handlers</code></li>
+<li>Scan <code>app/events/**/*_handler.rb</code> using <code>Dir.glob</code></li>
+<li>Require each file: <code>require_dependency(file_path)</code></li>
+<li>Return count of discovered handlers for logging</li>
+<li><strong>Files</strong>: <code>lib/servus/events/loader.rb</code>, <code>spec/servus/events/loader_spec.rb</code></li>
+</ul></li>
+<li><p>[ ] <strong>Add Handler Conflict Detection</strong> (<code>lib/servus/events/bus.rb</code>)</p>
+
+<ul>
+<li>In <code>Bus.register_handler</code>, detect if event already has handler</li>
+<li>Raise <code>Servus::Events::DuplicateHandlerError</code> if duplicate detected</li>
+<li>Include both handler class names in error message</li>
+<li>Add config option to allow multiple handlers (default: false)</li>
+<li><strong>Files</strong>: <code>lib/servus/events/bus.rb:25-35</code></li>
+</ul></li>
+<li><p>[ ] <strong>Create Custom Errors</strong> (<code>lib/servus/events/errors.rb</code>)</p>
+
+<ul>
+<li>Create <code>Servus::Events::DuplicateHandlerError &lt; StandardError</code></li>
+<li>Create <code>Servus::Events::UnregisteredEventError &lt; StandardError</code></li>
+<li><strong>Files</strong>: <code>lib/servus/events/errors.rb</code></li>
+</ul></li>
+<li><p>[ ] <strong>Add Development Mode Reloading</strong> (<code>lib/servus/railtie.rb</code>)</p>
+
+<ul>
+<li>Clear handler registry on code reload: <code>to_prepare</code> hook</li>
+<li>Call <code>Servus::Events::Bus.clear</code> before re-discovering</li>
+<li>Ensure handlers re-register properly in development</li>
+<li><strong>Files</strong>: <code>lib/servus/railtie.rb:35-40</code></li>
+</ul></li>
+<li><p>[ ] <strong>Write Comprehensive Specs</strong></p>
+
+<ul>
+<li>Test handler discovery in dummy Rails app</li>
+<li>Test duplicate handler detection raises error</li>
+<li>Test handler reloading in development mode</li>
+<li>Test nested handler files are discovered</li>
+<li>Test handlers are properly registered with Bus</li>
+<li><strong>Files</strong>: <code>spec/servus/events/loader_spec.rb</code>, <code>spec/integration/handler_discovery_spec.rb</code></li>
+</ul></li>
+</ul>
+
+<h3 id="phase-4-test-helpers">Phase 4: Test Helpers</h3>
+
+<p><strong>Goal</strong>: Provide intuitive test helpers for asserting event emissions and testing handlers.</p>
+
+<ul>
+<li><p>[ ] <strong>Create Test Helpers Module</strong> (<code>lib/servus/events/test_helpers.rb</code>)</p>
+
+<ul>
+<li>Create <code>Servus::Events::TestHelpers</code> module</li>
+<li>Add RSpec-specific helpers</li>
+<li>Include event capture/inspection utilities</li>
+<li><strong>Files</strong>: <code>lib/servus/events/test_helpers.rb</code>, <code>spec/servus/events/test_helpers_spec.rb</code></li>
+</ul></li>
+<li><p>[ ] <strong>Implement <code>expect_event</code> Matcher</strong> (<code>lib/servus/events/test_helpers.rb</code>)</p>
+
+<ul>
+<li>Create chainable matcher: <code>expect_event(event_name)</code></li>
+<li>Implement <code>.with_payload(expected_payload)</code> chain</li>
+<li>Implement <code>.when { block }</code> chain that executes code</li>
+<li>Capture events emitted during block execution</li>
+<li>Assert event was emitted with matching payload</li>
+<li>Use RSpec&#39;s <code>hash_including</code> for partial payload matching</li>
+<li><strong>Files</strong>: <code>lib/servus/events/test_helpers.rb:10-60</code></li>
+</ul></li>
+<li><p>[ ] <strong>Create Event Capture Mechanism</strong> (<code>lib/servus/events/test_helpers.rb</code>)</p>
+
+<ul>
+<li>Create thread-local event store: <code>@captured_events = []</code></li>
+<li>Hook into <code>Bus.emit</code> to capture events during tests</li>
+<li>Method: <code>def capture_events(&amp;block)</code> that returns array of emitted events</li>
+<li>Auto-clear captured events between test runs</li>
+<li><strong>Files</strong>: <code>lib/servus/events/test_helpers.rb:70-90</code></li>
+</ul></li>
+<li><p>[ ] <strong>Add Handler Testing Utilities</strong> (<code>lib/servus/events/test_helpers.rb</code>)</p>
+
+<ul>
+<li>Helper method: <code>trigger_event(event_name, payload)</code> for directly testing handlers</li>
+<li>Method to assert handler invoked specific service: <code>expect_handler_to_invoke(service_class)</code></li>
+<li>Method to build sample payloads: <code>sample_payload_for(event_name)</code></li>
+<li><strong>Files</strong>: <code>lib/servus/events/test_helpers.rb:100-130</code></li>
+</ul></li>
+<li><p>[ ] <strong>Create RSpec Configuration</strong> (<code>lib/servus/events/test_helpers.rb</code>)</p>
+
+<ul>
+<li>Add RSpec config to auto-include TestHelpers in event specs</li>
+<li>Add config to auto-clear event registry between tests</li>
+<li>Add matcher aliases for readability</li>
+<li><strong>Files</strong>: <code>lib/servus/events/test_helpers.rb:140-160</code></li>
+</ul></li>
+<li><p>[ ] <strong>Write Comprehensive Specs and Examples</strong></p>
+
+<ul>
+<li>Test <code>expect_event</code> matcher with various payload matchers</li>
+<li>Test <code>.when</code> block execution and event capture</li>
+<li>Test negative cases (event not emitted, wrong payload)</li>
+<li>Test handler testing utilities</li>
+<li>Create example specs showing usage patterns</li>
+<li><strong>Files</strong>: <code>spec/servus/events/test_helpers_spec.rb</code>, <code>spec/examples/event_testing_spec.rb</code></li>
+</ul></li>
+</ul>
+
+<h3 id="phase-5-generator">Phase 5: Generator</h3>
+
+<p><strong>Goal</strong>: Provide Rails generator for quickly scaffolding new EventHandler classes and specs.</p>
+
+<ul>
+<li><p>[ ] <strong>Create Generator Class</strong> (<code>lib/generators/servus/event_handler/event_handler_generator.rb</code>)</p>
+
+<ul>
+<li>Inherit from <code>Rails::Generators::NamedBase</code></li>
+<li>Set source root: <code>source_root File.expand_path(&#39;templates&#39;, __dir__)</code></li>
+<li>Define generator description and usage</li>
+<li><strong>Files</strong>: <code>lib/generators/servus/event_handler/event_handler_generator.rb</code></li>
+</ul></li>
+<li><p>[ ] <strong>Implement File Generation Logic</strong> (<code>lib/generators/servus/event_handler/event_handler_generator.rb</code>)</p>
+
+<ul>
+<li>Method: <code>def create_handler_file</code></li>
+<li>Generate file at: <code>app/events/#{file_name}_handler.rb</code></li>
+<li>Use ERB template with proper class name and event name</li>
+<li>Method: <code>def create_spec_file</code></li>
+<li>Generate file at: <code>spec/events/#{file_name}_handler_spec.rb</code></li>
+<li><strong>Files</strong>: <code>lib/generators/servus/event_handler/event_handler_generator.rb:15-30</code></li>
+</ul></li>
+<li><p>[ ] <strong>Create Handler Template</strong> (<code>lib/generators/servus/event_handler/templates/handler.rb.tt</code>)</p>
+
+<ul>
+<li>ERB template with <code>&lt;%= class_name %&gt;Handler &lt; Servus::EventHandler</code></li>
+<li>Include <code>handles :&lt;%= event_name %&gt;</code></li>
+<li>Include TODO comment with example invoke usage</li>
+<li><strong>Files</strong>: <code>lib/generators/servus/event_handler/templates/handler.rb.tt</code></li>
+</ul></li>
+<li><p>[ ] <strong>Create Spec Template</strong> (<code>lib/generators/servus/event_handler/templates/handler_spec.rb.tt</code>)</p>
+
+<ul>
+<li>ERB template for RSpec test file</li>
+<li>Include sample payload <code>let</code> block</li>
+<li>Include example test for service invocation</li>
+<li>Include pending test for additional invocations</li>
+<li><strong>Files</strong>: <code>lib/generators/servus/event_handler/templates/handler_spec.rb.tt</code></li>
+</ul></li>
+<li><p>[ ] <strong>Add Naming Conventions</strong> (<code>lib/generators/servus/event_handler/event_handler_generator.rb</code>)</p>
+
+<ul>
+<li>Convert snake_case event names to proper class names</li>
+<li>Example: <code>referral_created</code> → <code>ReferralCreatedHandler</code></li>
+<li>Handle multi-word event names correctly</li>
+<li>Add validation for event name format (only alphanumeric and underscores)</li>
+<li><strong>Files</strong>: <code>lib/generators/servus/event_handler/event_handler_generator.rb:40-55</code></li>
+</ul></li>
+<li><p>[ ] <strong>Write Generator Specs</strong> (<code>spec/generators/servus/event_handler_generator_spec.rb</code>)</p>
+
+<ul>
+<li>Test generator creates handler file in correct location</li>
+<li>Test generator creates spec file in correct location</li>
+<li>Test generated files have correct content/structure</li>
+<li>Test naming conventions work correctly</li>
+<li>Test generator with various event name formats</li>
+<li>Use <code>Rails::Generators::TestCase</code> for generator testing</li>
+<li><strong>Files</strong>: <code>spec/generators/servus/event_handler_generator_spec.rb</code></li>
+</ul></li>
+</ul>
+
+<h3 id="phase-6-documentation-polish">Phase 6: Documentation &amp; Polish</h3>
+
+<p><strong>Goal</strong>: Document the event bus feature and prepare for release.</p>
+
+<ul>
+<li><p>[ ] <strong>Move Spec to Feature Docs</strong> (<code>docs/features/5_event_bus.md</code>)</p>
+
+<ul>
+<li>Copy content from <code>docs/current_focus.md</code> to <code>docs/features/5_event_bus.md</code></li>
+<li>Remove &quot;Implementation Plan&quot; section (internal only)</li>
+<li>Polish language to be present tense (&quot;The event bus provides...&quot;)</li>
+<li>Add introduction paragraph linking to related features (async execution)</li>
+<li><strong>Files</strong>: <code>docs/features/5_event_bus.md</code></li>
+</ul></li>
+<li><p>[ ] <strong>Update Current Focus</strong> (<code>docs/current_focus.md</code>)</p>
+
+<ul>
+<li>Clear or archive current content</li>
+<li>Add new focus area (could be generator updates from IDEAS.md)</li>
+<li>Or mark as &quot;Event bus implementation complete, awaiting next focus&quot;</li>
+<li><strong>Files</strong>: <code>docs/current_focus.md</code></li>
+</ul></li>
+<li><p>[ ] <strong>Update README</strong> (<code>READme.md</code>)</p>
+
+<ul>
+<li>Add &quot;Event Bus&quot; section under features list</li>
+<li>Add quick example showing emitter → handler → consumer flow</li>
+<li>Add link to full documentation: <code>docs/features/5_event_bus.md</code></li>
+<li>Keep example concise (10-15 lines)</li>
+<li><strong>Files</strong>: <code>READme.md:30-60</code></li>
+</ul></li>
+<li><p>[ ] <strong>Add YARD Documentation</strong> (various files)</p>
+
+<ul>
+<li>Document <code>Servus::Base.emits</code> with @param and @example tags</li>
+<li>Document <code>Servus::EventHandler</code> class and DSL methods</li>
+<li>Document <code>Servus::Events::Bus</code> public methods</li>
+<li>Document test helpers module and matchers</li>
+<li>Generate updated YARD docs: <code>bundle exec yard doc</code></li>
+<li><strong>Files</strong>: <code>lib/servus/base.rb</code>, <code>lib/servus/event_handler.rb</code>, etc.</li>
+</ul></li>
+<li><p>[ ] <strong>Update CHANGELOG</strong> (<code>CHANGELOG.md</code>)</p>
+
+<ul>
+<li>Add new section: <code>## [0.2.0] - Unreleased</code></li>
+<li>List new features:</li>
+<li>Event bus with <code>emits</code> DSL for services</li>
+<li><code>Servus::EventHandler</code> for mapping events to service invocations</li>
+<li>Automatic handler discovery in <code>app/events/</code></li>
+<li>Test helpers with <code>expect_event</code> matcher</li>
+<li>Generator: <code>rails g servus:event_handler</code></li>
+<li>Note any breaking changes (hopefully none)</li>
+<li><strong>Files</strong>: <code>CHANGELOG.md:1-20</code></li>
+</ul></li>
+<li><p>[ ] <strong>Create Migration Guide</strong> (<code>docs/guides/3_adding_events.md</code>)</p>
+
+<ul>
+<li>Guide for adding events to existing services</li>
+<li>Walkthrough: identify business events → add <code>emits</code> → create handler → test</li>
+<li>Best practices: when to use events vs direct service calls</li>
+<li>Common patterns: notification events, audit events, workflow triggers</li>
+<li>Troubleshooting: handler not found, payload mapping issues</li>
+<li><strong>Files</strong>: <code>docs/guides/3_adding_events.md</code></li>
+</ul></li>
+<li><p>[ ] <strong>Update Version Number</strong> (<code>lib/servus/version.rb</code>)</p>
+
+<ul>
+<li>Bump version to <code>0.2.0</code> (minor version for new feature)</li>
+<li>Update version in <code>servus.gemspec</code> if needed</li>
+<li><strong>Files</strong>: <code>lib/servus/version.rb:3</code></li>
+</ul></li>
+</ul>
+
+<hr>
+
+<h3 id="implementation-notes">Implementation Notes</h3>
+
+<p><strong>Testing Strategy</strong>:</p>
+
+<ul>
+<li>Write specs FIRST for each component (TDD approach)</li>
+<li>Use dummy Rails app in <code>spec/dummy</code> for integration tests</li>
+<li>Test thread safety for Bus registry (use concurrent gem)</li>
+</ul>
+
+<p><strong>Performance Considerations</strong>:</p>
+
+<ul>
+<li>Event emission should add &lt; 1ms to service execution</li>
+<li>Handler lookup should be O(1) using hash-based registry</li>
+<li>Consider async-by-default for most event handlers to avoid blocking</li>
+</ul>
+
+<p><strong>Backward Compatibility</strong>:</p>
+
+<ul>
+<li>All event features are opt-in (no breaking changes)</li>
+<li>Services without <code>emits</code> declarations work exactly as before</li>
+<li>No changes to existing public APIs</li>
+</ul>
+
+<p><strong>Dependencies</strong>:</p>
+
+<ul>
+<li>May need <code>concurrent-ruby</code> gem for thread-safe Bus registry</li>
+<li>Async features already depend on ActiveJob (no new dependencies)</li>
+</ul>
+
+<p><strong>Phasing Approach</strong>:</p>
+
+<ul>
+<li>Phases 1-2 can be merged as single PR (core functionality)</li>
+<li>Phase 3 requires Rails integration testing (separate PR recommended)</li>
+<li>Phases 4-6 are polish/DX improvements (can be bundled or separate)</li>
+</ul>
+</div></div>
+
+      <div id="footer">
+  Generated on Wed Dec  3 23:33:26 2025 by
+  <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
+  0.9.37 (ruby-3.3.0).
+</div>
+
+    </div>
+  </body>
+</html>

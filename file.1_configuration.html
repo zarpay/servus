@@ -59,21 +59,26 @@
 
       <div id="content"><div id='filecontents'><h1 id="configuration">Configuration</h1>
 
-<p>Servus works without configuration. One optional setting exists for schema file location.</p>
+<p>Servus works without configuration. Optional settings exist for customizing directories and event validation.</p>
 
-<h2 id="schema-root">Schema Root</h2>
+<h2 id="directory-configuration">Directory Configuration</h2>
 
-<p>By default, Servus looks for schema JSON files in <code>Rails.root/app/schemas/services</code> (or <code>./app/schemas/services</code> in non-Rails apps).</p>
-
-<p>Change the location if needed:</p>
+<p>Configure where Servus looks for schemas, services, and event handlers:</p>
 
 <pre class="code ruby"><code class="ruby"><span class='comment'># config/initializers/servus.rb
 </span><span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='period'>.</span><span class='id identifier rubyid_configure'><span class='object_link'><a href="Servus.html#configure-class_method" title="Servus.configure (method)">configure</a></span></span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_config'>config</span><span class='op'>|</span>
-  <span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_schema_root'>schema_root</span> <span class='op'>=</span> <span class='const'>Rails</span><span class='period'>.</span><span class='id identifier rubyid_root'>root</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>config/schemas</span><span class='tstring_end'>&#39;</span></span><span class='rparen'>)</span>
+  <span class='comment'># Default: &#39;app/schemas&#39;
+</span>  <span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_schemas_dir'>schemas_dir</span> <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>app/schemas</span><span class='tstring_end'>&#39;</span></span>
+
+  <span class='comment'># Default: &#39;app/services&#39;
+</span>  <span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_services_dir'>services_dir</span> <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>app/services</span><span class='tstring_end'>&#39;</span></span>
+
+  <span class='comment'># Default: &#39;app/events&#39;
+</span>  <span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_events_dir'>events_dir</span> <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>app/events</span><span class='tstring_end'>&#39;</span></span>
 <span class='kw'>end</span>
 </code></pre>
 
-<p>This affects legacy file-based schemas only - schemas defined via the <code>schema</code> DSL method do not use files.</p>
+<p>These affect legacy file-based schemas and handler auto-loading. Schemas defined via the <code>schema</code> DSL method do not use files.</p>
 
 <h2 id="schema-cache">Schema Cache</h2>
 
@@ -102,10 +107,57 @@
 </code></pre>
 
 <p>Servus respects ActiveJob queue configuration - no Servus-specific setup needed.</p>
+
+<h2 id="event-bus-configuration">Event Bus Configuration</h2>
+
+<h3 id="strict-event-validation">Strict Event Validation</h3>
+
+<p>Enable strict validation to catch handlers subscribing to events that aren&#39;t emitted by any service:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># config/initializers/servus.rb
+</span><span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='period'>.</span><span class='id identifier rubyid_configure'><span class='object_link'><a href="Servus.html#configure-class_method" title="Servus.configure (method)">configure</a></span></span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_config'>config</span><span class='op'>|</span>
+  <span class='comment'># Default: true
+</span>  <span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_strict_event_validation'>strict_event_validation</span> <span class='op'>=</span> <span class='kw'>true</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<p>When enabled, you can validate handlers at boot or in CI:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># In a rake task or initializer
+</span><span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/EventHandler.html" title="Servus::EventHandler (class)">EventHandler</a></span></span><span class='period'>.</span><span class='id identifier rubyid_validate_all_handlers!'><span class='object_link'><a href="Servus/EventHandler.html#validate_all_handlers!-class_method" title="Servus::EventHandler.validate_all_handlers! (method)">validate_all_handlers!</a></span></span>
+</code></pre>
+
+<p>This raises <code>Servus::Events::OrphanedHandlerError</code> if any handler subscribes to a non-existent event.</p>
+
+<h3 id="handler-auto-loading">Handler Auto-Loading</h3>
+
+<p>In Rails, handlers in <code>app/events/</code> are automatically loaded. The Railtie:</p>
+
+<ul>
+<li>Clears the event bus on reload in development</li>
+<li>Eager-loads all <code>*_handler.rb</code> files from <code>config.events_dir</code></li>
+</ul>
+
+<pre class="code ruby"><code class="ruby">app/events/
+├── user_created_handler.rb
+├── payment_processed_handler.rb
+└── order_completed_handler.rb
+</code></pre>
+
+<h3 id="event-instrumentation">Event Instrumentation</h3>
+
+<p>Events are instrumented via ActiveSupport::Notifications with the prefix <code>servus.events.</code>:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># Subscribe to all Servus events
+</span><span class='const'>ActiveSupport</span><span class='op'>::</span><span class='const'>Notifications</span><span class='period'>.</span><span class='id identifier rubyid_subscribe'>subscribe</span><span class='lparen'>(</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>^servus\.events\.</span><span class='regexp_end'>/</span></span><span class='rparen'>)</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='op'>*</span><span class='id identifier rubyid_args'>args</span><span class='op'>|</span>
+  <span class='id identifier rubyid_event_name'>event_name</span> <span class='op'>=</span> <span class='id identifier rubyid_name'>name</span><span class='period'>.</span><span class='id identifier rubyid_sub'>sub</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>servus.events.</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='rparen'>)</span>
+  <span class='const'>Rails</span><span class='period'>.</span><span class='id identifier rubyid_logger'>logger</span><span class='period'>.</span><span class='id identifier rubyid_info'>info</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Event: </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_event_name'>event_name</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span>
+<span class='kw'>end</span>
+</code></pre>
 </div></div>
 
       <div id="footer">
-  Generated on Mon Nov 24 19:24:38 2025 by
+  Generated on Wed Dec  3 23:33:26 2025 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.37 (ruby-3.3.0).
 </div>

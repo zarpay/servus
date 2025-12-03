@@ -302,6 +302,29 @@ against JSON Schema definitions. Schemas can be defined as inline constants
         <li class="public ">
   <span class="summary_signature">
     
+      <a href="#validate_event_payload!-class_method" title="validate_event_payload! (class method)">.<strong>validate_event_payload!</strong>(handler_class, payload)  &#x21d2; Boolean </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  <span class="private note title">private</span>
+
+  
+    <span class="summary_desc"><div class='inline'><p>Validates event payload against the handler&#39;s payload schema.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
       <a href="#validate_result!-class_method" title="validate_result! (class method)">.<strong>validate_result!</strong>(service_class, result)  &#x21d2; Servus::Support::Response </a>
     
 
@@ -377,12 +400,12 @@ against JSON Schema definitions. Schemas can be defined as inline constants
       <pre class="lines">
 
 
-152
-153
-154</pre>
+179
+180
+181</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/support/validator.rb', line 152</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/support/validator.rb', line 179</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_cache'>cache</span>
   <span class='ivar'>@schema_cache</span>
@@ -450,12 +473,12 @@ to ensure fresh schema loading between test cases.</p>
       <pre class="lines">
 
 
-144
-145
-146</pre>
+171
+172
+173</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/support/validator.rb', line 144</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/support/validator.rb', line 171</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_clear_cache!'>clear_cache!</span>
   <span class='ivar'>@schema_cache</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
@@ -569,18 +592,18 @@ to ensure fresh schema loading between test cases.</p>
       <pre class="lines">
 
 
-170
-171
-172
-173
-174
-175
-176
-177
-178</pre>
+197
+198
+199
+200
+201
+202
+203
+204
+205</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/support/validator.rb', line 170</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/support/validator.rb', line 197</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_fetch_schema_from_sources'>fetch_schema_from_sources</span><span class='lparen'>(</span><span class='id identifier rubyid_dsl_schema'>dsl_schema</span><span class='comma'>,</span> <span class='id identifier rubyid_inline_schema_constant'>inline_schema_constant</span><span class='comma'>,</span> <span class='id identifier rubyid_schema_path'>schema_path</span><span class='rparen'>)</span>
   <span class='kw'>if</span> <span class='id identifier rubyid_dsl_schema'>dsl_schema</span>
@@ -688,32 +711,32 @@ to ensure fresh schema loading between test cases.</p>
       <pre class="lines">
 
 
-108
-109
-110
-111
-112
-113
-114
-115
-116
-117
-118
-119
-120
-121
-122
-123
-124
-125
-126
-127
-128
-129
-130</pre>
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/support/validator.rb', line 108</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/support/validator.rb', line 135</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_load_schema'>load_schema</span><span class='lparen'>(</span><span class='id identifier rubyid_service_class'>service_class</span><span class='comma'>,</span> <span class='id identifier rubyid_type'>type</span><span class='rparen'>)</span>
   <span class='comment'># Get service path based on class name (e.g., &quot;process_payment&quot; from &quot;Servus::ProcessPayment::Service&quot;)
@@ -820,14 +843,14 @@ to ensure fresh schema loading between test cases.</p>
       <pre class="lines">
 
 
-193
-194
-195
-196
-197</pre>
+220
+221
+222
+223
+224</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/support/validator.rb', line 193</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/support/validator.rb', line 220</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_parse_service_namespace'>parse_service_namespace</span><span class='lparen'>(</span><span class='id identifier rubyid_service_class'>service_class</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_service_class'>service_class</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='period'>.</span><span class='id identifier rubyid_split'>split</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>::</span><span class='tstring_end'>&#39;</span></span><span class='rparen'>)</span><span class='lbracket'>[</span><span class='op'>..</span><span class='op'>-</span><span class='int'>2</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_s'>s</span><span class='op'>|</span>
@@ -976,6 +999,148 @@ Validation is skipped if no schema is defined.</p>
   <span class='kw'>if</span> <span class='id identifier rubyid_validation_errors'>validation_errors</span><span class='period'>.</span><span class='id identifier rubyid_any?'>any?</span>
     <span class='id identifier rubyid_error_message'>error_message</span> <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Invalid arguments for </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_service_class'>service_class</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='embexpr_end'>}</span><span class='tstring_content'>: </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_validation_errors'>validation_errors</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>, </span><span class='tstring_end'>&#39;</span></span><span class='rparen'>)</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span>
     <span class='id identifier rubyid_raise'>raise</span> <span class='const'><span class='object_link'><a href="../../Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="../Base.html" title="Servus::Base (class)">Base</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Errors/ValidationError.html" title="Servus::Support::Errors::ValidationError (class)">ValidationError</a></span></span><span class='comma'>,</span> <span class='id identifier rubyid_error_message'>error_message</span>
+  <span class='kw'>end</span>
+
+  <span class='kw'>true</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="validate_event_payload!-class_method">
+  
+    .<strong>validate_event_payload!</strong>(handler_class, payload)  &#x21d2; <tt>Boolean</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p class="note private">
+  <strong>This method is part of a private API.</strong>
+  You should avoid using this method if possible, as it may be removed or be changed in the future.
+</p>
+<p>Validates event payload against the handler&#39;s payload schema.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+  <div class="examples">
+    <h4 class="tag_title">Examples:</h4>
+    
+      
+      <pre class="example code"><code><span class='const'><span class='object_link'><a href="" title="Servus::Support::Validator (class)">Validator</a></span></span><span class='period'>.</span><span class='id identifier rubyid_validate_event_payload!'>validate_event_payload!</span><span class='lparen'>(</span><span class='const'>MyEventHandler</span><span class='comma'>,</span> <span class='lbrace'>{</span> <span class='label'>user_id:</span> <span class='int'>123</span> <span class='rbrace'>}</span><span class='rparen'>)</span></code></pre>
+    
+  </div>
+<p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>handler_class</span>
+      
+      
+        <span class='type'>(<tt>Class</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>the event handler class</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>payload</span>
+      
+      
+        <span class='type'>(<tt>Hash</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>the event payload to validate</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Boolean</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>true if validation passes</p>
+</div>
+      
+    </li>
+  
+</ul>
+<p class="tag_title">Raises:</p>
+<ul class="raise">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt><span class='object_link'><a href="Errors/ValidationError.html" title="Servus::Support::Errors::ValidationError (class)">Servus::Support::Errors::ValidationError</a></span></tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>if payload fails validation</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/servus/support/validator.rb', line 105</span>
+
+<span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_validate_event_payload!'>validate_event_payload!</span><span class='lparen'>(</span><span class='id identifier rubyid_handler_class'>handler_class</span><span class='comma'>,</span> <span class='id identifier rubyid_payload'>payload</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_schema'>schema</span> <span class='op'>=</span> <span class='id identifier rubyid_handler_class'>handler_class</span><span class='period'>.</span><span class='id identifier rubyid_payload_schema'>payload_schema</span>
+  <span class='kw'>return</span> <span class='kw'>true</span> <span class='kw'>unless</span> <span class='id identifier rubyid_schema'>schema</span>
+
+  <span class='id identifier rubyid_serialized_payload'>serialized_payload</span> <span class='op'>=</span> <span class='id identifier rubyid_payload'>payload</span><span class='period'>.</span><span class='id identifier rubyid_as_json'>as_json</span>
+  <span class='id identifier rubyid_validation_errors'>validation_errors</span> <span class='op'>=</span> <span class='const'>JSON</span><span class='op'>::</span><span class='const'>Validator</span><span class='period'>.</span><span class='id identifier rubyid_fully_validate'>fully_validate</span><span class='lparen'>(</span><span class='id identifier rubyid_schema'>schema</span><span class='comma'>,</span> <span class='id identifier rubyid_serialized_payload'>serialized_payload</span><span class='rparen'>)</span>
+
+  <span class='kw'>if</span> <span class='id identifier rubyid_validation_errors'>validation_errors</span><span class='period'>.</span><span class='id identifier rubyid_any?'>any?</span>
+    <span class='id identifier rubyid_raise'>raise</span> <span class='const'><span class='object_link'><a href="../../Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="../Support.html" title="Servus::Support (module)">Support</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Errors.html" title="Servus::Support::Errors (module)">Errors</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Errors/ValidationError.html" title="Servus::Support::Errors::ValidationError (class)">ValidationError</a></span></span><span class='comma'>,</span>
+          <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Invalid payload for event :</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_handler_class'>handler_class</span><span class='period'>.</span><span class='id identifier rubyid_event_name'>event_name</span><span class='embexpr_end'>}</span><span class='tstring_content'>: </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_validation_errors'>validation_errors</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>, </span><span class='tstring_end'>&#39;</span></span><span class='rparen'>)</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span>
   <span class='kw'>end</span>
 
   <span class='kw'>true</span>
@@ -1140,7 +1305,7 @@ Only validates successful responses; failures are skipped.</p>
 </div>
 
       <div id="footer">
-  Generated on Mon Nov 24 19:24:38 2025 by
+  Generated on Wed Dec  3 23:33:27 2025 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.37 (ruby-3.3.0).
 </div>

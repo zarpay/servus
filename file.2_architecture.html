@@ -63,12 +63,12 @@
 
 <h2 id="execution-flow">Execution Flow</h2>
 
-<pre class="code ruby"><code class="ruby"><span class='const'>Arguments</span> <span class='id identifier rubyid_→'>→</span> <span class='const'>Validation</span> <span class='id identifier rubyid_→'>→</span> <span class='const'>Service</span><span class='comment'>#call → Result Validation → Logging → Response
-</span>                <span class='id identifier rubyid_↓'>↓</span>                              <span class='id identifier rubyid_↓'>↓</span>                <span class='id identifier rubyid_↓'>↓</span>
-          <span class='const'>ValidationError</span>                <span class='const'>ValidationError</span>     <span class='const'>Benchmark</span>
+<pre class="code ruby"><code class="ruby"><span class='const'>Arguments</span> <span class='id identifier rubyid_→'>→</span> <span class='const'>Validation</span> <span class='id identifier rubyid_→'>→</span> <span class='const'>Service</span><span class='comment'>#call → Result Validation → Event Emission → Logging → Response
+</span>                <span class='id identifier rubyid_↓'>↓</span>                              <span class='id identifier rubyid_↓'>↓</span>                   <span class='id identifier rubyid_↓'>↓</span>              <span class='id identifier rubyid_↓'>↓</span>
+          <span class='const'>ValidationError</span>                <span class='const'>ValidationError</span>      <span class='const'>EventHandlers</span>   <span class='const'>Benchmark</span>
 </code></pre>
 
-<p>The framework intercepts the <code>.call</code> class method to inject cross-cutting concerns before and after your business logic runs. Your <code>call</code> instance method contains only business logic - validation, logging, and timing happen automatically.</p>
+<p>The framework intercepts the <code>.call</code> class method to inject cross-cutting concerns before and after your business logic runs. Your <code>call</code> instance method contains only business logic - validation, logging, event emission, and timing happen automatically.</p>
 
 <h2 id="core-components">Core Components</h2>
 
@@ -83,6 +83,12 @@
 <p><strong>Support::Rescuer</strong> (<code>lib/servus/support/rescuer.rb</code>): Declarative exception handling via <code>rescue_from</code> class method</p>
 
 <p><strong>Support::Errors</strong> (<code>lib/servus/support/errors.rb</code>): HTTP-aligned error hierarchy (ServiceError, NotFoundError, ValidationError, etc.)</p>
+
+<p><strong>Events::Emitter</strong> (<code>lib/servus/events/emitter.rb</code>): DSL for declaring events that services emit on success/failure</p>
+
+<p><strong>Events::Bus</strong> (<code>lib/servus/events/bus.rb</code>): Central event router using ActiveSupport::Notifications for thread-safe dispatch</p>
+
+<p><strong>EventHandler</strong> (<code>lib/servus/event_handler.rb</code>): Base class for handlers that subscribe to events and invoke services</p>
 
 <h2 id="extension-points">Extension Points</h2>
 
@@ -136,6 +142,27 @@
 <span class='rparen'>)</span>
 </code></pre>
 
+<h2 id="event-driven-architecture">Event-Driven Architecture</h2>
+
+<p>Services can emit events that trigger downstream handlers. This decouples services from their side effects.</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># Service emits events
+</span><span class='kw'>class</span> <span class='const'>CreateUser</span><span class='op'>::</span><span class='const'>Service</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+  <span class='id identifier rubyid_emits'>emits</span> <span class='symbol'>:user_created</span><span class='comma'>,</span> <span class='label'>on:</span> <span class='symbol'>:success</span>
+<span class='kw'>end</span>
+
+<span class='comment'># Handler reacts to events
+</span><span class='kw'>class</span> <span class='const'>UserCreatedHandler</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/EventHandler.html" title="Servus::EventHandler (class)">EventHandler</a></span></span>
+  <span class='id identifier rubyid_handles'>handles</span> <span class='symbol'>:user_created</span>
+
+  <span class='id identifier rubyid_invoke'>invoke</span> <span class='const'>SendWelcomeEmail</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='label'>async:</span> <span class='kw'>true</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_payload'>payload</span><span class='op'>|</span>
+    <span class='lbrace'>{</span> <span class='label'>user_id:</span> <span class='id identifier rubyid_payload'>payload</span><span class='lbracket'>[</span><span class='symbol'>:user_id</span><span class='rbracket'>]</span> <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<p>See <a href="file.5_event_bus.html" title="Event Bus">Event Bus</a> for full documentation.</p>
+
 <h2 id="performance">Performance</h2>
 
 <ul>
@@ -147,7 +174,7 @@
 </div></div>
 
       <div id="footer">
-  Generated on Mon Nov 24 19:24:38 2025 by
+  Generated on Wed Dec  3 23:33:26 2025 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.37 (ruby-3.3.0).
 </div>

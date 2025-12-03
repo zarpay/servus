@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  File: Features / 5. Event Bus
+  
+    &mdash; Servus | Service Object Framework
+  
+</title>
+
+  <link rel="stylesheet" href="css/style.css" type="text/css" />
+
+  <link rel="stylesheet" href="css/common.css" type="text/css" />
+
+<script type="text/javascript">
+  pathId = "5_event_bus";
+  relpath = '';
+</script>
+
+
+  <script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+
+  <script type="text/javascript" charset="utf-8" src="js/app.js"></script>
+
+
+  </head>
+  <body>
+    <div class="nav_wrap">
+      <iframe id="nav" src="file_list.html?1"></iframe>
+      <div id="resizer"></div>
+    </div>
+
+    <div id="main" tabindex="-1">
+      <div id="header">
+        <div id="menu">
+  
+    <a href="_index.html">Index</a> &raquo; 
+    <span class="title">File: Features / 5. Event Bus</span>
+  
+</div>
+
+        <div id="search">
+  
+    <a class="full_list_link" id="class_list_link"
+        href="class_list.html">
+
+        <svg width="24" height="24">
+          <rect x="0" y="4" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="12" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="20" width="24" height="4" rx="1" ry="1"></rect>
+        </svg>
+    </a>
+  
+</div>
+        <div class="clear"></div>
+      </div>
+
+      <div id="content"><div id='filecontents'><h1 id="event-bus">Event Bus</h1>
+
+<p>Servus includes an event-driven architecture for decoupling service logic from side effects. Services emit events, and EventHandlers subscribe to them and invoke downstream services.</p>
+
+<h2 id="overview">Overview</h2>
+
+<p>The Event Bus provides:</p>
+
+<ul>
+<li><strong>Emitters</strong>: Services declare events they emit on success/failure</li>
+<li><strong>EventHandlers</strong>: Subscribe to events and invoke services in response</li>
+<li><strong>Event Bus</strong>: Routes events to registered handlers via ActiveSupport::Notifications</li>
+<li><strong>Payload Validation</strong>: Optional JSON Schema validation for event payloads</li>
+</ul>
+
+<h2 id="service-event-emission">Service Event Emission</h2>
+
+<p>Services can emit events when they succeed or fail using the <code>emits</code> DSL:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='kw'>class</span> <span class='const'>CreateUser</span><span class='op'>::</span><span class='const'>Service</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+  <span class='id identifier rubyid_emits'>emits</span> <span class='symbol'>:user_created</span><span class='comma'>,</span> <span class='label'>on:</span> <span class='symbol'>:success</span>
+  <span class='id identifier rubyid_emits'>emits</span> <span class='symbol'>:user_creation_failed</span><span class='comma'>,</span> <span class='label'>on:</span> <span class='symbol'>:failure</span>
+
+  <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>email:</span><span class='comma'>,</span> <span class='label'>name:</span><span class='rparen'>)</span>
+    <span class='ivar'>@email</span> <span class='op'>=</span> <span class='id identifier rubyid_email'>email</span>
+    <span class='ivar'>@name</span> <span class='op'>=</span> <span class='id identifier rubyid_name'>name</span>
+  <span class='kw'>end</span>
+
+  <span class='kw'>def</span> <span class='id identifier rubyid_call'>call</span>
+    <span class='id identifier rubyid_user'>user</span> <span class='op'>=</span> <span class='const'>User</span><span class='period'>.</span><span class='id identifier rubyid_create!'>create!</span><span class='lparen'>(</span><span class='label'>email:</span> <span class='ivar'>@email</span><span class='comma'>,</span> <span class='label'>name:</span> <span class='ivar'>@name</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_success'>success</span><span class='lparen'>(</span><span class='label'>user:</span> <span class='id identifier rubyid_user'>user</span><span class='rparen'>)</span>
+  <span class='kw'>rescue</span> <span class='const'>ActiveRecord</span><span class='op'>::</span><span class='const'>RecordInvalid</span> <span class='op'>=&gt;</span> <span class='id identifier rubyid_e'>e</span>
+    <span class='id identifier rubyid_failure'>failure</span><span class='lparen'>(</span><span class='id identifier rubyid_e'>e</span><span class='period'>.</span><span class='id identifier rubyid_message'>message</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h3 id="custom-payloads">Custom Payloads</h3>
+
+<p>By default, success events receive <code>result.data</code> and failure events receive <code>result.error</code>. Customize with a block or method:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='kw'>class</span> <span class='const'>CreateUser</span><span class='op'>::</span><span class='const'>Service</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+  <span class='comment'># Block-based payload
+</span>  <span class='id identifier rubyid_emits'>emits</span> <span class='symbol'>:user_created</span><span class='comma'>,</span> <span class='label'>on:</span> <span class='symbol'>:success</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_result'>result</span><span class='op'>|</span>
+    <span class='lbrace'>{</span> <span class='label'>user_id:</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='lbracket'>[</span><span class='symbol'>:user</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_id'>id</span><span class='comma'>,</span> <span class='label'>email:</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='lbracket'>[</span><span class='symbol'>:user</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_email'>email</span> <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+
+  <span class='comment'># Method-based payload
+</span>  <span class='id identifier rubyid_emits'>emits</span> <span class='symbol'>:user_stats_updated</span><span class='comma'>,</span> <span class='label'>on:</span> <span class='symbol'>:success</span><span class='comma'>,</span> <span class='label'>with:</span> <span class='symbol'>:stats_payload</span>
+
+  <span class='id identifier rubyid_private'>private</span>
+
+  <span class='kw'>def</span> <span class='id identifier rubyid_stats_payload'>stats_payload</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='rparen'>)</span>
+    <span class='lbrace'>{</span> <span class='label'>user_count:</span> <span class='const'>User</span><span class='period'>.</span><span class='id identifier rubyid_count'>count</span><span class='comma'>,</span> <span class='label'>latest_user_id:</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='lbracket'>[</span><span class='symbol'>:user</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_id'>id</span> <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h3 id="trigger-types">Trigger Types</h3>
+
+<ul>
+<li><code>:success</code> - Fires when service returns <code>success(...)</code></li>
+<li><code>:failure</code> - Fires when service returns <code>failure(...)</code></li>
+<li><code>:error!</code> - Fires when service calls <code>error!(...)</code> (before exception is raised)</li>
+</ul>
+
+<h2 id="event-handlers">Event Handlers</h2>
+
+<p>EventHandlers live in <code>app/events/</code> and subscribe to events using a declarative DSL:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># app/events/user_created_handler.rb
+</span><span class='kw'>class</span> <span class='const'>UserCreatedHandler</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/EventHandler.html" title="Servus::EventHandler (class)">EventHandler</a></span></span>
+  <span class='id identifier rubyid_handles'>handles</span> <span class='symbol'>:user_created</span>
+
+  <span class='id identifier rubyid_invoke'>invoke</span> <span class='const'>SendWelcomeEmail</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='label'>async:</span> <span class='kw'>true</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_payload'>payload</span><span class='op'>|</span>
+    <span class='lbrace'>{</span> <span class='label'>user_id:</span> <span class='id identifier rubyid_payload'>payload</span><span class='lbracket'>[</span><span class='symbol'>:user_id</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>email:</span> <span class='id identifier rubyid_payload'>payload</span><span class='lbracket'>[</span><span class='symbol'>:email</span><span class='rbracket'>]</span> <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_invoke'>invoke</span> <span class='const'>TrackAnalytics</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='label'>async:</span> <span class='kw'>true</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_payload'>payload</span><span class='op'>|</span>
+    <span class='lbrace'>{</span> <span class='label'>event:</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>user_created</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='label'>user_id:</span> <span class='id identifier rubyid_payload'>payload</span><span class='lbracket'>[</span><span class='symbol'>:user_id</span><span class='rbracket'>]</span> <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h3 id="generator">Generator</h3>
+
+<p>Generate handlers with the Rails generator:</p>
+
+<pre class="code bash"><code class="bash">rails g servus:event_handler user_created
+# Creates:
+#   app/events/user_created_handler.rb
+#   spec/events/user_created_handler_spec.rb
+</code></pre>
+
+<h3 id="invocation-options">Invocation Options</h3>
+
+<pre class="code ruby"><code class="ruby"><span class='kw'>class</span> <span class='const'>UserCreatedHandler</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/EventHandler.html" title="Servus::EventHandler (class)">EventHandler</a></span></span>
+  <span class='id identifier rubyid_handles'>handles</span> <span class='symbol'>:user_created</span>
+
+  <span class='comment'># Synchronous invocation (default)
+</span>  <span class='id identifier rubyid_invoke'>invoke</span> <span class='const'>NotifyAdmin</span><span class='op'>::</span><span class='const'>Service</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_payload'>payload</span><span class='op'>|</span>
+    <span class='lbrace'>{</span> <span class='label'>message:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>New user: </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_payload'>payload</span><span class='lbracket'>[</span><span class='symbol'>:email</span><span class='rbracket'>]</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+
+  <span class='comment'># Async via ActiveJob
+</span>  <span class='id identifier rubyid_invoke'>invoke</span> <span class='const'>SendWelcomeEmail</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='label'>async:</span> <span class='kw'>true</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_payload'>payload</span><span class='op'>|</span>
+    <span class='lbrace'>{</span> <span class='label'>user_id:</span> <span class='id identifier rubyid_payload'>payload</span><span class='lbracket'>[</span><span class='symbol'>:user_id</span><span class='rbracket'>]</span> <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+
+  <span class='comment'># Async with specific queue
+</span>  <span class='id identifier rubyid_invoke'>invoke</span> <span class='const'>SendWelcomeEmail</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='label'>async:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>queue:</span> <span class='symbol'>:mailers</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_payload'>payload</span><span class='op'>|</span>
+    <span class='lbrace'>{</span> <span class='label'>user_id:</span> <span class='id identifier rubyid_payload'>payload</span><span class='lbracket'>[</span><span class='symbol'>:user_id</span><span class='rbracket'>]</span> <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+
+  <span class='comment'># Conditional invocation
+</span>  <span class='id identifier rubyid_invoke'>invoke</span> <span class='const'>GrantPremiumRewards</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='label'>if:</span> <span class='tlambda'>-&gt;</span><span class='lparen'>(</span><span class='id identifier rubyid_p'>p</span><span class='rparen'>)</span> <span class='tlambeg'>{</span> <span class='id identifier rubyid_p'>p</span><span class='lbracket'>[</span><span class='symbol'>:premium</span><span class='rbracket'>]</span> <span class='rbrace'>}</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_payload'>payload</span><span class='op'>|</span>
+    <span class='lbrace'>{</span> <span class='label'>user_id:</span> <span class='id identifier rubyid_payload'>payload</span><span class='lbracket'>[</span><span class='symbol'>:user_id</span><span class='rbracket'>]</span> <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_invoke'>invoke</span> <span class='const'>SkipForPremium</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='label'>unless:</span> <span class='tlambda'>-&gt;</span><span class='lparen'>(</span><span class='id identifier rubyid_p'>p</span><span class='rparen'>)</span> <span class='tlambeg'>{</span> <span class='id identifier rubyid_p'>p</span><span class='lbracket'>[</span><span class='symbol'>:premium</span><span class='rbracket'>]</span> <span class='rbrace'>}</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_payload'>payload</span><span class='op'>|</span>
+    <span class='lbrace'>{</span> <span class='label'>user_id:</span> <span class='id identifier rubyid_payload'>payload</span><span class='lbracket'>[</span><span class='symbol'>:user_id</span><span class='rbracket'>]</span> <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h2 id="emitting-events-directly">Emitting Events Directly</h2>
+
+<p>EventHandlers provide an <code>emit</code> class method for emitting events from controllers, jobs, or other code without a service:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='kw'>class</span> <span class='const'>UsersController</span> <span class='op'>&lt;</span> <span class='const'>ApplicationController</span>
+  <span class='kw'>def</span> <span class='id identifier rubyid_create'>create</span>
+    <span class='id identifier rubyid_user'>user</span> <span class='op'>=</span> <span class='const'>User</span><span class='period'>.</span><span class='id identifier rubyid_create!'>create!</span><span class='lparen'>(</span><span class='id identifier rubyid_user_params'>user_params</span><span class='rparen'>)</span>
+    <span class='const'>UserCreatedHandler</span><span class='period'>.</span><span class='id identifier rubyid_emit'>emit</span><span class='lparen'>(</span><span class='lbrace'>{</span> <span class='label'>user_id:</span> <span class='id identifier rubyid_user'>user</span><span class='period'>.</span><span class='id identifier rubyid_id'>id</span><span class='comma'>,</span> <span class='label'>email:</span> <span class='id identifier rubyid_user'>user</span><span class='period'>.</span><span class='id identifier rubyid_email'>email</span> <span class='rbrace'>}</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_redirect_to'>redirect_to</span> <span class='id identifier rubyid_user'>user</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<p>This is useful when the event source isn&#39;t a Servus service.</p>
+
+<h2 id="payload-schema-validation">Payload Schema Validation</h2>
+
+<p>Define JSON schemas to validate event payloads:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='kw'>class</span> <span class='const'>UserCreatedHandler</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/EventHandler.html" title="Servus::EventHandler (class)">EventHandler</a></span></span>
+  <span class='id identifier rubyid_handles'>handles</span> <span class='symbol'>:user_created</span>
+
+  <span class='id identifier rubyid_schema'>schema</span> <span class='label'>payload:</span> <span class='lbrace'>{</span>
+    <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>object</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span>
+    <span class='label'>required:</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>user_id</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>email</span><span class='tstring_end'>&#39;</span></span><span class='rbracket'>]</span><span class='comma'>,</span>
+    <span class='label'>properties:</span> <span class='lbrace'>{</span>
+      <span class='label'>user_id:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>integer</span><span class='tstring_end'>&#39;</span></span> <span class='rbrace'>}</span><span class='comma'>,</span>
+      <span class='label'>email:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>string</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='label'>format:</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>email</span><span class='tstring_end'>&#39;</span></span> <span class='rbrace'>}</span>
+    <span class='rbrace'>}</span>
+  <span class='rbrace'>}</span>
+
+  <span class='id identifier rubyid_invoke'>invoke</span> <span class='const'>SendWelcomeEmail</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='label'>async:</span> <span class='kw'>true</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_payload'>payload</span><span class='op'>|</span>
+    <span class='lbrace'>{</span> <span class='label'>user_id:</span> <span class='id identifier rubyid_payload'>payload</span><span class='lbracket'>[</span><span class='symbol'>:user_id</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>email:</span> <span class='id identifier rubyid_payload'>payload</span><span class='lbracket'>[</span><span class='symbol'>:email</span><span class='rbracket'>]</span> <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<p>When <code>emit</code> is called, the payload is validated against the schema before the event is dispatched.</p>
+
+<h2 id="handler-validation">Handler Validation</h2>
+
+<p>Enable strict validation to catch handlers subscribing to non-existent events:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># config/initializers/servus.rb
+</span><span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='period'>.</span><span class='id identifier rubyid_configure'><span class='object_link'><a href="Servus.html#configure-class_method" title="Servus.configure (method)">configure</a></span></span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_config'>config</span><span class='op'>|</span>
+  <span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_strict_event_validation'>strict_event_validation</span> <span class='op'>=</span> <span class='kw'>true</span>  <span class='comment'># Default: true
+</span><span class='kw'>end</span>
+
+<span class='comment'># Then manually validate (typically in a rake task or CI)
+</span><span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/EventHandler.html" title="Servus::EventHandler (class)">EventHandler</a></span></span><span class='period'>.</span><span class='id identifier rubyid_validate_all_handlers!'><span class='object_link'><a href="Servus/EventHandler.html#validate_all_handlers!-class_method" title="Servus::EventHandler.validate_all_handlers! (method)">validate_all_handlers!</a></span></span>
+</code></pre>
+
+<p>This helps catch typos and orphaned handlers during development and CI.</p>
+
+<h2 id="best-practices">Best Practices</h2>
+
+<h3 id="single-event-per-service">Single Event Per Service</h3>
+
+<p>Services should emit one event per trigger representing their core concern:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># Good - one event, handler coordinates reactions
+</span><span class='kw'>class</span> <span class='const'>CreateUser</span><span class='op'>::</span><span class='const'>Service</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+  <span class='id identifier rubyid_emits'>emits</span> <span class='symbol'>:user_created</span><span class='comma'>,</span> <span class='label'>on:</span> <span class='symbol'>:success</span>
+<span class='kw'>end</span>
+
+<span class='kw'>class</span> <span class='const'>UserCreatedHandler</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/EventHandler.html" title="Servus::EventHandler (class)">EventHandler</a></span></span>
+  <span class='id identifier rubyid_handles'>handles</span> <span class='symbol'>:user_created</span>
+
+  <span class='id identifier rubyid_invoke'>invoke</span> <span class='const'>SendWelcomeEmail</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='label'>async:</span> <span class='kw'>true</span>
+  <span class='id identifier rubyid_invoke'>invoke</span> <span class='const'>TrackAnalytics</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='label'>async:</span> <span class='kw'>true</span>
+  <span class='id identifier rubyid_invoke'>invoke</span> <span class='const'>NotifySlack</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='label'>async:</span> <span class='kw'>true</span>
+<span class='kw'>end</span>
+
+<span class='comment'># Avoid - service doing too much coordination
+</span><span class='kw'>class</span> <span class='const'>CreateUser</span><span class='op'>::</span><span class='const'>Service</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+  <span class='id identifier rubyid_emits'>emits</span> <span class='symbol'>:send_welcome_email</span><span class='comma'>,</span> <span class='label'>on:</span> <span class='symbol'>:success</span>
+  <span class='id identifier rubyid_emits'>emits</span> <span class='symbol'>:track_user_analytics</span><span class='comma'>,</span> <span class='label'>on:</span> <span class='symbol'>:success</span>
+  <span class='id identifier rubyid_emits'>emits</span> <span class='symbol'>:notify_slack</span><span class='comma'>,</span> <span class='label'>on:</span> <span class='symbol'>:success</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<h3 id="naming-conventions">Naming Conventions</h3>
+
+<ul>
+<li>Events: Past tense describing what happened (<code>user_created</code>, <code>payment_processed</code>)</li>
+<li>Handlers: Event name + &quot;Handler&quot; suffix (<code>UserCreatedHandler</code>)</li>
+</ul>
+
+<h3 id="handler-location">Handler Location</h3>
+
+<p>Handlers live in <code>app/events/</code> and are auto-loaded by the Railtie:</p>
+
+<pre class="code ruby"><code class="ruby">app/events/
+├── user_created_handler.rb
+├── payment_processed_handler.rb
+└── order_completed_handler.rb
+</code></pre>
+
+<h2 id="instrumentation">Instrumentation</h2>
+
+<p>Events are instrumented via ActiveSupport::Notifications and appear in Rails logs:</p>
+
+<pre class="code ruby"><code class="ruby">servus.events.user_created (1.2ms) {:user_id=&gt;123, :email=&gt;&quot;user@example.com&quot;}
+</code></pre>
+
+<p>Subscribe to events programmatically:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='const'>ActiveSupport</span><span class='op'>::</span><span class='const'>Notifications</span><span class='period'>.</span><span class='id identifier rubyid_subscribe'>subscribe</span><span class='lparen'>(</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>^servus\.events\.</span><span class='regexp_end'>/</span></span><span class='rparen'>)</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='op'>*</span><span class='id identifier rubyid_args'>args</span><span class='op'>|</span>
+  <span class='id identifier rubyid_event_name'>event_name</span> <span class='op'>=</span> <span class='id identifier rubyid_name'>name</span><span class='period'>.</span><span class='id identifier rubyid_sub'>sub</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>servus.events.</span><span class='tstring_end'>&#39;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_end'>&#39;</span></span><span class='rparen'>)</span>
+  <span class='const'>Rails</span><span class='period'>.</span><span class='id identifier rubyid_logger'>logger</span><span class='period'>.</span><span class='id identifier rubyid_info'>info</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Event emitted: </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_event_name'>event_name</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span>
+<span class='kw'>end</span>
+</code></pre>
+</div></div>
+
+      <div id="footer">
+  Generated on Wed Dec  3 23:33:26 2025 by
+  <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
+  0.9.37 (ruby-3.3.0).
+</div>
+
+    </div>
+  </body>
+</html>

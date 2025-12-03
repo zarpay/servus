@@ -144,7 +144,7 @@ Access the configuration via <span class='object_link'><a href="../Servus.html#c
       <li class="public ">
   <span class="summary_signature">
     
-      <a href="#schema_root-instance_method" title="#schema_root (instance method)">#<strong>schema_root</strong>  &#x21d2; String </a>
+      <a href="#events_dir-instance_method" title="#events_dir (instance method)">#<strong>events_dir</strong>  &#x21d2; String </a>
     
 
     
@@ -153,7 +153,31 @@ Access the configuration via <span class='object_link'><a href="../Servus.html#c
   
   
     
-      <span class="note title readonly">readonly</span>
+    
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>The directory where event handlers are located.</p>
+</div></span>
+  
+</li>
+
+    
+      <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#schemas_dir-instance_method" title="#schemas_dir (instance method)">#<strong>schemas_dir</strong>  &#x21d2; String </a>
+    
+
+    
+  </span>
+  
+  
+  
     
     
   
@@ -163,7 +187,59 @@ Access the configuration via <span class='object_link'><a href="../Servus.html#c
   
 
   
-    <span class="summary_desc"><div class='inline'><p>The root directory where schema files are located.</p>
+    <span class="summary_desc"><div class='inline'><p>The directory where JSON schema files are located.</p>
+</div></span>
+  
+</li>
+
+    
+      <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#services_dir-instance_method" title="#services_dir (instance method)">#<strong>services_dir</strong>  &#x21d2; String </a>
+    
+
+    
+  </span>
+  
+  
+  
+    
+    
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>The directory where services are located.</p>
+</div></span>
+  
+</li>
+
+    
+      <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#strict_event_validation-instance_method" title="#strict_event_validation (instance method)">#<strong>strict_event_validation</strong>  &#x21d2; Boolean </a>
+    
+
+    
+  </span>
+  
+  
+  
+    
+    
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Whether to validate that all event handlers subscribe to events that are actually emitted by services.</p>
 </div></span>
   
 </li>
@@ -288,17 +364,21 @@ Access the configuration via <span class='object_link'><a href="../Servus.html#c
       <pre class="lines">
 
 
-29
-30
-31
-32</pre>
+50
+51
+52
+53
+54
+55</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/config.rb', line 29</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/config.rb', line 50</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span>
-  <span class='comment'># Default to Rails.root if available, otherwise use current working directory
-</span>  <span class='ivar'>@schema_root</span> <span class='op'>=</span> <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='id identifier rubyid_root_path'>root_path</span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>app/schemas/services</span><span class='tstring_end'>&#39;</span></span><span class='rparen'>)</span>
+  <span class='ivar'>@events_dir</span> <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>app/events</span><span class='tstring_end'>&#39;</span></span>
+  <span class='ivar'>@schemas_dir</span> <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>app/schemas</span><span class='tstring_end'>&#39;</span></span>
+  <span class='ivar'>@services_dir</span> <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&#39;</span><span class='tstring_content'>app/services</span><span class='tstring_end'>&#39;</span></span>
+  <span class='ivar'>@strict_event_validation</span> <span class='op'>=</span> <span class='kw'>true</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -311,11 +391,11 @@ Access the configuration via <span class='object_link'><a href="../Servus.html#c
     <h2>Instance Attribute Details</h2>
     
       
-      <span id=""></span>
+      <span id="events_dir=-instance_method"></span>
       <div class="method_details first">
-  <h3 class="signature first" id="schema_root-instance_method">
+  <h3 class="signature first" id="events_dir-instance_method">
   
-    #<strong>schema_root</strong>  &#x21d2; <tt>String</tt>  <span class="extras">(readonly)</span>
+    #<strong>events_dir</strong>  &#x21d2; <tt>String</tt> 
   
 
   
@@ -323,10 +403,9 @@ Access the configuration via <span class='object_link'><a href="../Servus.html#c
   
 </h3><div class="docstring">
   <div class="discussion">
-    <p>The root directory where schema files are located.</p>
+    <p>The directory where event handlers are located.</p>
 
-<p>Defaults to <code>Rails.root/app/schemas/services</code> in Rails applications,
-or a relative path from the gem installation otherwise.</p>
+<p>Defaults to <code>Rails.root/app/events</code> in Rails applications.</p>
 
 
   </div>
@@ -344,7 +423,7 @@ or a relative path from the gem installation otherwise.</p>
       
       
         &mdash;
-        <div class='inline'><p>the schema root directory path</p>
+        <div class='inline'><p>the events directory path</p>
 </div>
       
     </li>
@@ -357,15 +436,199 @@ or a relative path from the gem installation otherwise.</p>
       <pre class="lines">
 
 
-24
-25
-26</pre>
+30
+31
+32</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/config.rb', line 24</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/config.rb', line 30</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_schema_root'>schema_root</span>
-  <span class='ivar'>@schema_root</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_events_dir'>events_dir</span>
+  <span class='ivar'>@events_dir</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      
+      <span id="schemas_dir=-instance_method"></span>
+      <div class="method_details ">
+  <h3 class="signature " id="schemas_dir-instance_method">
+  
+    #<strong>schemas_dir</strong>  &#x21d2; <tt>String</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>The directory where JSON schema files are located.</p>
+
+<p>Defaults to <code>Rails.root/app/schemas/services</code> in Rails applications.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>String</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>the schemas directory path</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+23
+24
+25</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/servus/config.rb', line 23</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_schemas_dir'>schemas_dir</span>
+  <span class='ivar'>@schemas_dir</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      
+      <span id="services_dir=-instance_method"></span>
+      <div class="method_details ">
+  <h3 class="signature " id="services_dir-instance_method">
+  
+    #<strong>services_dir</strong>  &#x21d2; <tt>String</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>The directory where services are located.</p>
+
+<p>Defaults to <code>Rails.root/app/services</code> in Rails applications.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>String</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>the services directory path</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+37
+38
+39</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/servus/config.rb', line 37</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_services_dir'>services_dir</span>
+  <span class='ivar'>@services_dir</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      
+      <span id="strict_event_validation=-instance_method"></span>
+      <div class="method_details ">
+  <h3 class="signature " id="strict_event_validation-instance_method">
+  
+    #<strong>strict_event_validation</strong>  &#x21d2; <tt>Boolean</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Whether to validate that all event handlers subscribe to events that are actually emitted by services.</p>
+
+<p>When enabled, raises an error on boot if handlers subscribe to non-existent events.
+Helps catch typos and orphaned handlers.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Boolean</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>true to validate, false to skip validation</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+45
+46
+47</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/servus/config.rb', line 45</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_strict_event_validation'>strict_event_validation</span>
+  <span class='ivar'>@strict_event_validation</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -402,7 +665,7 @@ or a relative path from the gem installation otherwise.</p>
     
       
       <pre class="example code"><code><span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_schema_dir_for'>schema_dir_for</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>process_payment</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
-<span class='comment'># =&gt; &quot;/app/app/schemas/services/process_payment&quot;</span></code></pre>
+<span class='comment'># =&gt; &quot;/full/path/app/schemas/process_payment&quot;</span></code></pre>
     
   </div>
 <p class="tag_title">Parameters:</p>
@@ -449,15 +712,15 @@ or a relative path from the gem installation otherwise.</p>
       <pre class="lines">
 
 
-58
-59
-60</pre>
+78
+79
+80</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/config.rb', line 58</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/config.rb', line 78</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_schema_dir_for'>schema_dir_for</span><span class='lparen'>(</span><span class='id identifier rubyid_service_namespace'>service_namespace</span><span class='rparen'>)</span>
-  <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='id identifier rubyid_schema_root'>schema_root</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='comma'>,</span> <span class='id identifier rubyid_service_namespace'>service_namespace</span><span class='rparen'>)</span>
+  <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='id identifier rubyid_root_path'>root_path</span><span class='comma'>,</span> <span class='id identifier rubyid_schemas_dir'>schemas_dir</span><span class='comma'>,</span> <span class='id identifier rubyid_service_namespace'>service_namespace</span><span class='rparen'>)</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -477,9 +740,6 @@ or a relative path from the gem installation otherwise.</p>
   <div class="discussion">
     <p>Returns the full path to a service&#39;s schema file.</p>
 
-<p>Constructs the path by combining <span class='object_link'><a href="#schema_root-instance_method" title="Servus::Config#schema_root (method)">#schema_root</a></span> with the service namespace
-and schema type.</p>
-
 
   </div>
 </div>
@@ -490,7 +750,7 @@ and schema type.</p>
     
       
       <pre class="example code"><code><span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_schema_path_for'>schema_path_for</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>process_payment</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>arguments</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
-<span class='comment'># =&gt; &quot;/app/app/schemas/services/process_payment/arguments.json&quot;</span></code></pre>
+<span class='comment'># =&gt; &quot;/full/path/app/schemas/process_payment/arguments.json&quot;</span></code></pre>
     
   </div>
 <p class="tag_title">Parameters:</p>
@@ -552,15 +812,15 @@ and schema type.</p>
       <pre class="lines">
 
 
-46
-47
-48</pre>
+66
+67
+68</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/config.rb', line 46</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/config.rb', line 66</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_schema_path_for'>schema_path_for</span><span class='lparen'>(</span><span class='id identifier rubyid_service_namespace'>service_namespace</span><span class='comma'>,</span> <span class='id identifier rubyid_type'>type</span><span class='rparen'>)</span>
-  <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='id identifier rubyid_schema_root'>schema_root</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='comma'>,</span> <span class='id identifier rubyid_service_namespace'>service_namespace</span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_type'>type</span><span class='embexpr_end'>}</span><span class='tstring_content'>.json</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+  <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='id identifier rubyid_root_path'>root_path</span><span class='comma'>,</span> <span class='id identifier rubyid_schemas_dir'>schemas_dir</span><span class='comma'>,</span> <span class='id identifier rubyid_service_namespace'>service_namespace</span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_type'>type</span><span class='embexpr_end'>}</span><span class='tstring_content'>.json</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -572,7 +832,7 @@ and schema type.</p>
 </div>
 
       <div id="footer">
-  Generated on Mon Nov 24 19:24:38 2025 by
+  Generated on Wed Dec  3 23:33:27 2025 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.37 (ruby-3.3.0).
 </div>
