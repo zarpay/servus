@@ -1,0 +1,48 @@
+# frozen_string_literal: true
+
+require 'rails_helper'
+
+RSpec.describe <%= handler_class_name %> do
+<%- unless options[:no_docs] -%>
+  # Test that the handler invokes the correct services with properly mapped arguments.
+  #
+  # Example test pattern:
+  #   it 'invokes YourService with correct arguments' do
+  #     expect(YourService).to receive(:call_async).with(user_id: 123)
+  #     described_class.handle({ user_id: 123, email: 'test@example.com' })
+  #   end
+  #
+  # For testing event emission from controllers/jobs:
+  #   include Servus::Testing::EventHelpers
+  #
+  #   it 'emits <%= file_name %> event' do
+  #     servus_expect_event(:<%= file_name %>)
+  #       .with_payload(hash_including(user_id: 123))
+  #       .when { YourController.new.create }
+  #   end
+
+<%- end -%>
+  let(:payload) do
+    {
+      # TODO: Add sample payload fields
+      # user_id: 123,
+      # email: 'test@example.com'
+    }
+  end
+
+<%- unless options[:no_docs] -%>
+  # TODO: Add tests for service invocations
+  # it 'invokes YourService with mapped arguments' do
+  #   expect(YourService).to receive(:call_async).with(user_id: payload[:user_id])
+  #   described_class.handle(payload)
+  # end
+
+  # TODO: Test conditional logic if using :if or :unless
+  # it 'skips invocation when condition is false' do
+  #   expect(YourService).not_to receive(:call_async)
+  #   described_class.handle(payload.merge(premium: false))
+  # end
+<%- else -%>
+  # Add your tests here
+<%- end -%>
+end

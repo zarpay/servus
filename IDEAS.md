@@ -2,4 +2,4 @@
 
 2. Improve error handling with an error registry that can be referenced by codes as opposed to fully qualified class names.
 
-3. Mock result objects from schema defaults
+3. Update generators to not make schema files and instead add schemas to schema: method in generators.

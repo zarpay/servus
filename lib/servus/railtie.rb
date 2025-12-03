@@ -18,5 +18,21 @@ module Servus
         Servus::Base.extend Servus::Extensions::Async::Call
       end
     end
+
+    # Load event handlers and clear on reload
+    config.to_prepare do
+      Servus::Events::Bus.clear if Rails.env.development?
+
+      # Eager load all event handlers
+      events_path = Rails.root.join(Servus.config.events_dir)
+      Dir[File.join(events_path, '**/*_handler.rb')].each do |handler_file|
+        require_dependency handler_file
+      end
+    end
+
+    # NOTE: Event validation is available but not run automatically due to load order issues.
+    # To validate handlers match emitted events, call manually:
+    #   Servus::EventHandler.validate_all_handlers!
+    # Or create a rake task for CI validation.
   end
 end

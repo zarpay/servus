@@ -9,9 +9,11 @@ module Servus
   #
   # @see Servus::Testing::ExampleBuilders
   # @see Servus::Testing::ExampleExtractor
+  # @see Servus::Testing::Matchers
   module Testing
   end
 end
 
 require_relative 'testing/example_extractor'
 require_relative 'testing/example_builders'
+require_relative 'testing/matchers'

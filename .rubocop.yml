@@ -1,11 +1,27 @@
 AllCops:
+  NewCops: enable
+  TargetRubyVersion: 3.3
   Include:
     - 'lib/**/*.rb'
     - 'spec/**/*.rb'
+  Exclude:
+    - 'spec/dummy/**/*'
+    - 'vendor/bundle/**/*'
+
+Lint/ConstantDefinitionInBlock:
+  Enabled: false
+
+Lint/ConstantReassignment:
+  Exclude:
+    - 'spec/**/*'
+
+Lint/MissingSuper:
+  Exclude:
+    - 'spec/**/*'
 
 Metrics/BlockLength:
   Exclude:
     - 'spec/**/*'
 
-Lint/ConstantDefinitionInBlock:
+Naming/PredicateMethod:
   Enabled: false

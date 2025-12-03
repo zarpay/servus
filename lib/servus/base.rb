@@ -48,9 +48,11 @@ module Servus
   class Base
     include Servus::Support::Errors
     include Servus::Support::Rescuer
+    include Servus::Events::Emitter
 
     # Support class aliases
     Logger = Servus::Support::Logger
+    Emitter = Servus::Events::Emitter
     Response = Servus::Support::Response
     Validator = Servus::Support::Validator
 
@@ -138,7 +140,12 @@ module Servus
     # @note Prefer {#failure} for expected error conditions. Use this for exceptional cases.
     # @see #failure
     def error!(message = nil, type: Servus::Support::Errors::ServiceError)
-      Logger.log_exception(self.class, type.new(message))
+      error = type.new(message)
+      Logger.log_exception(self.class, error)
+
+      # Emit error! events before raising
+      emit_events_for(:error!, Response.new(false, nil, error))
+
       raise type, message
     end
 
@@ -172,10 +179,15 @@ module Servus
       #
       # @see #initialize
       # @see #call
+      #
+      # rubocop:disable Metrics/MethodLength
       def call(**args)
         before_call(args)
-        result = benchmark(**args) { new(**args).call }
-        after_call(result)
+
+        instance = new(**args)
+        result = benchmark(**args) { instance.call }
+
+        after_call(result, instance)
 
         result
       rescue Servus::Support::Errors::ValidationError => e
@@ -185,6 +197,7 @@ module Servus
         Logger.log_exception(self, e)
         raise e
       end
+      # rubocop:enable Metrics/MethodLength
 
       # Defines schema validation rules for the service's arguments and/or result.
       #
@@ -257,18 +270,21 @@ module Servus
         Validator.validate_arguments!(self, args)
       end
 
-      # Executes post-call hooks including result validation.
+      # Executes post-call hooks including result validation and event emission.
       #
       # This method is automatically called after service execution completes and handles:
       # - Validating the result data against RESULT_SCHEMA (if defined)
+      # - Emitting events declared with the emits DSL
       #
       # @param result [Servus::Support::Response] the response returned from the service
+      # @param instance [Servus::Base] the service instance
       # @return [void]
       # @raise [Servus::Support::Errors::ValidationError] if result data fails validation
       #
       # @api private
-      def after_call(result)
+      def after_call(result, instance)
         Validator.validate_result!(self, result)
+        Emitter.emit_result_events!(instance, result)
       end
 
       # Measures service execution time and logs the result.
