@@ -30,7 +30,7 @@ jobs:
       run: bundle install
     # Run linters and static analysis
     - name: Run RuboCop
-      run: bundle exec rubocop
+      run: bundle exec rubocop --config .rubocop.yml
     # Run the test suite
     - name: Run the Specs
       run: bundle exec rspec
