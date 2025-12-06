@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [0.1.6] - 2025-12-06
+
+### Fixed
+
+- Make `emit_events_for` public in `Servus::Events::Emitter` to allow external event emission
+
 ## [0.1.5] - 2025-12-03
 
 ### Added

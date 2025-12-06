@@ -118,9 +118,6 @@ module Servus
         end
       end
 
-      # Instance methods for emitting events during service execution
-      private
-
       # Emits events for a specific trigger with the given result.
       #
       # @param trigger [Symbol] the trigger type (:success, :failure, :error!)
@@ -133,6 +130,9 @@ module Servus
           Servus::Events::Bus.emit(emission[:event_name], payload)
         end
       end
+
+      # Instance methods for emitting events during service execution
+      private
 
       # Builds the event payload using the configured payload builder or defaults.
       #
