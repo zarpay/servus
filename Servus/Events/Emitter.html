@@ -160,6 +160,38 @@ declare events that will be automatically emitted on success, failure, or error.
       
     </ul>
   
+    <h2>
+      Instance Method Summary
+      <small><a href="#" class="summary_toggle">collapse</a></small>
+    </h2>
+
+    <ul class="summary">
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#emit_events_for-instance_method" title="#emit_events_for (instance method)">#<strong>emit_events_for</strong>(trigger, result)  &#x21d2; void </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  <span class="private note title">private</span>
+
+  
+    <span class="summary_desc"><div class='inline'><p>Emits events for a specific trigger with the given result.</p>
+</div></span>
+  
+</li>
+
+      
+    </ul>
+  
 
 
   
@@ -253,10 +285,100 @@ trigger type based on the result and emits all configured events.</p>
     
   </div>
 
+  <div id="instance_method_details" class="method_details_list">
+    <h2>Instance Method Details</h2>
+
+    
+      <div class="method_details first">
+  <h3 class="signature first" id="emit_events_for-instance_method">
+  
+    #<strong>emit_events_for</strong>(trigger, result)  &#x21d2; <tt>void</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p class="note private">
+  <strong>This method is part of a private API.</strong>
+  You should avoid using this method if possible, as it may be removed or be changed in the future.
+</p>
+<p class="note returns_void">This method returns an undefined value.</p><p>Emits events for a specific trigger with the given result.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  <p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>trigger</span>
+      
+      
+        <span class='type'>(<tt>Symbol</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>the trigger type (:success, :failure, :error!)</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>result</span>
+      
+      
+        <span class='type'>(<tt><span class='object_link'><a href="../Support/Response.html" title="Servus::Support::Response (class)">Servus::Support::Response</a></span></tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>the service result</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+127
+128
+129
+130
+131
+132</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/servus/events/emitter.rb', line 127</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_emit_events_for'>emit_events_for</span><span class='lparen'>(</span><span class='id identifier rubyid_trigger'>trigger</span><span class='comma'>,</span> <span class='id identifier rubyid_result'>result</span><span class='rparen'>)</span>
+  <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_class'>class</span><span class='period'>.</span><span class='id identifier rubyid_emissions_for'>emissions_for</span><span class='lparen'>(</span><span class='id identifier rubyid_trigger'>trigger</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_emission'>emission</span><span class='op'>|</span>
+    <span class='id identifier rubyid_payload'>payload</span> <span class='op'>=</span> <span class='id identifier rubyid_build_event_payload'>build_event_payload</span><span class='lparen'>(</span><span class='id identifier rubyid_emission'>emission</span><span class='comma'>,</span> <span class='id identifier rubyid_result'>result</span><span class='rparen'>)</span>
+    <span class='const'><span class='object_link'><a href="../../Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="../Events.html" title="Servus::Events (module)">Events</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Bus.html" title="Servus::Events::Bus (class)">Bus</a></span></span><span class='period'>.</span><span class='id identifier rubyid_emit'><span class='object_link'><a href="Bus.html#emit-class_method" title="Servus::Events::Bus.emit (method)">emit</a></span></span><span class='lparen'>(</span><span class='id identifier rubyid_emission'>emission</span><span class='lbracket'>[</span><span class='symbol'>:event_name</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='id identifier rubyid_payload'>payload</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+  </div>
+
 </div>
 
       <div id="footer">
-  Generated on Wed Dec  3 23:40:07 2025 by
+  Generated on Sat Dec  6 11:17:46 2025 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.37 (ruby-3.3.0).
 </div>
