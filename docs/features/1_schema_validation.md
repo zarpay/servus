@@ -28,6 +28,12 @@ class ProcessPayment::Service < Servus::Base
         transaction_id: { type: "string", example: "txn_abc123" },
         new_balance: { type: "number", example: 950.0 }
       }
+    },
+    failure: {
+      type: "object",
+      properties: {
+        reason: { type: "string", example: "insufficient_funds" }
+      }
     }
   )
 end
@@ -73,6 +79,13 @@ class ProcessPayment::Service < Servus::Base
       new_balance: { type: "number" }
     }
   }.freeze
+
+  FAILURE_SCHEMA = {
+    type: "object",
+    properties: {
+      reason: { type: "string" }
+    }
+  }.freeze
 end
 ```
 
@@ -81,12 +94,13 @@ end
 For complex schemas, use JSON files instead of inline definitions. Create files at:
 - `app/schemas/services/service_name/arguments.json`
 - `app/schemas/services/service_name/result.json`
+- `app/schemas/services/service_name/failure.json`
 
 ### Schema Lookup Precedence
 
 Servus checks for schemas in this order:
 1. **schema DSL method** (if defined)
-2. **Inline constants** (ARGUMENTS_SCHEMA, RESULT_SCHEMA)
+2. **Inline constants** (ARGUMENTS_SCHEMA, RESULT_SCHEMA, FAILURE_SCHEMA)
 3. **JSON files** (in schema_root directory)
 
 Schemas are cached after first load for performance.
@@ -100,6 +114,34 @@ Schemas are cached after first load for performance.
 **Model Validation** (ActiveRecord): Database constraints before persistence
 
 Each layer has a different purpose - don't duplicate validation across layers.
+
+## Failure Data Validation
+
+Services can optionally attach structured data to failure responses using the `data:` keyword argument on `failure()`. When a `failure` schema is defined, this data is validated against it — just like success results are validated against `result` schemas.
+
+```ruby
+class ProcessPayment::Service < Servus::Base
+  schema(
+    failure: {
+      type: "object",
+      required: ["reason"],
+      properties: {
+        reason: { type: "string" },
+        decline_code: { type: "string" }
+      }
+    }
+  )
+
+  def call
+    return failure("Card declined", data: { reason: "insufficient_funds", decline_code: "do_not_honor" })
+  end
+end
+```
+
+Failure data validation is skipped when:
+- No `failure` schema is defined
+- The failure response has no data (`data: nil`, the default)
+- The response is a success
 
 ## Configuration
 

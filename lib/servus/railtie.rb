@@ -14,8 +14,14 @@ module Servus
     initializer 'servus.job_async' do
       ActiveSupport.on_load(:active_job) do
         require 'servus/extensions/async/ext'
-        # Extend the base service with the async call method
         Servus::Base.extend Servus::Extensions::Async::Call
+      end
+    end
+
+    initializer 'servus.lazily' do
+      ActiveSupport.on_load(:active_record) do
+        require 'servus/extensions/lazily/ext'
+        Servus::Base.extend Servus::Extensions::Lazily::Call
       end
     end
 

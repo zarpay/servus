@@ -116,6 +116,28 @@ module Servus
         Servus::Support::Response.new(true, example, nil)
       end
 
+      # Extracts example failure data values from a service's schema.
+      #
+      # Looks for `example` or `examples` keywords in the service's failure schema
+      # and returns them wrapped in a failure Response. Useful for validating failure
+      # response structure in tests.
+      #
+      # @param service_class [Class] The service class to extract examples from
+      # @param overrides [Hash] Optional values to override the schema examples
+      # @return [Servus::Support::Response] Failure response object with example data
+      #
+      # @example Basic usage
+      #   expected = servus_failure_example(ProcessPayment::Service)
+      #   # => Servus::Support::Response with failure? == true, data:
+      #   #    { reason: 'card_declined', decline_code: 'insufficient_funds' }
+      #
+      # @note Override keys can be strings or symbols; they'll be converted to symbols
+      # @note Returns empty hash if service has no failure schema defined
+      def servus_failure_example(service_class, overrides = {})
+        example = extract_example_from(service_class, :failure, overrides)
+        Servus::Support::Response.new(false, example, Servus::Support::Errors::ServiceError.new)
+      end
+
       private
 
       # Helper method to extract and merge examples from schema

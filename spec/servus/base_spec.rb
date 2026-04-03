@@ -173,6 +173,32 @@ RSpec.describe Servus::Base do
       expect(result.error).to be_a(Servus::Support::Errors::ServiceError)
       expect(result.error.message).to eq('Custom message')
     end
+
+    it 'accepts a data keyword argument' do
+      result = TestServiceV2.new.failure('Something failed', data: { reason: 'invalid', code: 42 })
+
+      expect(result.success?).to be false
+      expect(result.error.message).to eq('Something failed')
+      expect(result.data).to eq({ reason: 'invalid', code: 42 })
+    end
+
+    it 'defaults data to nil for backwards compatibility' do
+      result = TestServiceV2.new.failure('Something failed')
+
+      expect(result.data).to be_nil
+    end
+
+    it 'works with data and a custom error type' do
+      result = TestServiceV2.new.failure(
+        'Not found',
+        data: { searched_id: 99 },
+        type: Servus::Support::Errors::NotFoundError
+      )
+
+      expect(result.error).to be_a(Servus::Support::Errors::NotFoundError)
+      expect(result.error.message).to eq('Not found')
+      expect(result.data).to eq({ searched_id: 99 })
+    end
   end
 
   describe 'inheritance' do

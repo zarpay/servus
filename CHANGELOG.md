@@ -1,10 +1,33 @@
-## [0.2.2] - 2026-04-02
+## [0.3.0] - 2026-04-03
+
+### Breaking Changes
+
+- **Failure responses can now carry data**: `failure()` accepts an optional `data:` kwarg. Previously,
+  `result.data` was guaranteed to be `nil` on failure. Code that checks `result.data` for truthiness
+  to determine success/failure must switch to `result.success?` or `result.failure?`.
+  See the [Migration Guide](docs/guides/2_migration_guide.md#migrating-to-030) for details.
+- **`Response#with_data` removed**: Replaced by the `data:` kwarg on `failure()`. The `with_data` method
+  allowed arbitrary mutation of responses after creation, bypassing schema validation.
 
 ### Added
 
-- **`failure?` predicate on Response**: Complement to `success?` for cleaner conditional handling
-- **Data key access via `method_missing`**: Access success data keys directly on the response object
-  (`result.user` instead of `result.data[:user]`); `respond_to_missing?` implemented accordingly
+- **`lazily` resolver DSL**: Declare lazy record resolvers on services with `lazily :user, finds: User`.
+  Accepts either an ID or an already-loaded instance — resolves on first access, memoizes the result.
+  Supports custom columns (`by: :uuid`), array input (via `.where`), and dry-initializer compatibility.
+  Loaded as an extension via Railtie when ActiveRecord is present.
+- **Failure data support**: `failure()` accepts an optional `data:` keyword argument for attaching
+  structured data to failure responses (e.g., `failure("Declined", data: { reason: "insufficient_funds" })`).
+  Defaults to `nil` for backwards compatibility with services that don't use it.
+- **Failure schema validation**: Define a `failure` schema via the `schema` DSL, `FAILURE_SCHEMA` constant,
+  or `failure.json` file. When present, failure response data is validated against it — just like success
+  results are validated against `result` schemas.
+- **`servus_failure_example` test helper**: Extracts example values from a service's `failure` schema,
+  returning a failure `Response` for use in tests.
+- **`failure?` predicate on Response**: Complement to `success?` for cleaner conditional handling.
+- **`DataObject` wrapper for response data**: Hash data returned by services is wrapped in a read-only
+  `DataObject` that supports accessor-style access (`result.data.user.email`) alongside bracket access
+  (`result.data[:user]`). Nested Hashes and Hashes inside Arrays are recursively wrapped. Non-Hash values
+  (models, nil) pass through unwrapped.
 
 ## [0.2.1] - 2025-12-20
 
@@ -109,21 +132,37 @@
 - Enhanced Railtie to auto-load event handlers and clear the event bus on reload in development
 
 ## [0.1.4] - 2025-11-21
-- Added: Test helpers (`servus_arguments_example` and `servus_result_example`) to extract example values from schemas for testing
-- Added: YARD documentation configuration with README homepage and markdown file support
-- Added: Added `schema` DSL method for cleaner schema definition. Supports `schema arguments: {...}, result: {...}` syntax. Fully backwards compatible with existing `ARGUMENTS_SCHEMA` and `RESULT_SCHEMA` constants.
-- Added: Added support from blocks on `rescue_from` to override default failure handler.
-- Fixed: YARD link resolution warnings in documentation
+
+### Added
+
+- **Schema DSL method**: `schema arguments: {...}, result: {...}` syntax for cleaner schema definition.
+  Fully backwards compatible with existing `ARGUMENTS_SCHEMA` and `RESULT_SCHEMA` constants.
+- **Test helpers**: `servus_arguments_example` and `servus_result_example` for extracting example values
+  from schemas in tests
+- **`rescue_from` block support**: Override the default failure handler with a custom block
+- **YARD documentation**: Configuration with README homepage and markdown file support
+
+### Fixed
+
+- YARD link resolution warnings in documentation
 
 ## [0.1.3] - 2025-10-10
-- Added: Added `call_async` method to `Servus::Base` to enqueue a job for calling the service asynchronously
-- Added: Added `Async::Job` to handle async enqueing with support for ActiveJob set options
+
+### Added
+
+- **`call_async`**: Enqueue service calls as background jobs via ActiveJob
+- **`Async::Job`**: Job class for async enqueueing with support for ActiveJob `set` options
 
 ## [0.1.1] - 2025-08-20
 
-- Added: Added `rescue_from` method to `Servus::Base` to rescue from standard errors and use custom error types.
-- Added: Added `run_service` and `render_service_object_error` helpers to `Servus::Helpers::ControllerHelpers`.
-- Fixed: All rubocop warnings.
+### Added
+
+- **`rescue_from`**: Rescue from standard errors and convert them to failure responses with custom error types
+- **Controller helpers**: `run_service` and `render_service_object_error` in `Servus::Helpers::ControllerHelpers`
+
+### Fixed
+
+- All rubocop warnings
 
 ## [0.1.0] - 2025-04-28
 

@@ -58,11 +58,11 @@ module Servus
         true
       end
 
-      # Validates service result data against the RESULT_SCHEMA.
+      # Validates service result data against the appropriate schema.
       #
-      # Checks the result.data against either an inline RESULT_SCHEMA constant or
-      # a file-based schema at app/schemas/services/namespace/result.json.
-      # Only validates successful responses; failures are skipped.
+      # For successful responses, validates against the +result+ schema.
+      # For failure responses with data, validates against the +failure+ schema.
+      # Failure responses without data are skipped.
       #
       # @param service_class [Class] the service class being validated
       # @param result [Servus::Support::Response] the response object to validate
@@ -74,16 +74,15 @@ module Servus
       #
       # @api private
       def self.validate_result!(service_class, result)
-        return result unless result.success?
-
-        schema = load_schema(service_class, 'result')
-        return result unless schema # Skip validation if no schema exists
+        schema = result_schema_for(service_class, result)
+        return result unless schema
 
         serialized_result = result.data.as_json
         validation_errors = JSON::Validator.fully_validate(schema, serialized_result)
 
         if validation_errors.any?
-          error_message = "Invalid result structure from #{service_class.name}: #{validation_errors.join(', ')}"
+          schema_type = result.success? ? 'result' : 'failure'
+          error_message = "Invalid #{schema_type} structure from #{service_class.name}: #{validation_errors.join(', ')}"
           raise Servus::Base::ValidationError, error_message
         end
 
@@ -127,7 +126,7 @@ module Servus
       # Schemas are cached after first load for performance.
       #
       # @param service_class [Class] the service class
-      # @param type [String] schema type ("arguments" or "result")
+      # @param type [String] schema type ("arguments", "result", or "failure")
       # @return [Hash, nil] the schema hash, or nil if no schema found
       #
       # @api private
@@ -141,10 +140,10 @@ module Servus
         return @schema_cache[schema_path] if @schema_cache.key?(schema_path)
 
         # Check for DSL-defined schema first
-        dsl_schema = if type == 'arguments'
-                       service_class.arguments_schema
-                     else
-                       service_class.result_schema
+        dsl_schema = case type
+                     when 'arguments' then service_class.arguments_schema
+                     when 'result'    then service_class.result_schema
+                     when 'failure'   then service_class.failure_schema
                      end
 
         inline_schema_constant_name = "#{service_class}::#{type.upcase}_SCHEMA"
@@ -178,6 +177,21 @@ module Servus
       # @api private
       def self.cache
         @schema_cache
+      end
+
+      # Resolves the appropriate schema for a result based on its success/failure state.
+      #
+      # @param service_class [Class] the service class
+      # @param result [Servus::Support::Response] the response to resolve schema for
+      # @return [Hash, nil] the schema, or nil if none applies
+      #
+      # @api private
+      def self.result_schema_for(service_class, result)
+        if result.success?
+          load_schema(service_class, 'result')
+        elsif result.data
+          load_schema(service_class, 'failure')
+        end
       end
 
       # Fetches schema from DSL, inline constant, or file.

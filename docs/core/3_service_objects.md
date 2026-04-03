@@ -35,6 +35,39 @@ result.success? # => true
 result.data[:user] # => #<User>
 ```
 
+## Accessing Response Data
+
+Response data can be accessed with bracket syntax or accessor-style methods. Both are fully supported — use whichever reads better in context.
+
+```ruby
+result = Users::Create::Service.call(email: "user@example.com", name: "John")
+
+# Bracket access
+result.data[:user]          # => #<User>
+result.data[:user].email    # => "user@example.com"
+
+# Accessor access
+result.data.user            # => #<User>
+result.data.user.email      # => "user@example.com"
+```
+
+Nested Hashes are wrapped automatically, so accessor chains work at any depth:
+
+```ruby
+result = Orders::Create::Service.call(items: [...])
+
+result.data.order.shipping.address.city  # => "Berlin"
+result.data[:order][:shipping]           # also works
+```
+
+Arrays of Hashes are also wrapped, so you can access elements naturally:
+
+```ruby
+result.data.order.items.first.sku   # => "A1"
+```
+
+Non-Hash values like model instances, strings, and integers pass through unchanged — accessor access on those values uses the object's own methods.
+
 ## Service Composition
 
 Services can call other services. Use the returned Response to decide whether to continue or propagate the failure.

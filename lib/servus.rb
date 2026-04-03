@@ -20,6 +20,7 @@ require_relative 'servus/config'
 
 # Support
 require_relative 'servus/support/logger'
+require_relative 'servus/support/data_object'
 require_relative 'servus/support/response'
 require_relative 'servus/support/validator'
 require_relative 'servus/support/errors'

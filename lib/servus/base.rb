@@ -88,6 +88,8 @@ module Servus
     # The failure is logged automatically and returns a response containing the error.
     #
     # @param message [String, nil] custom error message (uses error type's default if nil)
+    # @param data [Object, nil] optional structured data to attach to the failure response.
+    #   When a +failure+ schema is defined, this data will be validated against it.
     # @param type [Class] error class to instantiate (must inherit from ServiceError)
     # @return [Servus::Support::Response] response with success: false and the error
     #
@@ -109,12 +111,17 @@ module Servus
     #     # Uses "Not found" as the message
     #   end
     #
+    # @example Attaching structured data to a failure
+    #   def call
+    #     return failure("Approval required", data: { requires_human_approval: true })
+    #   end
+    #
     # @see #success
     # @see #error!
     # @see Servus::Support::Errors
-    def failure(message = nil, type: Servus::Support::Errors::ServiceError)
+    def failure(message = nil, data: nil, type: Servus::Support::Errors::ServiceError)
       error = type.new(message)
-      Response.new(false, nil, error)
+      Response.new(false, data, error)
     end
 
     # Logs an error and raises an exception, halting service execution.
@@ -207,15 +214,16 @@ module Servus
       end
       # rubocop:enable Metrics/MethodLength
 
-      # Defines schema validation rules for the service's arguments and/or result.
+      # Defines schema validation rules for the service's arguments, result, and/or failure data.
       #
       # This method provides a clean DSL for specifying JSON schemas that will be used
       # to validate service inputs and outputs. Schemas defined via this method take
-      # precedence over ARGUMENTS_SCHEMA and RESULT_SCHEMA constants. The next major
-      # version will deprecate those constants in favor of this DSL.
+      # precedence over ARGUMENTS_SCHEMA, RESULT_SCHEMA, and FAILURE_SCHEMA constants.
+      # The next major version will deprecate those constants in favor of this DSL.
       #
       # @param arguments [Hash, nil] JSON schema for validating service arguments
       # @param result [Hash, nil] JSON schema for validating service result data
+      # @param failure [Hash, nil] JSON schema for validating failure response data
       # @return [void]
       #
       # @example Defining both arguments and result schemas
@@ -245,9 +253,10 @@ module Servus
       #   end
       #
       # @see Servus::Support::Validator
-      def schema(arguments: nil, result: nil)
+      def schema(arguments: nil, result: nil, failure: nil)
         @arguments_schema = arguments.with_indifferent_access if arguments
         @result_schema    = result.with_indifferent_access    if result
+        @failure_schema   = failure.with_indifferent_access   if failure
       end
 
       # Returns the arguments schema defined via the schema DSL method.
@@ -261,6 +270,12 @@ module Servus
       # @return [Hash, nil] the result schema or nil if not defined
       # @api private
       attr_reader :result_schema
+
+      # Returns the failure schema defined via the schema DSL method.
+      #
+      # @return [Hash, nil] the failure schema or nil if not defined
+      # @api private
+      attr_reader :failure_schema
 
       # Executes pre-call hooks including logging and argument validation.
       #

@@ -39,11 +39,15 @@ Services return `Response` objects instead of raising exceptions for business fa
 ```ruby
 result = SomeService.call(params)
 if result.success?
-  result.data  # Hash or object returned by success()
+  result.data            # DataObject wrapping the success data
+  result.data[:user]     # bracket access
+  result.data.user       # accessor access
+  result.data.user.email # nested accessor access
 else
-  result.error # ServiceError instance
+  result.error           # ServiceError instance
   result.error.message
   result.error.api_error # { code: :symbol, message: "string" }
+  result.data            # optional failure data (nil unless data: kwarg was used)
 end
 ```
 

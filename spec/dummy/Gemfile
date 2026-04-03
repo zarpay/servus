@@ -2,6 +2,7 @@ source "https://rubygems.org"
 
 gem "rails", "~> 8.0.4"
 gem "puma", ">= 5.0"
+gem "sqlite3"
 
 # Load servus from parent directory
 gem "servus", path: "../.."
