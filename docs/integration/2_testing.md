@@ -42,6 +42,13 @@ class ProcessPayment::Service < Servus::Base
         transaction_id: { type: "string", example: "txn_abc123" },
         status: { type: "string", example: "approved" }
       }
+    },
+    failure: {
+      type: "object",
+      properties: {
+        reason: { type: "string", example: "card_declined" },
+        decline_code: { type: "string", example: "insufficient_funds" }
+      }
     }
   )
 end
@@ -62,6 +69,15 @@ RSpec.describe ProcessPayment::Service do
     expect(result.data.keys).to match_array(
       servus_result_example(ProcessPayment::Service).data.keys
     )
+  end
+
+  it "returns structured failure data on decline" do
+    args = servus_arguments_example(ProcessPayment::Service, amount: 999_999)
+    result = ProcessPayment::Service.call(**args)
+
+    expected = servus_failure_example(ProcessPayment::Service)
+    expect(result).to be_failure
+    expect(result.data.keys).to match_array(expected.data.keys)
   end
 
   it "handles different currencies" do
@@ -91,7 +107,8 @@ args = servus_arguments_example(
 ### Available Helpers
 
 - `servus_arguments_example(ServiceClass, **overrides)` - Returns hash of argument examples
-- `servus_result_example(ServiceClass, **overrides)` - Returns Response object with result examples
+- `servus_result_example(ServiceClass, **overrides)` - Returns successful Response with result examples
+- `servus_failure_example(ServiceClass, **overrides)` - Returns failure Response with failure schema examples
 
 ## Basic Testing Pattern
 
