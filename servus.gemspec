@@ -36,10 +36,10 @@ Gem::Specification.new do |spec|
 
   # Uncomment to register a new dependency of your gem
   spec.add_dependency 'active_model_serializers', '~> 0.10.0'
-  spec.add_dependency 'activesupport', '~> 8.0'
+  spec.add_dependency 'activesupport', '>= 8.0'
   spec.add_dependency 'json-schema', '~> 5'
 
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html
-  spec.add_development_dependency 'actionpack', '~> 8.0'
+  spec.add_development_dependency 'actionpack', '>= 8.0'
 end
