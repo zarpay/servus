@@ -1,4 +1,4 @@
-## [0.3.0] - 2026-04-03
+## [0.2.2] - 2026-04-02
 
 ### Added
 
@@ -10,25 +10,11 @@
   results are validated against `result` schemas.
 - **`servus_failure_example` test helper**: Extracts example values from a service's `failure` schema,
   returning a failure `Response` for use in tests.
-
-### Removed
-
-- **`Response#with_data`**: Removed in favor of the `data:` kwarg on `failure()`. The `with_data` method
-  allowed arbitrary mutation of responses after creation, bypassing schema validation. The new approach
-  keeps failure data within the schema contract.
-
-### Changed
-
-- **`Validator.validate_result!` refactored**: Now validates both success and failure responses in a single
-  method, routing to the appropriate schema based on response state.
-
-## [0.2.2] - 2026-04-02
-
-### Added
-
 - **`failure?` predicate on Response**: Complement to `success?` for cleaner conditional handling
-- **Data key access via `method_missing`**: Access success data keys directly on the response object
-  (`result.user` instead of `result.data[:user]`); `respond_to_missing?` implemented accordingly
+- **`DataObject` wrapper for response data**: Hash data returned by services is wrapped in a read-only
+  `DataObject` that supports accessor-style access (`result.data.user.email`) alongside bracket access
+  (`result.data[:user]`). Nested Hashes are recursively wrapped. Non-Hash values (models, arrays, nil)
+  pass through unwrapped.
 
 ## [0.2.1] - 2025-12-20
 

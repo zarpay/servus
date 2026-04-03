@@ -51,7 +51,7 @@ module Servus
       # @api private
       def initialize(success, data, error)
         @success = success
-        @data = data
+        @data = DataObject.wrap(data)
         @error = error
       end
 
@@ -79,33 +79,6 @@ module Servus
       #   return render_error(result.error.message) if result.failure?
       def failure?
         !@success
-      end
-
-      # Allows direct access to data keys as methods.
-      #
-      # When {#data} is a Hash, you can access its keys directly on the response
-      # object. Works for both success and failure responses.
-      #
-      # @example
-      #   result = MyService.call(user_id: 123)
-      #   result.user   # equivalent to result.data[:user]
-      #   result.token  # equivalent to result.data[:token]
-      def method_missing(method_name, *args, &)
-        if @data.is_a?(Hash)
-          key = method_name.to_s
-          return @data[key.to_sym] if @data.key?(key.to_sym)
-          return @data[key] if @data.key?(key)
-        end
-        super
-      end
-
-      # @api private
-      def respond_to_missing?(method_name, include_private = false)
-        if @data.is_a?(Hash)
-          key = method_name.to_s
-          return true if @data.key?(key.to_sym) || @data.key?(key)
-        end
-        super
       end
     end
   end

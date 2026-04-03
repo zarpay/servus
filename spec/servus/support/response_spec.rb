@@ -27,39 +27,33 @@ RSpec.describe Servus::Support::Response do
     end
   end
 
-  describe '#method_missing / data key access' do
-    let(:response) { described_class.new(true, { user: 'Alice', token: 'abc123' }, nil) }
-
-    it 'allows access to symbol keys as methods' do
-      expect(response.user).to eq('Alice')
-      expect(response.token).to eq('abc123')
+  describe '#data wrapping' do
+    it 'wraps Hash data in a DataObject' do
+      response = described_class.new(true, { user: 'Alice' }, nil)
+      expect(response.data).to be_a(Servus::Support::DataObject)
     end
 
-    it 'allows access to string keys as methods' do
-      response = described_class.new(true, { 'name' => 'Bob' }, nil)
-      expect(response.name).to eq('Bob')
-    end
-
-    it 'falls through to super for unknown keys' do
-      expect { response.nonexistent }.to raise_error(NoMethodError)
-    end
-
-    it 'returns nil data when response is a failure (no method_missing delegation)' do
+    it 'returns nil when data is nil' do
       error = Servus::Support::Errors::ServiceError.new('error')
       response = described_class.new(false, nil, error)
+      expect(response.data).to be_nil
+    end
+
+    it 'returns non-Hash data unchanged' do
+      response = described_class.new(true, 'plain string', nil)
+      expect(response.data).to eq('plain string')
+      expect(response.data).not_to be_a(Servus::Support::DataObject)
+    end
+
+    it 'supports accessor-style access through data' do
+      response = described_class.new(true, { user: 'Alice', token: 'abc123' }, nil)
+      expect(response.data.user).to eq('Alice')
+      expect(response.data.token).to eq('abc123')
+    end
+
+    it 'does not delegate data keys to the response itself' do
+      response = described_class.new(true, { user: 'Alice' }, nil)
       expect { response.user }.to raise_error(NoMethodError)
-    end
-  end
-
-  describe '#respond_to_missing?' do
-    let(:response) { described_class.new(true, { user: 'Alice' }, nil) }
-
-    it 'returns true for data keys' do
-      expect(response.respond_to?(:user)).to be true
-    end
-
-    it 'returns false for unknown keys' do
-      expect(response.respond_to?(:nonexistent)).to be false
     end
   end
 end
