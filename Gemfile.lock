@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    servus (0.2.1)
+    servus (0.2.2)
       active_model_serializers (~> 0.10.0)
       activesupport (~> 8.0)
       json-schema (~> 5)
@@ -86,7 +86,9 @@ GEM
       crass (~> 1.0.2)
       nokogiri (>= 1.12.0)
     mini_portile2 (2.8.8)
-    minitest (5.25.5)
+    minitest (6.0.3)
+      drb (~> 2.0)
+      prism (~> 1.5)
     nokogiri (1.18.8)
       mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
@@ -186,7 +188,7 @@ GEM
       concurrent-ruby (~> 1.0)
     unicode-display_width (3.2.0)
       unicode-emoji (~> 4.1)
-    unicode-emoji (4.1.0)
+    unicode-emoji (4.2.0)
     uri (1.0.3)
     useragent (0.16.11)
     webrick (1.9.1)

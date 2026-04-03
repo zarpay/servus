@@ -1,3 +1,11 @@
+## [0.2.2] - 2026-04-02
+
+### Added
+
+- **`failure?` predicate on Response**: Complement to `success?` for cleaner conditional handling
+- **Data key access via `method_missing`**: Access success data keys directly on the response object
+  (`result.user` instead of `result.data[:user]`); `respond_to_missing?` implemented accordingly
+
 ## [0.2.1] - 2025-12-20
 
 ### Added
