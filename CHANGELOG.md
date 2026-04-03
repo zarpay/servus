@@ -1,20 +1,33 @@
-## [0.2.2] - 2026-04-02
+## [0.3.0] - 2026-04-03
+
+### Breaking Changes
+
+- **Failure responses can now carry data**: `failure()` accepts an optional `data:` kwarg. Previously,
+  `result.data` was guaranteed to be `nil` on failure. Code that checks `result.data` for truthiness
+  to determine success/failure must switch to `result.success?` or `result.failure?`.
+  See the [Migration Guide](docs/guides/2_migration_guide.md#migrating-to-030) for details.
+- **`Response#with_data` removed**: Replaced by the `data:` kwarg on `failure()`. The `with_data` method
+  allowed arbitrary mutation of responses after creation, bypassing schema validation.
 
 ### Added
 
+- **`lazily` resolver DSL**: Declare lazy record resolvers on services with `lazily :user, finds: User`.
+  Accepts either an ID or an already-loaded instance — resolves on first access, memoizes the result.
+  Supports custom columns (`by: :uuid`), array input (via `.where`), and dry-initializer compatibility.
+  Loaded as an extension via Railtie when ActiveRecord is present.
 - **Failure data support**: `failure()` accepts an optional `data:` keyword argument for attaching
   structured data to failure responses (e.g., `failure("Declined", data: { reason: "insufficient_funds" })`).
-  Fully backwards compatible — defaults to `nil`.
+  Defaults to `nil` for backwards compatibility with services that don't use it.
 - **Failure schema validation**: Define a `failure` schema via the `schema` DSL, `FAILURE_SCHEMA` constant,
   or `failure.json` file. When present, failure response data is validated against it — just like success
   results are validated against `result` schemas.
 - **`servus_failure_example` test helper**: Extracts example values from a service's `failure` schema,
   returning a failure `Response` for use in tests.
-- **`failure?` predicate on Response**: Complement to `success?` for cleaner conditional handling
+- **`failure?` predicate on Response**: Complement to `success?` for cleaner conditional handling.
 - **`DataObject` wrapper for response data**: Hash data returned by services is wrapped in a read-only
   `DataObject` that supports accessor-style access (`result.data.user.email`) alongside bracket access
-  (`result.data[:user]`). Nested Hashes are recursively wrapped. Non-Hash values (models, arrays, nil)
-  pass through unwrapped.
+  (`result.data[:user]`). Nested Hashes and Hashes inside Arrays are recursively wrapped. Non-Hash values
+  (models, nil) pass through unwrapped.
 
 ## [0.2.1] - 2025-12-20
 

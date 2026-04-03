@@ -13,7 +13,9 @@ gem 'rake', '~> 13.0'
 # Development and test dependencies
 group :development, :test do
   gem 'activejob'
+  gem 'activerecord'
   gem 'railties'
+  gem 'sqlite3'
 
   gem 'rspec', '~> 3.0'
   gem 'rspec-rails' # gives you `have_enqueued_job` matcher
