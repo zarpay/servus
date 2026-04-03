@@ -256,6 +256,34 @@ including automatic validation, logging, benchmarking, and error handling.</p>
       <li class="public ">
   <span class="summary_signature">
     
+      <a href="#failure_schema-class_method" title="failure_schema (class method)">.<strong>failure_schema</strong>  &#x21d2; Hash<sup>?</sup> </a>
+    
+
+    
+  </span>
+  
+  
+  
+    
+      <span class="note title readonly">readonly</span>
+    
+    
+  
+  
+  
+  
+  <span class="private note title">private</span>
+
+  
+    <span class="summary_desc"><div class='inline'><p>Returns the failure schema defined via the schema DSL method.</p>
+</div></span>
+  
+</li>
+
+    
+      <li class="public ">
+  <span class="summary_signature">
+    
       <a href="#result_schema-class_method" title="result_schema (class method)">.<strong>result_schema</strong>  &#x21d2; Hash<sup>?</sup> </a>
     
 
@@ -389,7 +417,7 @@ including automatic validation, logging, benchmarking, and error handling.</p>
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#schema-class_method" title="schema (class method)">.<strong>schema</strong>(arguments: nil, result: nil)  &#x21d2; void </a>
+      <a href="#schema-class_method" title="schema (class method)">.<strong>schema</strong>(arguments: nil, result: nil, failure: nil)  &#x21d2; void </a>
     
 
     
@@ -403,7 +431,7 @@ including automatic validation, logging, benchmarking, and error handling.</p>
   
 
   
-    <span class="summary_desc"><div class='inline'><p>Defines schema validation rules for the service&#39;s arguments and/or result.</p>
+    <span class="summary_desc"><div class='inline'><p>Defines schema validation rules for the service&#39;s arguments, result, and/or failure data.</p>
 </div></span>
   
 </li>
@@ -444,7 +472,7 @@ including automatic validation, logging, benchmarking, and error handling.</p>
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#failure-instance_method" title="#failure (instance method)">#<strong>failure</strong>(message = nil, type: Servus::Support::Errors::ServiceError)  &#x21d2; Servus::Support::Response </a>
+      <a href="#failure-instance_method" title="#failure (instance method)">#<strong>failure</strong>(message = nil, data: nil, type: Servus::Support::Errors::ServiceError)  &#x21d2; Servus::Support::Response </a>
     
 
     
@@ -582,15 +610,78 @@ including automatic validation, logging, benchmarking, and error handling.</p>
       <pre class="lines">
 
 
-257
-258
-259</pre>
+266
+267
+268</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 257</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 266</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_arguments_schema'>arguments_schema</span>
   <span class='ivar'>@arguments_schema</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      
+      <span id=""></span>
+      <div class="method_details ">
+  <h3 class="signature " id="failure_schema-class_method">
+  
+    .<strong>failure_schema</strong>  &#x21d2; <tt>Hash</tt><sup>?</sup>  <span class="extras">(readonly)</span>
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p class="note private">
+  <strong>This method is part of a private API.</strong>
+  You should avoid using this method if possible, as it may be removed or be changed in the future.
+</p>
+<p>Returns the failure schema defined via the schema DSL method.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Hash</tt>, <tt>nil</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>the failure schema or nil if not defined</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+278
+279
+280</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 278</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_failure_schema'>failure_schema</span>
+  <span class='ivar'>@failure_schema</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -645,12 +736,12 @@ including automatic validation, logging, benchmarking, and error handling.</p>
       <pre class="lines">
 
 
-263
-264
-265</pre>
+272
+273
+274</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 263</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 272</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_result_schema'>result_schema</span>
   <span class='ivar'>@result_schema</span>
@@ -754,13 +845,13 @@ including automatic validation, logging, benchmarking, and error handling.</p>
       <pre class="lines">
 
 
-293
-294
-295
-296</pre>
+308
+309
+310
+311</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 293</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 308</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_after_call'>after_call</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='comma'>,</span> <span class='id identifier rubyid_instance'>instance</span><span class='rparen'>)</span>
   <span class='const'><span class='object_link'><a href="#Validator-constant" title="Servus::Base::Validator (constant)">Validator</a></span></span><span class='period'>.</span><span class='id identifier rubyid_validate_result!'>validate_result!</span><span class='lparen'>(</span><span class='kw'>self</span><span class='comma'>,</span> <span class='id identifier rubyid_result'>result</span><span class='rparen'>)</span>
@@ -843,13 +934,13 @@ including automatic validation, logging, benchmarking, and error handling.</p>
       <pre class="lines">
 
 
-276
-277
-278
-279</pre>
+291
+292
+293
+294</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 276</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 291</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_before_call'>before_call</span><span class='lparen'>(</span><span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
   <span class='const'><span class='object_link'><a href="#Logger-constant" title="Servus::Base::Logger (constant)">Logger</a></span></span><span class='period'>.</span><span class='id identifier rubyid_log_call'>log_call</span><span class='lparen'>(</span><span class='kw'>self</span><span class='comma'>,</span> <span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
@@ -945,18 +1036,18 @@ The duration is logged along with the success/failure status of the service.</p>
       <pre class="lines">
 
 
-308
-309
-310
-311
-312
-313
-314
-315
-316</pre>
+323
+324
+325
+326
+327
+328
+329
+330
+331</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 308</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 323</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_benchmark'>benchmark</span><span class='lparen'>(</span><span class='op'>**</span><span class='id identifier rubyid__args'>_args</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_start_time'>start_time</span> <span class='op'>=</span> <span class='const'>Time</span><span class='period'>.</span><span class='id identifier rubyid_now'>now</span><span class='period'>.</span><span class='id identifier rubyid_utc'>utc</span>
@@ -1119,13 +1210,6 @@ service lifecycle including:</p>
       <pre class="lines">
 
 
-185
-186
-187
-188
-189
-190
-191
 192
 193
 194
@@ -1141,10 +1225,17 @@ service lifecycle including:</p>
 204
 205
 206
-207</pre>
+207
+208
+209
+210
+211
+212
+213
+214</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 185</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 192</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='op'>**</span><span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_before_call'>before_call</span><span class='lparen'>(</span><span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
@@ -1177,7 +1268,7 @@ service lifecycle including:</p>
       <div class="method_details ">
   <h3 class="signature " id="schema-class_method">
   
-    .<strong>schema</strong>(arguments: nil, result: nil)  &#x21d2; <tt>void</tt> 
+    .<strong>schema</strong>(arguments: nil, result: nil, failure: nil)  &#x21d2; <tt>void</tt> 
   
 
   
@@ -1185,12 +1276,12 @@ service lifecycle including:</p>
   
 </h3><div class="docstring">
   <div class="discussion">
-    <p class="note returns_void">This method returns an undefined value.</p><p>Defines schema validation rules for the service&#39;s arguments and/or result.</p>
+    <p class="note returns_void">This method returns an undefined value.</p><p>Defines schema validation rules for the service&#39;s arguments, result, and/or failure data.</p>
 
 <p>This method provides a clean DSL for specifying JSON schemas that will be used
 to validate service inputs and outputs. Schemas defined via this method take
-precedence over ARGUMENTS_SCHEMA and RESULT_SCHEMA constants. The next major
-version will deprecate those constants in favor of this DSL.</p>
+precedence over ARGUMENTS_SCHEMA, RESULT_SCHEMA, and FAILURE_SCHEMA constants.
+The next major version will deprecate those constants in favor of this DSL.</p>
 
 
   </div>
@@ -1270,6 +1361,23 @@ version will deprecate those constants in favor of this DSL.</p>
       
     </li>
   
+    <li>
+      
+        <span class='name'>failure</span>
+      
+      
+        <span class='type'>(<tt>Hash</tt>, <tt>nil</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>nil</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'><p>JSON schema for validating failure response data</p>
+</div>
+      
+    </li>
+  
 </ul>
 
 
@@ -1286,17 +1394,19 @@ version will deprecate those constants in favor of this DSL.</p>
       <pre class="lines">
 
 
-248
-249
-250
-251</pre>
+256
+257
+258
+259
+260</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 248</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 256</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_schema'>schema</span><span class='lparen'>(</span><span class='label'>arguments:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>result:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_schema'>schema</span><span class='lparen'>(</span><span class='label'>arguments:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>result:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>failure:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='ivar'>@arguments_schema</span> <span class='op'>=</span> <span class='id identifier rubyid_arguments'>arguments</span><span class='period'>.</span><span class='id identifier rubyid_with_indifferent_access'>with_indifferent_access</span> <span class='kw'>if</span> <span class='id identifier rubyid_arguments'>arguments</span>
   <span class='ivar'>@result_schema</span>    <span class='op'>=</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_with_indifferent_access'>with_indifferent_access</span>    <span class='kw'>if</span> <span class='id identifier rubyid_result'>result</span>
+  <span class='ivar'>@failure_schema</span>   <span class='op'>=</span> <span class='id identifier rubyid_failure'>failure</span><span class='period'>.</span><span class='id identifier rubyid_with_indifferent_access'>with_indifferent_access</span>   <span class='kw'>if</span> <span class='id identifier rubyid_failure'>failure</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -1428,18 +1538,18 @@ the exception is raised.</p>
       <pre class="lines">
 
 
-143
-144
-145
-146
-147
-148
-149
 150
-151</pre>
+151
+152
+153
+154
+155
+156
+157
+158</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 143</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 150</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_error!'>error!</span><span class='lparen'>(</span><span class='id identifier rubyid_message'>message</span> <span class='op'>=</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>type:</span> <span class='const'><span class='object_link'><a href="../Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Support.html" title="Servus::Support (module)">Support</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Support/Errors.html" title="Servus::Support::Errors (module)">Errors</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Support/Errors/ServiceError.html" title="Servus::Support::Errors::ServiceError (class)">ServiceError</a></span></span><span class='rparen'>)</span>
   <span class='id identifier rubyid_error'>error</span> <span class='op'>=</span> <span class='id identifier rubyid_type'>type</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='id identifier rubyid_message'>message</span><span class='rparen'>)</span>
@@ -1458,7 +1568,7 @@ the exception is raised.</p>
       <div class="method_details ">
   <h3 class="signature " id="failure-instance_method">
   
-    #<strong>failure</strong>(message = nil, type: Servus::Support::Errors::ServiceError)  &#x21d2; <tt><span class='object_link'><a href="Support/Response.html" title="Servus::Support::Response (class)">Servus::Support::Response</a></span></tt> 
+    #<strong>failure</strong>(message = nil, data: nil, type: Servus::Support::Errors::ServiceError)  &#x21d2; <tt><span class='object_link'><a href="Support/Response.html" title="Servus::Support::Response (class)">Servus::Support::Response</a></span></tt> 
   
 
   
@@ -1506,6 +1616,14 @@ The failure is logged automatically and returns a response containing the error.
   <span class='comment'># Uses &quot;Not found&quot; as the message
 </span><span class='kw'>end</span></code></pre>
     
+      
+        <h5 class="example_title"><div class='inline'><p>Attaching structured data to a failure</p>
+</div></h5>
+      
+      <pre class="example code"><code><span class='kw'>def</span> <span class='id identifier rubyid_call'>call</span>
+  <span class='kw'>return</span> <span class='id identifier rubyid_failure'>failure</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Approval required</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>data:</span> <span class='lbrace'>{</span> <span class='label'>requires_human_approval:</span> <span class='kw'>true</span> <span class='rbrace'>}</span><span class='rparen'>)</span>
+<span class='kw'>end</span></code></pre>
+    
   </div>
 <p class="tag_title">Parameters:</p>
 <ul class="param">
@@ -1523,6 +1641,24 @@ The failure is logged automatically and returns a response containing the error.
       
         &mdash;
         <div class='inline'><p>custom error message (uses error type&#39;s default if nil)</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>data</span>
+      
+      
+        <span class='type'>(<tt>Object</tt>, <tt>nil</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>nil</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'><p>optional structured data to attach to the failure response.
+When a +failure+ schema is defined, this data will be validated against it.</p>
 </div>
       
     </li>
@@ -1581,17 +1717,17 @@ The failure is logged automatically and returns a response containing the error.
       <pre class="lines">
 
 
-115
-116
-117
-118</pre>
+122
+123
+124
+125</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 115</span>
+      <pre class="code"><span class="info file"># File 'lib/servus/base.rb', line 122</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_failure'>failure</span><span class='lparen'>(</span><span class='id identifier rubyid_message'>message</span> <span class='op'>=</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>type:</span> <span class='const'><span class='object_link'><a href="../Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Support.html" title="Servus::Support (module)">Support</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Support/Errors.html" title="Servus::Support::Errors (module)">Errors</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Support/Errors/ServiceError.html" title="Servus::Support::Errors::ServiceError (class)">ServiceError</a></span></span><span class='rparen'>)</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_failure'>failure</span><span class='lparen'>(</span><span class='id identifier rubyid_message'>message</span> <span class='op'>=</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>data:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>type:</span> <span class='const'><span class='object_link'><a href="../Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Support.html" title="Servus::Support (module)">Support</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Support/Errors.html" title="Servus::Support::Errors (module)">Errors</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Support/Errors/ServiceError.html" title="Servus::Support::Errors::ServiceError (class)">ServiceError</a></span></span><span class='rparen'>)</span>
   <span class='id identifier rubyid_error'>error</span> <span class='op'>=</span> <span class='id identifier rubyid_type'>type</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='id identifier rubyid_message'>message</span><span class='rparen'>)</span>
-  <span class='const'><span class='object_link'><a href="#Response-constant" title="Servus::Base::Response (constant)">Response</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='kw'>false</span><span class='comma'>,</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='id identifier rubyid_error'>error</span><span class='rparen'>)</span>
+  <span class='const'><span class='object_link'><a href="#Response-constant" title="Servus::Base::Response (constant)">Response</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='kw'>false</span><span class='comma'>,</span> <span class='id identifier rubyid_data'>data</span><span class='comma'>,</span> <span class='id identifier rubyid_error'>error</span><span class='rparen'>)</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -1713,7 +1849,7 @@ The data will be validated against the RESULT_SCHEMA if one is defined.</p>
 </div>
 
       <div id="footer">
-  Generated on Fri Apr  3 16:37:59 2026 by
+  Generated on Fri Apr  3 21:00:09 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.37 (ruby-3.3.0).
 </div>

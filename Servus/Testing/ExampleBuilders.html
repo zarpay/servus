@@ -183,6 +183,29 @@ testing libraries and makes it clear these are Servus-specific helpers.</p>
         <li class="public ">
   <span class="summary_signature">
     
+      <a href="#servus_failure_example-instance_method" title="#servus_failure_example (instance method)">#<strong>servus_failure_example</strong>(service_class, overrides = {})  &#x21d2; Servus::Support::Response </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Extracts example failure data values from a service&#39;s schema.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
       <a href="#servus_result_example-instance_method" title="#servus_result_example (instance method)">#<strong>servus_result_example</strong>(service_class, overrides = {})  &#x21d2; Servus::Support::Response </a>
     
 
@@ -356,6 +379,131 @@ and returns them as a hash ready to be passed to the service&#39;s <code>.call</
 </div>
     
       <div class="method_details ">
+  <h3 class="signature " id="servus_failure_example-instance_method">
+  
+    #<strong>servus_failure_example</strong>(service_class, overrides = {})  &#x21d2; <tt><span class='object_link'><a href="../Support/Response.html" title="Servus::Support::Response (class)">Servus::Support::Response</a></span></tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    
+  <div class="note notetag">
+    <strong>Note:</strong>
+    <div class='inline'><p>Override keys can be strings or symbols; they&#39;ll be converted to symbols</p>
+</div>
+  </div>
+
+  <div class="note notetag">
+    <strong>Note:</strong>
+    <div class='inline'><p>Returns empty hash if service has no failure schema defined</p>
+</div>
+  </div>
+
+<p>Extracts example failure data values from a service&#39;s schema.</p>
+
+<p>Looks for <code>example</code> or <code>examples</code> keywords in the service&#39;s failure schema
+and returns them wrapped in a failure Response. Useful for validating failure
+response structure in tests.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+  <div class="examples">
+    <h4 class="tag_title">Examples:</h4>
+    
+      
+        <h5 class="example_title"><div class='inline'><p>Basic usage</p>
+</div></h5>
+      
+      <pre class="example code"><code><span class='id identifier rubyid_expected'>expected</span> <span class='op'>=</span> <span class='id identifier rubyid_servus_failure_example'>servus_failure_example</span><span class='lparen'>(</span><span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span><span class='rparen'>)</span>
+<span class='comment'># =&gt; Servus::Support::Response with failure? == true, data:
+</span><span class='comment'>#    { reason: &#39;card_declined&#39;, decline_code: &#39;insufficient_funds&#39; }</span></code></pre>
+    
+  </div>
+<p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>service_class</span>
+      
+      
+        <span class='type'>(<tt>Class</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>The service class to extract examples from</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>overrides</span>
+      
+      
+        <span class='type'>(<tt>Hash</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>{}</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'><p>Optional values to override the schema examples</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt><span class='object_link'><a href="../Support/Response.html" title="Servus::Support::Response (class)">Servus::Support::Response</a></span></tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>Failure response object with example data</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+136
+137
+138
+139</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/servus/testing/example_builders.rb', line 136</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_servus_failure_example'>servus_failure_example</span><span class='lparen'>(</span><span class='id identifier rubyid_service_class'>service_class</span><span class='comma'>,</span> <span class='id identifier rubyid_overrides'>overrides</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_example'>example</span> <span class='op'>=</span> <span class='id identifier rubyid_extract_example_from'>extract_example_from</span><span class='lparen'>(</span><span class='id identifier rubyid_service_class'>service_class</span><span class='comma'>,</span> <span class='symbol'>:failure</span><span class='comma'>,</span> <span class='id identifier rubyid_overrides'>overrides</span><span class='rparen'>)</span>
+  <span class='const'><span class='object_link'><a href="../../Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="../Support.html" title="Servus::Support (module)">Support</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="../Support/Response.html" title="Servus::Support::Response (class)">Response</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="../Support/Response.html#initialize-instance_method" title="Servus::Support::Response#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='kw'>false</span><span class='comma'>,</span> <span class='id identifier rubyid_example'>example</span><span class='comma'>,</span> <span class='const'><span class='object_link'><a href="../../Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="../Support.html" title="Servus::Support (module)">Support</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="../Support/Errors.html" title="Servus::Support::Errors (module)">Errors</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="../Support/Errors/ServiceError.html" title="Servus::Support::Errors::ServiceError (class)">ServiceError</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="../Support/Errors/ServiceError.html#initialize-instance_method" title="Servus::Support::Errors::ServiceError#initialize (method)">new</a></span></span><span class='rparen'>)</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
   <h3 class="signature " id="servus_result_example-instance_method">
   
     #<strong>servus_result_example</strong>(service_class, overrides = {})  &#x21d2; <tt><span class='object_link'><a href="../Support/Response.html" title="Servus::Support::Response (class)">Servus::Support::Response</a></span></tt> 
@@ -513,7 +661,7 @@ and expected data shapes in tests.</p>
 </div>
 
       <div id="footer">
-  Generated on Fri Apr  3 16:37:58 2026 by
+  Generated on Fri Apr  3 21:00:09 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.37 (ruby-3.3.0).
 </div>

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  Module: Servus::Extensions::Lazily::Call
+  
+    &mdash; Servus | Service Object Framework
+  
+</title>
+
+  <link rel="stylesheet" href="../../../css/style.css" type="text/css" />
+
+  <link rel="stylesheet" href="../../../css/common.css" type="text/css" />
+
+<script type="text/javascript">
+  pathId = "Servus::Extensions::Lazily::Call";
+  relpath = '../../../';
+</script>
+
+
+  <script type="text/javascript" charset="utf-8" src="../../../js/jquery.js"></script>
+
+  <script type="text/javascript" charset="utf-8" src="../../../js/app.js"></script>
+
+
+  </head>
+  <body>
+    <div class="nav_wrap">
+      <iframe id="nav" src="../../../class_list.html?1"></iframe>
+      <div id="resizer"></div>
+    </div>
+
+    <div id="main" tabindex="-1">
+      <div id="header">
+        <div id="menu">
+  
+    <a href="../../../_index.html">Index (C)</a> &raquo;
+    <span class='title'><span class='object_link'><a href="../../../Servus.html" title="Servus (module)">Servus</a></span></span> &raquo; <span class='title'><span class='object_link'><a href="../../Extensions.html" title="Servus::Extensions (module)">Extensions</a></span></span> &raquo; <span class='title'><span class='object_link'><a href="../Lazily.html" title="Servus::Extensions::Lazily (module)">Lazily</a></span></span>
+     &raquo; 
+    <span class="title">Call</span>
+  
+</div>
+
+        <div id="search">
+  
+    <a class="full_list_link" id="class_list_link"
+        href="../../../class_list.html">
+
+        <svg width="24" height="24">
+          <rect x="0" y="4" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="12" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="20" width="24" height="4" rx="1" ry="1"></rect>
+        </svg>
+    </a>
+  
+</div>
+        <div class="clear"></div>
+      </div>
+
+      <div id="content"><h1>Module: Servus::Extensions::Lazily::Call
+  
+  
+  
+</h1>
+<div class="box_info">
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+  <dl>
+    <dt>Defined in:</dt>
+    <dd>lib/servus/extensions/lazily/call.rb</dd>
+  </dl>
+  
+</div>
+
+<h2>Overview</h2><div class="docstring">
+  <div class="discussion">
+    <p>Provides lazy record resolution for service inputs.</p>
+
+<p>This module extends <span class='object_link'><a href="../../Base.html" title="Servus::Base (class)">Base</a></span> with the <span class='object_link'><a href="#lazily-instance_method" title="Servus::Extensions::Lazily::Call#lazily (method)">#lazily</a></span> class method, enabling
+services to accept either a record ID or an already-loaded record instance.
+Resolution happens lazily on first access and is memoized.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+
+  <p class="tag_title">See Also:</p>
+  <ul class="see">
+    
+      <li>Lazily#lazily</li>
+    
+  </ul>
+
+</div>
+
+
+
+
+
+
+  
+    <h2>
+      Instance Method Summary
+      <small><a href="#" class="summary_toggle">collapse</a></small>
+    </h2>
+
+    <ul class="summary">
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#lazily-instance_method" title="#lazily (instance method)">#<strong>lazily</strong>(name, finds:, by: :id)  &#x21d2; void </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Declares a lazy record resolver for a service input.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#lazy_resolvers-instance_method" title="#lazy_resolvers (instance method)">#<strong>lazy_resolvers</strong>  &#x21d2; Hash{Symbol =&gt; Hash} </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  <span class="private note title">private</span>
+
+  
+    <span class="summary_desc"><div class='inline'><p>Returns the hash of registered lazy resolvers for this service class.</p>
+</div></span>
+  
+</li>
+
+      
+    </ul>
+  
+
+
+
+  <div id="instance_method_details" class="method_details_list">
+    <h2>Instance Method Details</h2>
+
+    
+      <div class="method_details first">
+  <h3 class="signature first" id="lazily-instance_method">
+  
+    #<strong>lazily</strong>(name, finds:, by: :id)  &#x21d2; <tt>void</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    
+  <div class="note notetag">
+    <strong>Note:</strong>
+    <div class='inline'><p>Only available when ActiveRecord is loaded (via Railtie)</p>
+</div>
+  </div>
+
+<p class="note returns_void">This method returns an undefined value.</p><p>Declares a lazy record resolver for a service input.</p>
+
+<p>Defines an accessor method that lazily resolves the input value to a record.
+If the value is already an instance of the target class, it is returned directly.
+If the value is an ID (or other lookup value), it is resolved via the target
+class&#39;s +.find+ or +.find_by!+ method. Arrays are resolved via +.where+.</p>
+
+<p>The resolved record is written back to the instance variable, so subsequent
+calls return the same object without re-querying.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+  <div class="examples">
+    <h4 class="tag_title">Examples:</h4>
+    
+      
+        <h5 class="example_title"><div class='inline'><p>Basic usage with .find</p>
+</div></h5>
+      
+      <pre class="example code"><code><span class='id identifier rubyid_lazily'>lazily</span> <span class='symbol'>:user</span><span class='comma'>,</span> <span class='label'>finds:</span> <span class='const'>User</span>
+<span class='comment'># user: 123       → User.find(123)
+</span><span class='comment'># user: user_inst → returns user_inst directly</span></code></pre>
+    
+      
+        <h5 class="example_title"><div class='inline'><p>Custom column lookup</p>
+</div></h5>
+      
+      <pre class="example code"><code><span class='id identifier rubyid_lazily'>lazily</span> <span class='symbol'>:account</span><span class='comma'>,</span> <span class='label'>finds:</span> <span class='const'>Account</span><span class='comma'>,</span> <span class='label'>by:</span> <span class='symbol'>:uuid</span>
+<span class='comment'># account: &quot;abc-def&quot; → Account.find_by!(uuid: &quot;abc-def&quot;)</span></code></pre>
+    
+      
+        <h5 class="example_title"><div class='inline'><p>Array input</p>
+</div></h5>
+      
+      <pre class="example code"><code><span class='id identifier rubyid_lazily'>lazily</span> <span class='symbol'>:users</span><span class='comma'>,</span> <span class='label'>finds:</span> <span class='const'>User</span>
+<span class='comment'># users: [1, 2, 3] → User.where(id: [1, 2, 3])</span></code></pre>
+    
+  </div>
+<p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>name</span>
+      
+      
+        <span class='type'>(<tt>Symbol</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>the param/ivar name, also becomes the accessor method</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>finds</span>
+      
+      
+        <span class='type'>(<tt>Class</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>the model class to resolve against (e.g., +User+, +Account+)</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>by</span>
+      
+      
+        <span class='type'>(<tt>Symbol</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>:id</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'><p>the lookup column (default: +:id+). When +:id+, uses +.find+.
+Otherwise uses +.find_by!(column: value)+.</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+
+  <p class="tag_title">See Also:</p>
+  <ul class="see">
+    
+      <li><span class='object_link'><a href="../../Base.html#call-class_method" title="Servus::Base.call (method)">Base.call</a></span></li>
+    
+  </ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+45
+46
+47
+48</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/servus/extensions/lazily/call.rb', line 45</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_lazily'>lazily</span><span class='lparen'>(</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='label'>finds:</span><span class='comma'>,</span> <span class='label'>by:</span> <span class='symbol'>:id</span><span class='rparen'>)</span>
+  <span class='lparen'>(</span><span class='ivar'>@lazy_resolvers</span> <span class='op'>||=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='rparen'>)</span><span class='lbracket'>[</span><span class='id identifier rubyid_name'>name</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='lbrace'>{</span> <span class='label'>klass:</span> <span class='id identifier rubyid_finds'>finds</span><span class='comma'>,</span> <span class='label'>by:</span> <span class='id identifier rubyid_by'>by</span> <span class='rbrace'>}</span>
+  <span class='id identifier rubyid_define_resolver_method'>define_resolver_method</span><span class='lparen'>(</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='id identifier rubyid_finds'>finds</span><span class='comma'>,</span> <span class='id identifier rubyid_by'>by</span><span class='rparen'>)</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="lazy_resolvers-instance_method">
+  
+    #<strong>lazy_resolvers</strong>  &#x21d2; <tt>Hash{Symbol =&gt; Hash}</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p class="note private">
+  <strong>This method is part of a private API.</strong>
+  You should avoid using this method if possible, as it may be removed or be changed in the future.
+</p>
+<p>Returns the hash of registered lazy resolvers for this service class.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Hash{Symbol =&gt; Hash}</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>resolver configurations keyed by name</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+54
+55
+56</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/servus/extensions/lazily/call.rb', line 54</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_lazy_resolvers'>lazy_resolvers</span>
+  <span class='ivar'>@lazy_resolvers</span> <span class='op'>||</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+  </div>
+
+</div>
+
+      <div id="footer">
+  Generated on Fri Apr  3 21:00:09 2026 by
+  <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
+  0.9.37 (ruby-3.3.0).
+</div>
+
+    </div>
+  </body>
+</html>

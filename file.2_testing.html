@@ -97,6 +97,13 @@
         <span class='label'>transaction_id:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>example:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>txn_abc123</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span><span class='comma'>,</span>
         <span class='label'>status:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>example:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>approved</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span>
       <span class='rbrace'>}</span>
+    <span class='rbrace'>}</span><span class='comma'>,</span>
+    <span class='label'>failure:</span> <span class='lbrace'>{</span>
+      <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>object</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+      <span class='label'>properties:</span> <span class='lbrace'>{</span>
+        <span class='label'>reason:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>example:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>card_declined</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span><span class='comma'>,</span>
+        <span class='label'>decline_code:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>example:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>insufficient_funds</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span>
+      <span class='rbrace'>}</span>
     <span class='rbrace'>}</span>
   <span class='rparen'>)</span>
 <span class='kw'>end</span>
@@ -116,6 +123,15 @@
     <span class='id identifier rubyid_expect'>expect</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='period'>.</span><span class='id identifier rubyid_keys'>keys</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to'>to</span> <span class='id identifier rubyid_match_array'>match_array</span><span class='lparen'>(</span>
       <span class='id identifier rubyid_servus_result_example'>servus_result_example</span><span class='lparen'>(</span><span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='period'>.</span><span class='id identifier rubyid_keys'>keys</span>
     <span class='rparen'>)</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_it'>it</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>returns structured failure data on decline</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>do</span>
+    <span class='id identifier rubyid_args'>args</span> <span class='op'>=</span> <span class='id identifier rubyid_servus_arguments_example'>servus_arguments_example</span><span class='lparen'>(</span><span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span><span class='comma'>,</span> <span class='label'>amount:</span> <span class='int'>999_999</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='op'>**</span><span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
+
+    <span class='id identifier rubyid_expected'>expected</span> <span class='op'>=</span> <span class='id identifier rubyid_servus_failure_example'>servus_failure_example</span><span class='lparen'>(</span><span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_expect'>expect</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to'>to</span> <span class='id identifier rubyid_be_failure'>be_failure</span>
+    <span class='id identifier rubyid_expect'>expect</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='period'>.</span><span class='id identifier rubyid_keys'>keys</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to'>to</span> <span class='id identifier rubyid_match_array'>match_array</span><span class='lparen'>(</span><span class='id identifier rubyid_expected'>expected</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='period'>.</span><span class='id identifier rubyid_keys'>keys</span><span class='rparen'>)</span>
   <span class='kw'>end</span>
 
   <span class='id identifier rubyid_it'>it</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>handles different currencies</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>do</span>
@@ -145,7 +161,8 @@
 
 <ul>
 <li><code>servus_arguments_example(ServiceClass, **overrides)</code> - Returns hash of argument examples</li>
-<li><code>servus_result_example(ServiceClass, **overrides)</code> - Returns Response object with result examples</li>
+<li><code>servus_result_example(ServiceClass, **overrides)</code> - Returns successful Response with result examples</li>
+<li><code>servus_failure_example(ServiceClass, **overrides)</code> - Returns failure Response with failure schema examples</li>
 </ul>
 
 <h2 id="basic-testing-pattern">Basic Testing Pattern</h2>
@@ -335,7 +352,7 @@ end
 </div></div>
 
       <div id="footer">
-  Generated on Fri Apr  3 16:37:58 2026 by
+  Generated on Fri Apr  3 21:00:09 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.37 (ruby-3.3.0).
 </div>

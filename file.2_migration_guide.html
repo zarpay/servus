@@ -59,7 +59,53 @@
 
       <div id="content"><div id='filecontents'><h1 id="migration-guide">Migration Guide</h1>
 
-<p>Strategies for adopting Servus in existing Rails applications.</p>
+<p>Strategies for adopting Servus in existing Rails applications, and version-specific migration notes.</p>
+
+<h2 id="migrating-to-0-3-0">Migrating to 0.3.0</h2>
+
+<h3 id="breaking-result-data-is-no-longer-guaranteed-nil-on-failure">Breaking: <code>result.data</code> is no longer guaranteed nil on failure</h3>
+
+<p>In 0.2.x, <code>failure()</code> always set <code>result.data</code> to <code>nil</code>. Some code relied on this to distinguish success from failure:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># ❌ Unsafe in 0.3.0 — result.data can be non-nil on failure
+</span><span class='kw'>if</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span>
+  <span class='comment'># handle success
+</span><span class='kw'>else</span>
+  <span class='comment'># handle failure
+</span><span class='kw'>end</span>
+</code></pre>
+
+<p>In 0.3.0, <code>failure()</code> accepts an optional <code>data:</code> kwarg, so failure responses can carry structured data. Use <code>result.success?</code> or <code>result.failure?</code> instead:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># ✅ Correct — always use success? or failure?
+</span><span class='kw'>if</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_success?'>success?</span>
+  <span class='id identifier rubyid_render'>render</span> <span class='label'>json:</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='comma'>,</span> <span class='label'>status:</span> <span class='symbol'>:ok</span>
+<span class='kw'>else</span>
+  <span class='id identifier rubyid_render'>render</span> <span class='label'>json:</span> <span class='lbrace'>{</span> <span class='label'>error:</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_error'>error</span><span class='period'>.</span><span class='id identifier rubyid_api_error'>api_error</span><span class='comma'>,</span> <span class='label'>details:</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span> <span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>status:</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_error'>error</span><span class='period'>.</span><span class='id identifier rubyid_http_status'>http_status</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<p><strong>How to find affected code</strong>: Search your codebase for patterns like <code>if result.data</code>, <code>result.data.present?</code>, or <code>result.data.nil?</code> used as success/failure checks. Replace them with <code>result.success?</code> or <code>result.failure?</code>.</p>
+
+<h3 id="removed-response-with_data">Removed: <code>Response#with_data</code></h3>
+
+<p><code>with_data</code> was removed in favor of the <code>data:</code> kwarg on <code>failure()</code>:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='comment'># ❌ 0.2.x — no longer available
+</span><span class='id identifier rubyid_failure'>failure</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Declined</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_tap'>tap</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_r'>r</span><span class='op'>|</span> <span class='id identifier rubyid_r'>r</span><span class='period'>.</span><span class='id identifier rubyid_with_data'>with_data</span><span class='lparen'>(</span><span class='label'>reason:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>insufficient_funds</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='rbrace'>}</span>
+
+<span class='comment'># ✅ 0.3.0
+</span><span class='id identifier rubyid_failure'>failure</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Declined</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>data:</span> <span class='lbrace'>{</span> <span class='label'>reason:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>insufficient_funds</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span><span class='rparen'>)</span>
+</code></pre>
+
+<h3 id="new-dataobject-wrapping">New: DataObject wrapping</h3>
+
+<p>Response data is now wrapped in a <code>DataObject</code> when it is a Hash. This is backwards compatible — <code>result.data[:key]</code> still works. You can also use accessor-style access:</p>
+
+<pre class="code ruby"><code class="ruby"><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='lbracket'>[</span><span class='symbol'>:user</span><span class='rbracket'>]</span>       <span class='comment'># still works
+</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='period'>.</span><span class='id identifier rubyid_user'>user</span>         <span class='comment'># also works (new)
+</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_data'>data</span><span class='period'>.</span><span class='id identifier rubyid_user'>user</span><span class='period'>.</span><span class='id identifier rubyid_email'>email</span>   <span class='comment'># nested access (new)
+</span></code></pre>
 
 <h2 id="incremental-adoption">Incremental Adoption</h2>
 
@@ -232,7 +278,7 @@
 </div></div>
 
       <div id="footer">
-  Generated on Fri Apr  3 16:37:58 2026 by
+  Generated on Fri Apr  3 21:00:09 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.37 (ruby-3.3.0).
 </div>

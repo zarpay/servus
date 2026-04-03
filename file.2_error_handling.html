@@ -91,6 +91,13 @@
 <span class='kw'>end</span>
 </code></pre>
 
+<p>Failures can optionally carry structured data using the <code>data:</code> keyword argument. When a <code>failure</code> schema is defined on the service, this data is validated against it.</p>
+
+<pre class="code ruby"><code class="ruby"><span class='kw'>def</span> <span class='id identifier rubyid_call'>call</span>
+  <span class='kw'>return</span> <span class='id identifier rubyid_failure'>failure</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Approval required</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>data:</span> <span class='lbrace'>{</span> <span class='label'>requires_human_approval:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>ai_approved:</span> <span class='kw'>true</span> <span class='rbrace'>}</span><span class='rparen'>)</span>
+<span class='kw'>end</span>
+</code></pre>
+
 <h2 id="error-classes">Error Classes</h2>
 
 <p>All error classes inherit from <code>ServiceError</code> and map to HTTP status codes. Use them for API-friendly errors.</p>
@@ -160,7 +167,7 @@ end
 <span class='kw'>end</span>
 </code></pre>
 
-<p>The block has access to <code>success(data)</code> and <code>failure(message, type:)</code> methods. This allows conditional error handling and even recovering from exceptions.</p>
+<p>The block has access to <code>success(data)</code> and <code>failure(message, data:, type:)</code> methods. This allows conditional error handling and even recovering from exceptions.</p>
 
 <h2 id="custom-errors">Custom Errors</h2>
 
@@ -180,7 +187,7 @@ end
 </div></div>
 
       <div id="footer">
-  Generated on Fri Apr  3 16:37:58 2026 by
+  Generated on Fri Apr  3 21:00:09 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.37 (ruby-3.3.0).
 </div>

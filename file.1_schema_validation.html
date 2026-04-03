@@ -84,6 +84,12 @@
         <span class='label'>transaction_id:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>example:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>txn_abc123</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span><span class='comma'>,</span>
         <span class='label'>new_balance:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>number</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>example:</span> <span class='float'>950.0</span> <span class='rbrace'>}</span>
       <span class='rbrace'>}</span>
+    <span class='rbrace'>}</span><span class='comma'>,</span>
+    <span class='label'>failure:</span> <span class='lbrace'>{</span>
+      <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>object</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+      <span class='label'>properties:</span> <span class='lbrace'>{</span>
+        <span class='label'>reason:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>example:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>insufficient_funds</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span>
+      <span class='rbrace'>}</span>
     <span class='rbrace'>}</span>
   <span class='rparen'>)</span>
 <span class='kw'>end</span>
@@ -127,6 +133,13 @@
       <span class='label'>new_balance:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>number</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span>
     <span class='rbrace'>}</span>
   <span class='rbrace'>}</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span>
+
+  <span class='const'>FAILURE_SCHEMA</span> <span class='op'>=</span> <span class='lbrace'>{</span>
+    <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>object</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+    <span class='label'>properties:</span> <span class='lbrace'>{</span>
+      <span class='label'>reason:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span>
+    <span class='rbrace'>}</span>
+  <span class='rbrace'>}</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span>
 <span class='kw'>end</span>
 </code></pre>
 
@@ -137,6 +150,7 @@
 <ul>
 <li><code>app/schemas/services/service_name/arguments.json</code></li>
 <li><code>app/schemas/services/service_name/result.json</code></li>
+<li><code>app/schemas/services/service_name/failure.json</code></li>
 </ul>
 
 <h3 id="schema-lookup-precedence">Schema Lookup Precedence</h3>
@@ -145,7 +159,7 @@
 
 <ol>
 <li><strong>schema DSL method</strong> (if defined)</li>
-<li><strong>Inline constants</strong> (ARGUMENTS_SCHEMA, RESULT_SCHEMA)</li>
+<li><strong>Inline constants</strong> (ARGUMENTS_SCHEMA, RESULT_SCHEMA, FAILURE_SCHEMA)</li>
 <li><strong>JSON files</strong> (in schema_root directory)</li>
 </ol>
 
@@ -160,6 +174,36 @@
 <p><strong>Model Validation</strong> (ActiveRecord): Database constraints before persistence</p>
 
 <p>Each layer has a different purpose - don&#39;t duplicate validation across layers.</p>
+
+<h2 id="failure-data-validation">Failure Data Validation</h2>
+
+<p>Services can optionally attach structured data to failure responses using the <code>data:</code> keyword argument on <code>failure()</code>. When a <code>failure</code> schema is defined, this data is validated against it — just like success results are validated against <code>result</code> schemas.</p>
+
+<pre class="code ruby"><code class="ruby"><span class='kw'>class</span> <span class='const'>ProcessPayment</span><span class='op'>::</span><span class='const'>Service</span> <span class='op'>&lt;</span> <span class='const'><span class='object_link'><a href="Servus.html" title="Servus (module)">Servus</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Servus/Base.html" title="Servus::Base (class)">Base</a></span></span>
+  <span class='id identifier rubyid_schema'>schema</span><span class='lparen'>(</span>
+    <span class='label'>failure:</span> <span class='lbrace'>{</span>
+      <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>object</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+      <span class='label'>required:</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>reason</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span><span class='comma'>,</span>
+      <span class='label'>properties:</span> <span class='lbrace'>{</span>
+        <span class='label'>reason:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span><span class='comma'>,</span>
+        <span class='label'>decline_code:</span> <span class='lbrace'>{</span> <span class='label'>type:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>string</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span>
+      <span class='rbrace'>}</span>
+    <span class='rbrace'>}</span>
+  <span class='rparen'>)</span>
+
+  <span class='kw'>def</span> <span class='id identifier rubyid_call'>call</span>
+    <span class='kw'>return</span> <span class='id identifier rubyid_failure'>failure</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Card declined</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>data:</span> <span class='lbrace'>{</span> <span class='label'>reason:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>insufficient_funds</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>decline_code:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>do_not_honor</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+</code></pre>
+
+<p>Failure data validation is skipped when:</p>
+
+<ul>
+<li>No <code>failure</code> schema is defined</li>
+<li>The failure response has no data (<code>data: nil</code>, the default)</li>
+<li>The response is a success</li>
+</ul>
 
 <h2 id="configuration">Configuration</h2>
 
@@ -178,7 +222,7 @@
 </div></div>
 
       <div id="footer">
-  Generated on Fri Apr  3 16:37:58 2026 by
+  Generated on Fri Apr  3 21:00:09 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.37 (ruby-3.3.0).
 </div>
