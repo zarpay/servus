@@ -297,15 +297,70 @@ RSpec.describe Servus::Testing::ExampleBuilders do
     end
   end
 
+  describe '#servus_failure_example' do
+    context 'with service that has failure schema with examples' do
+      before do
+        ExampleBuildersTest::PaymentService.schema(
+          failure: {
+            type: 'object',
+            properties: {
+              reason: { type: 'string', example: 'card_declined' },
+              decline_code: { type: 'string', example: 'insufficient_funds' }
+            }
+          }
+        )
+      end
+
+      after do
+        if ExampleBuildersTest::PaymentService.instance_variable_defined?(:@failure_schema)
+          ExampleBuildersTest::PaymentService.remove_instance_variable(:@failure_schema)
+        end
+      end
+
+      it 'returns a failure Response with example data' do
+        result = servus_failure_example(ExampleBuildersTest::PaymentService)
+
+        expect(result).to be_a(Servus::Support::Response)
+        expect(result.failure?).to be(true)
+        expect(result.data).to eq({
+                                    reason: 'card_declined',
+                                    decline_code: 'insufficient_funds'
+                                  })
+      end
+
+      it 'merges overrides with example values' do
+        result = servus_failure_example(
+          ExampleBuildersTest::PaymentService,
+          reason: 'expired_card'
+        )
+
+        expect(result.data).to eq({
+                                    reason: 'expired_card',
+                                    decline_code: 'insufficient_funds'
+                                  })
+      end
+    end
+
+    context 'with service that has no failure schema' do
+      it 'returns a failure Response with empty data' do
+        result = servus_failure_example(ExampleBuildersTest::NoSchemaService)
+        expect(result.failure?).to be(true)
+        expect(result.data).to eq({})
+      end
+    end
+  end
+
   describe 'module inclusion' do
     it 'makes methods available when included' do
       expect(self).to respond_to(:servus_arguments_example)
       expect(self).to respond_to(:servus_result_example)
+      expect(self).to respond_to(:servus_failure_example)
     end
 
     it 'does not pollute Object' do
       expect(Object.new).not_to respond_to(:servus_arguments_example)
       expect(Object.new).not_to respond_to(:servus_result_example)
+      expect(Object.new).not_to respond_to(:servus_failure_example)
     end
   end
 end

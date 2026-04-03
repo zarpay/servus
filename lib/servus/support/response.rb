@@ -81,29 +81,10 @@ module Servus
         !@success
       end
 
-      # Attaches additional data to the response, merging with any existing data.
-      #
-      # This is useful for enriching failure responses with structured context
-      # beyond the error message, e.g. validation details or domain-specific flags.
-      # Returns +self+ so it can be chained or used inside a +tap+ block.
-      #
-      # @param attributes [Hash] key-value pairs to merge into the response data
-      # @return [self]
-      #
-      # @example Adding data to a failure response
-      #   failure("Human approval required").tap do |r|
-      #     r.with_data(requires_human_approval: true, ai_approved: true)
-      #   end
-      def with_data(**attributes)
-        @data = (@data || {}).merge(attributes)
-        self
-      end
-
       # Allows direct access to data keys as methods.
       #
       # When {#data} is a Hash, you can access its keys directly on the response
-      # object. Works for both success and failure responses (e.g. after calling
-      # {#with_data}).
+      # object. Works for both success and failure responses.
       #
       # @example
       #   result = MyService.call(user_id: 123)

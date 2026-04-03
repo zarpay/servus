@@ -12,11 +12,13 @@ RSpec.describe Servus::Support::Validator do
       end
 
       def call
-        success({
-                  id: 123,
-                  name: @name,
-                  age: @age
-                })
+        success(
+          {
+            id: 123,
+            name: @name,
+            age: @age
+          }
+        )
       end
     end
 
@@ -36,12 +38,15 @@ RSpec.describe Servus::Support::Validator do
 
     after do
       if defined?(SchemaValidationTest::Service::ARGUMENTS_SCHEMA)
-        SchemaValidationTest::Service.send(:remove_const,
-                                           :ARGUMENTS_SCHEMA)
+        SchemaValidationTest::Service.send(:remove_const, :ARGUMENTS_SCHEMA)
       end
+
       if defined?(SchemaValidationTest::Service::RESULT_SCHEMA)
-        SchemaValidationTest::Service.send(:remove_const,
-                                           :RESULT_SCHEMA)
+        SchemaValidationTest::Service.send(:remove_const, :RESULT_SCHEMA)
+      end
+
+      if defined?(SchemaValidationTest::Service::FAILURE_SCHEMA)
+        SchemaValidationTest::Service.send(:remove_const, :FAILURE_SCHEMA)
       end
     end
 
@@ -246,6 +251,83 @@ RSpec.describe Servus::Support::Validator do
           expect do
             described_class.validate_result!(SchemaValidationTest::ServiceWithNonPrimitiveArguments, invalid_result)
           end.to raise_error(Servus::Base::ValidationError, /did not match the following type: string/)
+        end
+      end
+    end
+
+    describe '.validate_result! with failure schema' do
+      let(:error) { Servus::Support::Errors::ServiceError.new('something failed') }
+      let(:failure_with_data) { Servus::Support::Response.new(false, { reason: 'invalid', code: 42 }, error) }
+      let(:failure_without_data) { Servus::Support::Response.new(false, nil, error) }
+      let(:success_result) { Servus::Support::Response.new(true, { id: 123 }, nil) }
+
+      context 'when no failure schema exists' do
+        it 'returns the failure result unchanged' do
+          expect(described_class.validate_result!(SchemaValidationTest::Service,
+                                                  failure_with_data)).to eq(failure_with_data)
+        end
+      end
+
+      context 'when failure schema exists via DSL' do
+        before do
+          SchemaValidationTest::Service.schema(
+            failure: {
+              type: 'object',
+              required: %w[reason],
+              properties: {
+                reason: { type: 'string' },
+                code: { type: 'integer' }
+              }
+            }
+          )
+        end
+
+        it 'returns failure result unchanged if data matches schema' do
+          expect(described_class.validate_result!(SchemaValidationTest::Service,
+                                                  failure_with_data)).to eq(failure_with_data)
+        end
+
+        it 'raises ValidationError if failure data does not match schema' do
+          bad_failure = Servus::Support::Response.new(false, { reason: 123 }, error)
+          expect do
+            described_class.validate_result!(SchemaValidationTest::Service, bad_failure)
+          end.to raise_error(Servus::Base::ValidationError, /Invalid failure structure/)
+        end
+
+        it 'skips validation when failure has nil data' do
+          expect(described_class.validate_result!(SchemaValidationTest::Service,
+                                                  failure_without_data)).to eq(failure_without_data)
+        end
+
+        it 'does not apply failure schema to success results' do
+          expect(described_class.validate_result!(SchemaValidationTest::Service, success_result)).to eq(success_result)
+        end
+      end
+
+      context 'when failure schema exists via inline constant' do
+        before do
+          module SchemaValidationTest
+            class Service
+              FAILURE_SCHEMA = {
+                type: 'object',
+                required: %w[reason],
+                properties: {
+                  reason: { type: 'string' }
+                }
+              }.freeze
+            end
+          end
+        end
+
+        after do
+          SchemaValidationTest::Service.send(:remove_const, :FAILURE_SCHEMA)
+        end
+
+        it 'validates failure data against the inline constant schema' do
+          bad_failure = Servus::Support::Response.new(false, { reason: 123 }, error)
+          expect do
+            described_class.validate_result!(SchemaValidationTest::Service, bad_failure)
+          end.to raise_error(Servus::Base::ValidationError, /Invalid failure structure/)
         end
       end
     end
@@ -532,6 +614,10 @@ RSpec.describe Servus::Support::Validator do
         SchemaValidationTest::Service.remove_instance_variable(:@result_schema)
       end
 
+      if SchemaValidationTest::Service.instance_variable_defined?(:@failure_schema)
+        SchemaValidationTest::Service.remove_instance_variable(:@failure_schema)
+      end
+
       # Clean up constants if they exist
       if defined?(SchemaValidationTest::Service::ARGUMENTS_SCHEMA)
         SchemaValidationTest::Service.send(:remove_const, :ARGUMENTS_SCHEMA)
@@ -539,6 +625,10 @@ RSpec.describe Servus::Support::Validator do
 
       if defined?(SchemaValidationTest::Service::RESULT_SCHEMA)
         SchemaValidationTest::Service.send(:remove_const, :RESULT_SCHEMA)
+      end
+
+      if defined?(SchemaValidationTest::Service::FAILURE_SCHEMA)
+        SchemaValidationTest::Service.send(:remove_const, :FAILURE_SCHEMA)
       end
     end
 

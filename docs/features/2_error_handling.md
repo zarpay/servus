@@ -29,6 +29,14 @@ def call
 end
 ```
 
+Failures can optionally carry structured data using the `data:` keyword argument. When a `failure` schema is defined on the service, this data is validated against it.
+
+```ruby
+def call
+  return failure("Approval required", data: { requires_human_approval: true, ai_approved: true })
+end
+```
+
 ## Error Classes
 
 All error classes inherit from `ServiceError` and map to HTTP status codes. Use them for API-friendly errors.
@@ -101,7 +109,7 @@ class ProcessPayment::Service < Servus::Base
 end
 ```
 
-The block has access to `success(data)` and `failure(message, type:)` methods. This allows conditional error handling and even recovering from exceptions.
+The block has access to `success(data)` and `failure(message, data:, type:)` methods. This allows conditional error handling and even recovering from exceptions.
 
 ## Custom Errors
 
