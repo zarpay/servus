@@ -105,7 +105,7 @@ RSpec.describe Servus::Guards::PresenceGuard do
       error = guard.error
 
       expect(error).to be_a(Servus::Support::Errors::GuardError)
-      expect(error.code).to eq('must_be_present')
+      expect(error.detail).to eq('must_be_present')
       expect(error.http_status).to eq(422)
     end
 

@@ -319,7 +319,7 @@ RSpec.describe Servus::Guard do
       # Test error generation
       error = guard.error
       expect(error).to be_a(Servus::Support::Errors::GuardError)
-      expect(error.code).to eq('insufficient_balance')
+      expect(error.detail).to eq('insufficient_balance')
       expect(error.message).to eq('Insufficient balance: need 150, have 100')
       expect(error.http_status).to eq(422)
     end

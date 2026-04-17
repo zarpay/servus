@@ -26,7 +26,7 @@
 <%- end -%>
 class <%= guard_class_name %> < Servus::Guard
   http_status 422
-  error_code '<%= file_name %>'
+  error_detail '<%= file_name %>'
 
   message '%<class_name>s <%= file_name.humanize.downcase %> validation failed' do
     message_data

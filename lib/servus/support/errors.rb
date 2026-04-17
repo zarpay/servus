@@ -12,34 +12,45 @@ module Servus
     module Errors
       # Base error class for all Servus service errors.
       #
-      # Subclasses define their HTTP status via {#http_status} and their
-      # API response format via {#api_error}.
+      # Subclasses define their HTTP status via {#http_status}. The API response
+      # format is derived automatically — {#api_error} builds a hash from
+      # {#http_status}, {#message}, and the optional {#detail} field. Subclasses
+      # should NOT override {#api_error}.
+      #
+      # The +:code+ in the API response always matches {#http_status}, ensuring
+      # the HTTP status and JSON body cannot drift apart. Use {#detail} when
+      # consumers need a machine-readable identifier to branch on (e.g.,
+      # +'insufficient_funds'+, +'account_frozen'+).
       #
       # @example Creating a custom error type
-      #   class InsufficientFundsError < Servus::Support::Errors::ServiceError
+      #   class InsufficientFundsError < Servus::Support::Errors::UnprocessableEntityError
       #     DEFAULT_MESSAGE = 'Insufficient funds'
-      #
-      #     def http_status = :unprocessable_entity
-      #
-      #     def api_error
-      #       { code: 'insufficient_funds', message: message }
-      #     end
       #   end
       #
       # @example Using with failure method
       #   def call
       #     return failure("User not found", type: NotFoundError)
       #   end
+      #
+      # @example Error with detail for programmatic branching
+      #   error = ServiceError.new("Card declined", detail: "card_declined")
+      #   error.api_error
+      #   # => { code: :bad_request, message: "Card declined", detail: "card_declined" }
       class ServiceError < StandardError
         attr_reader :message
+
+        # @return [String, nil] optional machine-readable error identifier for consumer branching
+        attr_reader :detail
 
         DEFAULT_MESSAGE = 'An error occurred'
 
         # Creates a new service error instance.
         #
         # @param message [String, nil] custom error message (uses DEFAULT_MESSAGE if nil)
-        def initialize(message = nil)
+        # @param detail [String, nil] optional machine-readable identifier for programmatic branching
+        def initialize(message = nil, detail: nil)
           @message = message || self.class::DEFAULT_MESSAGE
+          @detail = detail
           super("#{self.class}: #{@message}")
         end
 
@@ -50,21 +61,28 @@ module Servus
 
         # Returns an API-friendly error response.
         #
-        # @return [Hash] hash with :code and :message keys
-        def api_error = { code: http_status, message: message }
+        # The +:code+ is always derived from {#http_status}, ensuring the HTTP
+        # response status and JSON body stay in sync. When {#detail} is set, it
+        # is included for consumers that need to branch on a specific error case.
+        #
+        # @return [Hash] hash with :code, :message, and optionally :detail keys
+        def api_error
+          hash = { code: http_status, message: message }
+          hash[:detail] = detail if detail
+          hash
+        end
       end
 
-      # Guard validation failure with custom code.
+      # Guard validation failure with detail identifier.
       #
-      # Guards define their own error code and HTTP status via the DSL.
+      # Guards define their own detail and HTTP status via the DSL. The +:code+
+      # in the API response is always the HTTP status symbol; use +:detail+ for
+      # machine-readable identifiers consumers can branch on.
       #
       # @example
-      #   GuardError.new("Amount must be positive", code: 'invalid_amount', http_status: 422)
+      #   GuardError.new("Amount must be positive", detail: 'invalid_amount', http_status: :unprocessable_entity)
       class GuardError < ServiceError
         DEFAULT_MESSAGE = 'Guard validation failed'
-
-        # @return [String] application-specific error code
-        attr_reader :code
 
         # @return [Symbol, Integer] HTTP status code
         attr_reader :http_status
@@ -72,15 +90,12 @@ module Servus
         # Creates a new guard error with metadata.
         #
         # @param message [String, nil] error message
-        # @param code [String] error code for API responses (default: 'guard_failed')
+        # @param detail [String] machine-readable identifier for programmatic branching (default: 'guard_failed')
         # @param http_status [Symbol, Integer] HTTP status (default: :unprocessable_entity)
-        def initialize(message = nil, code: 'guard_failed', http_status: :unprocessable_entity)
-          super(message)
-          @code        = code
+        def initialize(message = nil, detail: 'guard_failed', http_status: :unprocessable_entity)
+          super(message, detail: detail)
           @http_status = http_status
         end
-
-        def api_error = { code: code, message: message }
       end
 
       # --------------------------------------------------------
@@ -92,7 +107,6 @@ module Servus
         DEFAULT_MESSAGE = 'Bad request'
 
         def http_status = :bad_request
-        def api_error = { code: http_status, message: message }
       end
 
       # 401 Unauthorized - authentication credentials missing or invalid.
@@ -100,7 +114,6 @@ module Servus
         DEFAULT_MESSAGE = 'Authentication failed'
 
         def http_status = :unauthorized
-        def api_error = { code: http_status, message: message }
       end
 
       # 401 Unauthorized (alias for AuthenticationError).
@@ -113,7 +126,6 @@ module Servus
         DEFAULT_MESSAGE = 'Forbidden'
 
         def http_status = :forbidden
-        def api_error = { code: http_status, message: message }
       end
 
       # 404 Not Found - requested resource does not exist.
@@ -121,7 +133,6 @@ module Servus
         DEFAULT_MESSAGE = 'Not found'
 
         def http_status = :not_found
-        def api_error = { code: http_status, message: message }
       end
 
       # 405 Method Not Allowed - HTTP method not supported for this resource.
@@ -129,7 +140,6 @@ module Servus
         DEFAULT_MESSAGE = 'Method not allowed'
 
         def http_status = :method_not_allowed
-        def api_error = { code: http_status, message: message }
       end
 
       # 406 Not Acceptable - requested content type cannot be provided.
@@ -137,7 +147,6 @@ module Servus
         DEFAULT_MESSAGE = 'Not acceptable'
 
         def http_status = :not_acceptable
-        def api_error = { code: http_status, message: message }
       end
 
       # 407 Proxy Authentication Required - proxy credentials required.
@@ -145,7 +154,6 @@ module Servus
         DEFAULT_MESSAGE = 'Proxy authentication required'
 
         def http_status = :proxy_authentication_required
-        def api_error = { code: http_status, message: message }
       end
 
       # 408 Request Timeout - client did not produce a request in time.
@@ -153,7 +161,6 @@ module Servus
         DEFAULT_MESSAGE = 'Request timeout'
 
         def http_status = :request_timeout
-        def api_error = { code: http_status, message: message }
       end
 
       # 409 Conflict - request conflicts with current state of the resource.
@@ -161,7 +168,6 @@ module Servus
         DEFAULT_MESSAGE = 'Conflict'
 
         def http_status = :conflict
-        def api_error = { code: http_status, message: message }
       end
 
       # 410 Gone - resource is no longer available and will not be available again.
@@ -169,7 +175,6 @@ module Servus
         DEFAULT_MESSAGE = 'Gone'
 
         def http_status = :gone
-        def api_error = { code: http_status, message: message }
       end
 
       # 411 Length Required - Content-Length header is required.
@@ -177,7 +182,6 @@ module Servus
         DEFAULT_MESSAGE = 'Length required'
 
         def http_status = :length_required
-        def api_error = { code: http_status, message: message }
       end
 
       # 412 Precondition Failed - precondition in headers evaluated to false.
@@ -185,7 +189,6 @@ module Servus
         DEFAULT_MESSAGE = 'Precondition failed'
 
         def http_status = :precondition_failed
-        def api_error = { code: http_status, message: message }
       end
 
       # 413 Payload Too Large - request entity is larger than server limits.
@@ -193,7 +196,6 @@ module Servus
         DEFAULT_MESSAGE = 'Payload too large'
 
         def http_status = :payload_too_large
-        def api_error = { code: http_status, message: message }
       end
 
       # 414 URI Too Long - URI is too long for the server to process.
@@ -201,7 +203,6 @@ module Servus
         DEFAULT_MESSAGE = 'URI too long'
 
         def http_status = :uri_too_long
-        def api_error = { code: http_status, message: message }
       end
 
       # 415 Unsupported Media Type - request entity has unsupported media type.
@@ -209,7 +210,6 @@ module Servus
         DEFAULT_MESSAGE = 'Unsupported media type'
 
         def http_status = :unsupported_media_type
-        def api_error = { code: http_status, message: message }
       end
 
       # 416 Range Not Satisfiable - client requested a portion that cannot be supplied.
@@ -217,7 +217,6 @@ module Servus
         DEFAULT_MESSAGE = 'Range not satisfiable'
 
         def http_status = :range_not_satisfiable
-        def api_error = { code: http_status, message: message }
       end
 
       # 417 Expectation Failed - server cannot meet Expect header requirements.
@@ -225,7 +224,6 @@ module Servus
         DEFAULT_MESSAGE = 'Expectation failed'
 
         def http_status = :expectation_failed
-        def api_error = { code: http_status, message: message }
       end
 
       # 418 I'm a Teapot - server refuses to brew coffee because it is a teapot.
@@ -233,7 +231,6 @@ module Servus
         DEFAULT_MESSAGE = "I'm a teapot"
 
         def http_status = :im_a_teapot
-        def api_error = { code: http_status, message: message }
       end
 
       # 421 Misdirected Request - request was directed at a server unable to respond.
@@ -241,7 +238,6 @@ module Servus
         DEFAULT_MESSAGE = 'Misdirected request'
 
         def http_status = :misdirected_request
-        def api_error = { code: http_status, message: message }
       end
 
       # 422 Unprocessable Entity - semantic errors in request.
@@ -249,7 +245,6 @@ module Servus
         DEFAULT_MESSAGE = 'Unprocessable entity'
 
         def http_status = :unprocessable_entity
-        def api_error = { code: http_status, message: message }
       end
 
       # 422 Unprocessable Content - content could not be processed.
@@ -257,14 +252,11 @@ module Servus
         DEFAULT_MESSAGE = 'Unprocessable content'
 
         def http_status = :unprocessable_content
-        def api_error = { code: http_status, message: message }
       end
 
       # 422 Validation Error - schema or business validation failed.
       class ValidationError < UnprocessableEntityError
         DEFAULT_MESSAGE = 'Validation failed'
-
-        def api_error = { code: http_status, message: message }
       end
 
       # 423 Locked - resource is locked.
@@ -272,7 +264,6 @@ module Servus
         DEFAULT_MESSAGE = 'Locked'
 
         def http_status = :locked
-        def api_error = { code: http_status, message: message }
       end
 
       # 424 Failed Dependency - request failed due to failure of a previous request.
@@ -280,7 +271,6 @@ module Servus
         DEFAULT_MESSAGE = 'Failed dependency'
 
         def http_status = :failed_dependency
-        def api_error = { code: http_status, message: message }
       end
 
       # 425 Too Early - server unwilling to process request that might be replayed.
@@ -288,7 +278,6 @@ module Servus
         DEFAULT_MESSAGE = 'Too early'
 
         def http_status = :too_early
-        def api_error = { code: http_status, message: message }
       end
 
       # 426 Upgrade Required - client should switch to a different protocol.
@@ -296,7 +285,6 @@ module Servus
         DEFAULT_MESSAGE = 'Upgrade required'
 
         def http_status = :upgrade_required
-        def api_error = { code: http_status, message: message }
       end
 
       # 428 Precondition Required - origin server requires the request to be conditional.
@@ -304,7 +292,6 @@ module Servus
         DEFAULT_MESSAGE = 'Precondition required'
 
         def http_status = :precondition_required
-        def api_error = { code: http_status, message: message }
       end
 
       # 429 Too Many Requests - user has sent too many requests in a given time.
@@ -312,7 +299,6 @@ module Servus
         DEFAULT_MESSAGE = 'Too many requests'
 
         def http_status = :too_many_requests
-        def api_error = { code: http_status, message: message }
       end
 
       # 431 Request Header Fields Too Large - server unwilling to process due to header size.
@@ -320,7 +306,6 @@ module Servus
         DEFAULT_MESSAGE = 'Request header fields too large'
 
         def http_status = :request_header_fields_too_large
-        def api_error = { code: http_status, message: message }
       end
 
       # 451 Unavailable For Legal Reasons - resource unavailable due to legal demands.
@@ -328,7 +313,6 @@ module Servus
         DEFAULT_MESSAGE = 'Unavailable for legal reasons'
 
         def http_status = :unavailable_for_legal_reasons
-        def api_error = { code: http_status, message: message }
       end
 
       # 500 Internal Server Error - unexpected server-side failure.
@@ -336,7 +320,6 @@ module Servus
         DEFAULT_MESSAGE = 'Internal server error'
 
         def http_status = :internal_server_error
-        def api_error = { code: http_status, message: message }
       end
 
       # 501 Not Implemented - server does not support the functionality required.
@@ -344,7 +327,6 @@ module Servus
         DEFAULT_MESSAGE = 'Not implemented'
 
         def http_status = :not_implemented
-        def api_error = { code: http_status, message: message }
       end
 
       # 502 Bad Gateway - server received an invalid response from upstream.
@@ -352,7 +334,6 @@ module Servus
         DEFAULT_MESSAGE = 'Bad gateway'
 
         def http_status = :bad_gateway
-        def api_error = { code: http_status, message: message }
       end
 
       # 503 Service Unavailable - dependency temporarily unavailable.
@@ -360,7 +341,6 @@ module Servus
         DEFAULT_MESSAGE = 'Service unavailable'
 
         def http_status = :service_unavailable
-        def api_error = { code: http_status, message: message }
       end
 
       # 504 Gateway Timeout - upstream server did not respond in time.
@@ -368,7 +348,6 @@ module Servus
         DEFAULT_MESSAGE = 'Gateway timeout'
 
         def http_status = :gateway_timeout
-        def api_error = { code: http_status, message: message }
       end
 
       # 505 HTTP Version Not Supported - server does not support the HTTP version.
@@ -376,7 +355,6 @@ module Servus
         DEFAULT_MESSAGE = 'HTTP version not supported'
 
         def http_status = :http_version_not_supported
-        def api_error = { code: http_status, message: message }
       end
 
       # 506 Variant Also Negotiates - transparent content negotiation error.
@@ -384,7 +362,6 @@ module Servus
         DEFAULT_MESSAGE = 'Variant also negotiates'
 
         def http_status = :variant_also_negotiates
-        def api_error = { code: http_status, message: message }
       end
 
       # 507 Insufficient Storage - server unable to store the representation.
@@ -392,7 +369,6 @@ module Servus
         DEFAULT_MESSAGE = 'Insufficient storage'
 
         def http_status = :insufficient_storage
-        def api_error = { code: http_status, message: message }
       end
 
       # 508 Loop Detected - server detected an infinite loop while processing.
@@ -400,7 +376,6 @@ module Servus
         DEFAULT_MESSAGE = 'Loop detected'
 
         def http_status = :loop_detected
-        def api_error = { code: http_status, message: message }
       end
 
       # 510 Not Extended - further extensions to the request are required.
@@ -408,7 +383,6 @@ module Servus
         DEFAULT_MESSAGE = 'Not extended'
 
         def http_status = :not_extended
-        def api_error = { code: http_status, message: message }
       end
 
       # 511 Network Authentication Required - client needs to authenticate for network access.
@@ -416,7 +390,6 @@ module Servus
         DEFAULT_MESSAGE = 'Network authentication required'
 
         def http_status = :network_authentication_required
-        def api_error = { code: http_status, message: message }
       end
     end
   end

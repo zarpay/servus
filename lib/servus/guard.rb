@@ -90,23 +90,33 @@ module Servus
       # @return [Integer, nil] the HTTP status code or nil if not set
       attr_reader :http_status_code
 
-      # Declares the error code for API responses.
+      # Declares the detail identifier for API responses.
       #
-      # @param code [String] the error code
+      # This is a machine-readable identifier that consumers can use to
+      # branch on specific error cases. It appears in the +:detail+ field
+      # of the API error response.
+      #
+      # @param detail [String] the detail identifier
       # @return [void]
       #
       # @example
       #   class MyGuard < Servus::Guard
-      #     error_code 'insufficient_balance'
+      #     error_detail 'insufficient_balance'
       #   end
-      def error_code(code)
-        @error_code_value = code
+      def error_detail(detail)
+        @error_detail_value = detail
       end
 
-      # Returns the error code.
+      # @deprecated Use {.error_detail} instead.
+      alias error_code error_detail
+
+      # Returns the detail identifier.
       #
-      # @return [String, nil] the error code or nil if not set
-      attr_reader :error_code_value
+      # @return [String, nil] the detail identifier or nil if not set
+      attr_reader :error_detail_value
+
+      # @deprecated Use {.error_detail_value} instead.
+      alias error_code_value error_detail_value
 
       # Declares the message template and data block.
       #
@@ -256,8 +266,8 @@ module Servus
     def error
       Servus::Support::Errors::GuardError.new(
         message,
-        code: self.class.error_code_value || 'validation_failed',
-        http_status: self.class.http_status_code || 422
+        detail: self.class.error_detail_value || 'validation_failed',
+        http_status: self.class.http_status_code || :unprocessable_entity
       )
     end
 

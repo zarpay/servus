@@ -72,7 +72,7 @@ RSpec.describe Servus::Guards::StateGuard do
         error = guard.error
 
         expect(error).to be_a(Servus::Support::Errors::GuardError)
-        expect(error.code).to eq('invalid_state')
+        expect(error.detail).to eq('invalid_state')
         expect(error.http_status).to eq(422)
       end
 

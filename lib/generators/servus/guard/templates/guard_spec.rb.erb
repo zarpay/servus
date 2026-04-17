@@ -48,7 +48,7 @@ RSpec.describe <%= guard_class_name %> do
       error = guard.error
 
       expect(error).to be_a(Servus::Support::Errors::GuardError)
-      expect(error.code).to eq('<%= file_name %>')
+      expect(error.detail).to eq('<%= file_name %>')
       expect(error.http_status).to eq(422)
     end
   end

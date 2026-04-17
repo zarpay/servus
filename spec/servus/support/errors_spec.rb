@@ -62,6 +62,16 @@ RSpec.describe Servus::Support::Errors do
       it 'returns a custom api error' do
         expect(error.api_error).to eq({ code: :bad_request, message: 'error message' })
       end
+
+      it 'includes detail when provided' do
+        error_with_detail = described_class.new('error message', detail: 'insufficient_funds')
+        expect(error_with_detail.api_error).to eq({ code: :bad_request, message: 'error message',
+                                                    detail: 'insufficient_funds' })
+      end
+
+      it 'omits detail when not provided' do
+        expect(error.api_error).not_to have_key(:detail)
+      end
     end
   end
 
