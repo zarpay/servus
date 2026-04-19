@@ -1,0 +1,222 @@
+/* Design philosophy: Citadel Atlas — editorial brutalism with archival warmth, asymmetrical emphasis, and technical clarity. */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;500;600;700&display=swap');
+
+:root {
+  --vp-font-family-base: 'Source Sans 3', system-ui, sans-serif;
+  --vp-font-family-mono: 'IBM Plex Mono', monospace;
+  --vp-c-brand-1: #8b6d3c;
+  --vp-c-brand-2: #a8864e;
+  --vp-c-brand-3: #6b552f;
+  --vp-c-text-1: #2b241d;
+  --vp-c-text-2: #5b4f42;
+  --vp-c-text-3: #7c6d5b;
+  --vp-c-bg: #f6f1e6;
+  --vp-c-bg-alt: #efe6d6;
+  --vp-c-bg-soft: #f9f5ec;
+  --vp-c-bg-elv: rgba(255, 251, 242, 0.92);
+  --vp-c-border: rgba(104, 84, 57, 0.2);
+  --vp-c-divider: rgba(104, 84, 57, 0.18);
+  --vp-home-hero-image-background-image: none;
+  --vp-home-hero-image-filter: none;
+  --vp-shadow-1: 0 14px 40px rgba(44, 35, 24, 0.08);
+  --vp-shadow-2: 0 22px 60px rgba(44, 35, 24, 0.12);
+}
+
+html,
+body {
+  background:
+    radial-gradient(circle at top left, rgba(167, 136, 78, 0.08), transparent 32%),
+    linear-gradient(180deg, #fbf8f1 0%, #f3ecdf 100%);
+}
+
+body {
+  font-family: var(--vp-font-family-base);
+}
+
+.VPNavBar {
+  background: rgba(250, 245, 236, 0.82) !important;
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(104, 84, 57, 0.14);
+}
+
+.VPNavBarTitle .title,
+.VPHomeHero .name,
+.VPHomeHero .text,
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3 {
+  font-family: 'Cormorant Garamond', serif;
+}
+
+.VPHome {
+  position: relative;
+}
+
+.VPHome::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: linear-gradient(180deg, rgba(246, 241, 230, 0.72), rgba(246, 241, 230, 0.92)), url('https://d36hbw14aib5lz.cloudfront.net/310419663031838687/LkW8JUS4hoZQDBb2xPjibT/servus-raven-network-7gT9q58deDR4JqbFsMVjDx.webp?Expires=1807950875&Signature=jTzJn613UhsERxn7t8mWWJhyoQ56jOkPzjMoVfM1v5QSdDVqm32kSm9MRxcP5VVvkkG4sRQFTJv0YEQnEqSPeA49H1DIlQAwAmiqQKjUE3Mk-5XuQBOCfZju1BPbc4JY5n5CmxRNn4I02hGoxbyBDXS5YrtDT2GtaPMSc05Jgsr-RNWoKlNtTtOlVqC7dvY~1rgJknwgO56Y-0m1rQKxi1o8TV1rd7QtC~386FwO6u4NScPjkdO87ftxZaFXxXyKYKab36Fn3JdjSsO~LXX0NwXB94lb2BMKeZUeiZ8DGRrJFXgmz5ez4v860rpgrgvl1dveyIUwWL00gXCvOQ5wwA__&Key-Pair-Id=K1MP89RTKNH4J');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: -2;
+}
+
+.VPHomeHero {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(241, 227, 198, 0.14);
+  background:
+    linear-gradient(100deg, rgba(10, 12, 18, 0.92) 0%, rgba(18, 20, 28, 0.78) 40%, rgba(18, 20, 28, 0.62) 100%),
+    url('https://d36hbw14aib5lz.cloudfront.net/310419663031838687/LkW8JUS4hoZQDBb2xPjibT/servus-hero-citadel-moGG5Uz8F7LGBacwaNNvCy.webp?Expires=1807950871&Signature=ewo39UZz3NvIRQSafv4GCrX7xp2u2qLcWqS8pFUFLOhGmMhLmkSeCC3kIxPyYOD1GB7AMHJgznwy6g2ambdIr~BouwJqfrX6DBDs3MZJBxnigkx5DJdnQW7aIn6dIeFNj6acKaOSTGRxiSjki7okCTKXXj1k6IZWI5M8GikS8snEwXZPul7LegUNCKCtoqOkAsvV0Y9GaSJ6Zi0WHyWCM-oQ4GLkxaVVC~0XOHhRPjw5WWpEaDJSNnJysLj23VT5aIpVTchPB6FabyjNoHLI3xbZPb7qALxtxR46qb9WvaXYX4BZtj~1NhcEdz9Di5VXVVyL8coyDHw079~yMRf-JQ__&Key-Pair-Id=K1MP89RTKNH4J') center right / cover no-repeat;
+}
+
+.VPHomeHero::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 10rem;
+  background: linear-gradient(180deg, rgba(13, 15, 19, 0), rgba(13, 15, 19, 0.72));
+}
+
+.VPHomeHero .container {
+  position: relative;
+  z-index: 1;
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+}
+
+.VPHomeHero .name,
+.VPHomeHero .text,
+.VPHomeHero .tagline {
+  color: #f9f3e6;
+}
+
+.VPHomeHero .name {
+  font-size: clamp(3rem, 7vw, 5.6rem);
+  letter-spacing: 0.02em;
+  line-height: 0.92;
+}
+
+.VPHomeHero .text {
+  font-size: clamp(1.5rem, 3.2vw, 2.5rem);
+  max-width: 13ch;
+}
+
+.VPHomeHero .tagline {
+  max-width: 42rem;
+  font-size: 1.1rem;
+  color: rgba(249, 243, 230, 0.8);
+}
+
+.VPButton.brand {
+  border-color: rgba(206, 173, 112, 0.4);
+  background: linear-gradient(180deg, #b69055 0%, #856638 100%);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.25);
+}
+
+.VPButton.alt {
+  border-color: rgba(247, 238, 220, 0.22);
+  background: rgba(255, 251, 244, 0.06);
+  color: #f9f3e6;
+  backdrop-filter: blur(8px);
+}
+
+.VPFeatures {
+  position: relative;
+  margin-top: -2rem;
+  padding-top: 0;
+}
+
+.VPFeatures::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(246, 241, 230, 0.9), rgba(246, 241, 230, 0.96)),
+    url('https://d36hbw14aib5lz.cloudfront.net/310419663031838687/LkW8JUS4hoZQDBb2xPjibT/servus-architecture-atlas-Qs6GMg9dttU5GSzd2kQ85E.webp?Expires=1807950873&Signature=sTAjPyEyPOHrETsf4Gu~SJPrN3385vivd4hF4mW7JvEt2foD2Mb2S7~pXLVhf8ySNzFNITR29~4saQQrtwnS6e1EsR2vHYXmxb-F5ZGtu8mI45sLPOUS1KTzFF1BQK9NOWg46aBcVZkPyJGcL36a~6lt3otY9k3CIZJ-OhKsZ62kvN14oJxIpFckGLjpWECpmN4yUg7NCpq8qEXG8h4c-3AIJpGrI3Bxwhrn2YQS5jg5BgFMQwDpH6mnEbllZ2gsK2JvN0nkc9MMMNH4LJiPLFzbo1~OEivha1gT47aEHQ1piGjT-r9586GwdUcnABy-8uhYzR-ealRxYTqRfpCI9Q__&Key-Pair-Id=K1MP89RTKNH4J') center / cover no-repeat;
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.VPFeatures .container {
+  position: relative;
+  z-index: 1;
+}
+
+.VPFeature {
+  border: 1px solid rgba(104, 84, 57, 0.14);
+  background: rgba(255, 250, 242, 0.88);
+  box-shadow: var(--vp-shadow-1);
+  backdrop-filter: blur(10px);
+}
+
+.VPFeature:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--vp-shadow-2);
+}
+
+.vp-doc a,
+.VPLink.link {
+  text-decoration-color: rgba(139, 109, 60, 0.45);
+  text-underline-offset: 0.18em;
+}
+
+.vp-doc h1 {
+  font-size: clamp(2.4rem, 4vw, 3.5rem);
+  letter-spacing: 0.01em;
+}
+
+.vp-doc h2 {
+  margin-top: 2.2rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(104, 84, 57, 0.12);
+  font-size: 2rem;
+}
+
+.vp-doc h3 {
+  font-size: 1.45rem;
+}
+
+.vp-doc table {
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: var(--vp-shadow-1);
+}
+
+.vp-doc th {
+  background: rgba(140, 109, 59, 0.12);
+}
+
+.vp-doc tr:nth-child(even) td {
+  background: rgba(255, 250, 242, 0.58);
+}
+
+.vp-doc div[class*='language-'] {
+  border: 1px solid rgba(104, 84, 57, 0.18);
+  box-shadow: var(--vp-shadow-1);
+}
+
+.vp-doc .custom-block {
+  border-radius: 18px;
+  border: 1px solid rgba(104, 84, 57, 0.16);
+  box-shadow: var(--vp-shadow-1);
+}
+
+.VPSidebarItem.level-0 > .item > .text,
+.VPLocalNavOutlineDropdown .items .item .text {
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 960px) {
+  .VPHomeHero .container {
+    padding-top: 4rem;
+    padding-bottom: 3.5rem;
+  }
+
+  .VPHomeHero {
+    background-position: 72% center;
+  }
+}
