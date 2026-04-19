@@ -1,10 +1,10 @@
 # Service Objects
 
-The service object is the unit around which Servus is built. Every service should communicate one business action clearly through its name, its directory location, and its `call` method.
+Every Servus service lives in its own namespaced module with a `Service` class at the root. The module boundary makes the public surface explicit — outside callers only touch `Service.call`. Everything else is internal to the action.
 
 ## Directory structure
 
-The recommended structure is intentionally narrow. Each service lives in its own namespace and keeps service-specific helpers under a `support/` directory that should not leak into wider application use.
+Each service owns its namespace directory. Service-specific helpers live under `support/` and should never be used outside the service.
 
 ```text
 app/services/
@@ -20,26 +20,29 @@ app/services/
         └── support/
             └── payload_builder.rb
 ```
+## Why the namespace matters
 
-## Structural rules
+**Encapsulation.** The only public interface is `Service.call`. Support classes, private methods, and internal state stay behind the module boundary.
 
-| Rule | Reason |
-| --- | --- |
-| Main service class inherits from `Servus::Base` | The framework lifecycle stays available |
-| Service-specific helpers stay under `support/` | Boundaries remain visible |
-| The `call` method is the public execution point | Callers know where behavior lives |
-| Supporting classes do not need to inherit from `Servus::Base` | The framework should wrap actions, not every helper |
+**Naming freedom.** Two services can both have a `Support::Client` or `Support::Validator` without colliding. Simple names stay simple.
+
+**Refactorability.** If nothing inside the namespace leaks, you can rename, move, or delete the entire directory with confidence that nothing else breaks.
+## Why support classes should never leak
+
+Support classes are written for their parent service's context. Using them elsewhere creates silent coupling — changes to the support class gain an invisible blast radius across unrelated services.
+
+If multiple services need the same capability, that's usually a sign that a service is missing. Extract the shared work into its own service first — then a concern or `lib/` class if a service doesn't fit.
 
 ## Composition
 
-Services often call other services. When they do, the safest default is to return a failed downstream response unchanged unless the calling service has a good reason to translate it.
+Services can call other services. The safest default is to return a failed downstream response unchanged unless the calling service has a reason to translate it.
 
 ```ruby
 def call
   reserve = Treasury::ReserveFunds::Service.call(account: @account, amount: @amount)
   return reserve unless reserve.success?
 
-  dispatch = Ravens::DispatchReceipt::Service.call(transfer_id: reserve.data[:transfer_id])
+  dispatch = Ravens::DispatchReceipt::Service.call(transfer: reserve.data.transfer_id)
   return dispatch unless dispatch.success?
 
   success(transfer: reserve.data, receipt: dispatch.data)
@@ -48,4 +51,4 @@ end
 
 ## When to extract a service
 
-Extraction usually pays off when an action has a business name, more than one meaningful failure mode, or enough orchestration that the reader would benefit from a dedicated boundary. If the code is simply formatting data or mapping one record into another, a service may be unnecessary.
+Extraction pays off when an action has a business name, more than one meaningful failure mode, or enough orchestration that a dedicated boundary helps the reader. If the code is simply formatting data or mapping one record, a plain Ruby class is simpler.

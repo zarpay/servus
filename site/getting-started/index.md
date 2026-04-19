@@ -1,19 +1,39 @@
 # Quick Start
 
-Servus is most useful when a business action needs a real boundary. Instead of letting a workflow dissolve into controller code, callbacks, and incidental helpers, you give the action a name, a class, and a consistent way to report what happened.
+## Installation
 
-Quick Start begins with the simplest possible shape. One service owns one action. The caller uses `.call`. The result comes back in a standard form. Everything else in the handbook builds from that foundation.
-
-## A first service
-
-The example below is intentionally small. It performs one action, returns clear failures for ordinary business conditions, and emits an event when the transfer succeeds.
+Add Servus to your Gemfile:
 
 ```ruby
+gem 'servus'
+```
+
+```bash
+bundle install
+```
+
+Requires Ruby 3.0+ and ActiveSupport 8.0+. Rails integration is automatic via Railtie; Servus core works in any Ruby application, though has more features enabled in Rails.
+
+## Generate a service
+
+Generate the service scaffold with the arguments it will accept:
+
+```bash
+rails g servus:service treasury/transfer_gold from_account to_account gold_dragons
+
+=> create app/services/treasury/transfer_gold/service.rb
+=> create spec/services/treasury/transfer_gold/service_spec.rb
+```
+
+## A basic service
+
+A Servus service inherits from `Servus::Base`, defines `initialize` and `call`, and calls `success(...)` to return a `Response`.
+
+```ruby
+# app/services/treasury/transfer_gold/service.rb
 module Treasury
   module TransferGold
     class Service < Servus::Base
-      emits :gold_transferred, on: :success
-
       def initialize(from_account:, to_account:, gold_dragons:)
         @from_account = from_account
         @to_account = to_account
@@ -21,18 +41,13 @@ module Treasury
       end
 
       def call
-        return failure('Amount must be positive') unless @gold_dragons.positive?
-        return failure('Insufficient funds') if @from_account.balance < @gold_dragons
-
         @from_account.withdraw!(@gold_dragons)
         @to_account.deposit!(@gold_dragons)
 
         success(
-          transfer: {
-            from: @from_account.ledger_id,
-            to: @to_account.ledger_id,
-            amount: @gold_dragons
-          }
+          transferred: @gold_dragons,
+          from_balance: @from_account.balance,
+          to_balance: @to_account.balance
         )
       end
     end
@@ -40,11 +55,17 @@ module Treasury
 end
 ```
 
-This service is easy to scan because the business action is explicit. It transfers gold from one account to another, rejects invalid input, and returns a structured success payload when the work is complete.
+Even at a basic level, a few conventions matter:
+
+**One module, one service.** Each service lives in its own namespaced module with a `Service` class at the root. The only public method is `.call` — this treats the service as an internal API with a standard contract for its inputs (arguments) and outputs (response).
+
+**Keyword arguments only.** Always use kwargs in `initialize`, never positional arguments. Error messages become more helpful and callers gain freedom in argument ordering.
+
+**One `Servus::Base` per namespace.** The `Service` class is the only class in the module that inherits from `Servus::Base`. It's where the runtime wraps `call` and provides the functionality covered throughout the docs.
 
 ## Calling the service
 
-The normal entrypoint is the class method `.call`.
+Every service is called with `.call` and keyword arguments:
 
 ```ruby
 result = Treasury::TransferGold::Service.call(
@@ -54,47 +75,29 @@ result = Treasury::TransferGold::Service.call(
 )
 ```
 
-That call gives the action a stable public boundary. The caller does not need to know how the service is wired internally. It only needs to know which action it is running and how to inspect the result.
+Servus automatically logs every call with timing:
+
+```
+Calling Treasury::TransferGold::Service with args: {:from_account=>#<Account id: 1>, :to_account=>#<Account id: 2>, :gold_dragons=>50}
+Treasury::TransferGold::Service succeeded in 0.013s
+```
 
 ## Reading the result
 
-Servus returns a response object, so callers handle outcomes in a consistent way.
+Every service returns a `Response` with the same shape — `success?`, `data`, and `error`. Any hash passed to `success(...)` is deeply wrapped in a `DataObject`, so nested values are accessible as methods at any depth.
 
 ```ruby
-if result.success?
-  puts result.data[:transfer][:amount]
-else
-  warn result.error.message
-end
+puts result.success?          # => true
+puts result.data.transferred  # => 50
+puts result.data.from_balance # => 950
+puts result.data.to_balance   # => 550
+puts result.error             # => nil
 ```
 
-| Question | What to check |
+| Method | Returns |
 | --- | --- |
-| Did the action succeed? | `result.success?` |
-| What data came back? | `result.data` |
-| Why did it fail? | `result.error.message` |
+| `result.success?` | `true` or `false` |
+| `result.data` | A `DataObject` wrapping the success payload — supports bracket and accessor syntax |
+| `result.error` | `nil` on success, a `ServiceError` on failure |
 
-## Why this pattern helps
-
-A named service makes business work easier to reason about. The action lives in one place. The outcome is predictable. The same calling style can be reused across controllers, jobs, and other services.
-
-| Without a service | With Servus |
-| --- | --- |
-| The workflow is spread across several layers | The action lives in one named class |
-| Success and failure are reported inconsistently | The response follows one standard shape |
-| Similar operations drift into different styles | The codebase develops a shared rhythm |
-
-## The first habits that matter
-
-The early habits are straightforward. Name the service after a real action. Keep the `call` method centered on the decision being made. Return clear failures for expected business conditions. Let callers use `.call` and inspect the response.
-
-| Habit | Why it matters |
-| --- | --- |
-| Name the service after the action | The intent is visible before the implementation is read |
-| Keep `call` at the center | The business decision stays easy to find |
-| Use `.call` from the outside | Every caller uses the same entrypoint |
-| Test success and failure early | The contract becomes reliable from the start |
-
-## What to read next
-
-The next step is **The Servus Mental Model**, followed by **Core Overview**. Those pages explain how the runtime model fits together and how services scale into a larger application design.
+This is Servus at its simplest — but there's much more. Schema validation, guards, events, async execution, lazy resolvers, and declarative error handling all layer onto the same interface. The core stays the same: one class, one `.call`, one response.

@@ -1,31 +1,106 @@
 # Async Execution
 
-Servus supports background execution through `call_async`, allowing the same service contract to run through ActiveJob. This is often preferable to creating a bespoke job immediately because the validation, logging, and response semantics remain attached to the service boundary.
+`.call_async` enqueues a service through ActiveJob. The service runs the same lifecycle — validation, logging, events — the only difference is when and where.
 
 ## Basic usage
 
 ```ruby
-Ravens::DispatchMessage::Service.call_async(
-  rookery_id: castle_black_rookery.id,
-  recipient: 'winterfell',
-  message: 'The Wall stands',
-  queue: :communications,
-  priority: 10
+Treasury::TransferGold::Service.call_async(
+  from_account: crown_account.id,
+  to_account: night_watch_account.id,
+  gold_dragons: 50
 )
 ```
 
-## Sync and async compared
+The service is enqueued immediately and executed by a worker. There is no return value — the service hasn't run yet.
 
-| Concern | `.call` | `.call_async` |
-| --- | --- | --- |
-| Return value | Immediate response object | Enqueue result from ActiveJob |
-| Caller expectation | Inspect success or failure now | Observe outcome through persistence, logs, or events |
-| Argument choice | Ruby objects may work in-process | Prefer IDs and portable values |
+## Queue and scheduling options
 
-## When async execution is a good fit
+Pass ActiveJob options alongside the service arguments — Servus extracts them before passing the rest to your service:
 
-Async execution works well for notifications, reconciliation, report generation, and non-blocking follow-up tasks. It is a poor fit for operations where the caller needs a result in the same request cycle.
+```ruby
+Treasury::TransferGold::Service.call_async(
+  from_account: 1,
+  to_account: 2,
+  gold_dragons: 50,
+  queue: :critical,
+  priority: 10,
+  wait: 5.minutes
+)
+```
 
-## Design rule
+| Option | What it does |
+| --- | --- |
+| `queue:` | Route to a specific queue (e.g., `:critical`, `:low_priority`) |
+| `priority:` | Set job priority (adapter-dependent) |
+| `wait:` | Delay execution by a duration (e.g., `5.minutes`) |
+| `wait_until:` | Schedule execution for a specific time |
 
-If a service may run both synchronously and asynchronously, design its arguments to be portable. That makes the service easier to enqueue safely and easier to call from different parts of the application.
+These are the same options `ActiveJob::Base.set` supports. They can also be nested under `job_options:` if you prefer:
+
+```ruby
+Treasury::TransferGold::Service.call_async(
+  from_account: 1,
+  to_account: 2,
+  gold_dragons: 50,
+  job_options: { queue: :critical, priority: 10, wait: 5.minutes }
+)
+```
+
+## Arguments must be serializable
+
+ActiveJob serializes arguments, so service arguments must be primitives (strings, integers, booleans), hashes, and arrays. Pass IDs instead of ActiveRecord instances:
+
+```ruby
+# Works — IDs and primitives
+Treasury::TransferGold::Service.call_async(
+  from_account: crown_account.id,
+  to_account: night_watch_account.id,
+  gold_dragons: 50
+)
+
+# Won't serialize reliably — pass the ID instead
+Treasury::TransferGold::Service.call_async(
+  from_account: crown_account,
+  to_account: night_watch_account,
+  gold_dragons: 50
+)
+```
+
+::: tip lazily resolvers
+This is where [`lazily`](/features/lazy-resolvers) helps. Declare `lazily :from_account, finds: Account` and the service accepts either an instance (sync) or an ID (async) — same code, both paths.
+:::
+
+## One service, both paths
+
+The service itself doesn't know or care whether it was called synchronously or asynchronously. There's no `if async?` branching, no separate job class with its own logic, no risk of the two paths drifting apart. The business logic lives in one place and runs the same way regardless of how it was invoked.
+
+This means you can develop and test a service synchronously — fast feedback, easy debugging — and then switch a call site to `.call_async` when you're ready to move it to the background. Nothing inside the service changes.
+
+## How it works
+
+`call_async` enqueues a `Servus::Extensions::Async::Job` that stores the service class name and arguments. When the worker picks it up, it calls `Service.call(**args)` — the full lifecycle runs exactly as if you had called `.call` directly.
+
+```ruby
+args = { from_account: 1, to_account: 2, gold_dragons: 50 }
+
+# These two are functionally identical — the second just runs later
+Treasury::TransferGold::Service.call(**args)
+Treasury::TransferGold::Service.call_async(**args)
+```
+
+## Error behavior
+
+Business failures (`failure(...)`) don't trigger ActiveJob retries — the job completes successfully, it just returns a failure `Response`. Since there's no caller waiting for the response, failures are visible through logs and events.
+
+System exceptions (uncaught errors) trigger ActiveJob's retry mechanism as usual. Use `rescue_from` to convert transient exceptions into failures if you don't want retries:
+
+```ruby
+class Service < Servus::Base
+  # This will retry via ActiveJob
+  # rescue_from is NOT defined for Net::HTTPError
+
+  # This will NOT retry — converted to a failure Response
+  rescue_from Timeout::Error, use: ServiceUnavailableError
+end
+```

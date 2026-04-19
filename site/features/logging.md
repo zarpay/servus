@@ -1,20 +1,75 @@
 # Logging
 
-Logging is one of the quieter strengths of Servus. Because the framework already owns the service boundary, it can log execution consistently without forcing every service author to invent a logging pattern from scratch.
+Servus automatically logs every service call with its arguments, outcome, and duration. No instrumentation code needed in your services.
 
 ## What gets logged
 
-| Concern | Why it matters |
-| --- | --- |
-| Service name | Helps readers identify the business action that ran |
-| Arguments | Helps explain what was attempted, when safe to log |
-| Outcome | Makes success and failure paths visible |
-| Timing | Surfaces slow services for investigation |
+Every call produces two log lines — one when it starts, one when it finishes:
 
-## Operational value
+### Successful call
 
-A consistent service boundary makes production debugging easier. Instead of searching through a mix of controller logs, model logs, and bespoke instrumentation, teams can reason in terms of named business actions.
+```
+INFO  Calling Treasury::TransferGold::Service with args: {:from_account=>1, :to_account=>2, :gold_dragons=>50}
+INFO  Treasury::TransferGold::Service succeeded in 0.013s
+```
+
+### Business failure
+
+```
+INFO  Calling Treasury::TransferGold::Service with args: {:from_account=>1, :to_account=>1, :gold_dragons=>50}
+WARN  Treasury::TransferGold::Service failed in 0.008s with error: Cannot transfer to the same account
+```
+
+### Validation error
+
+```
+ERROR Treasury::TransferGold::Service validation error: "fifty" is not of type integer
+```
+
+### Uncaught exception
+
+```
+ERROR Treasury::TransferGold::Service uncaught exception: ActiveRecord::RecordNotFound - Couldn't find Account with 'id'=999
+```
+
+## Log levels
+
+| Outcome | Level | When |
+| --- | --- | --- |
+| Call started | `info` | Every call, with arguments |
+| Success | `info` | Call completed successfully, with duration |
+| Business failure | `warn` | `failure(...)` returned, with error and duration |
+| Validation error | `error` | Schema validation failed (arguments or result) |
+| Uncaught exception | `error` | Exception raised and not handled by `rescue_from` |
+
+## Logger configuration
+
+Servus uses `Rails.logger` when available, otherwise `Logger.new($stdout)`. Control the log level through Rails configuration:
+
+```ruby
+# config/environments/production.rb
+config.log_level = :warn  # Hides info-level call and success logs
+```
+
+## Custom logging inside services
+
+The automatic logging covers the lifecycle — call, outcome, duration. If you need to log something specific inside your `call` method, use `Rails.logger` (or whatever logger your app uses) as you normally would. Servus doesn't replace or wrap your application's logger.
+
+```ruby
+def call
+  Rails.logger.info("Transferring #{@gold_dragons} gold dragons from #{from_account.id} to #{to_account.id}")
+
+  from_account.withdraw!(@gold_dragons)
+  to_account.deposit!(@gold_dragons)
+
+  success(transferred: @gold_dragons, from_balance: from_account.balance, to_balance: to_account.balance)
+end
+```
 
 ## Sensitive data
 
-Logging should still be selective. Payment credentials, personal identifiers, or other sensitive material should be filtered or omitted. Servus makes logging easier, but it does not remove the responsibility to log thoughtfully.
+Arguments are logged at `info` level. In production, either:
+
+1. Set the log level to `:warn` to suppress argument logging entirely
+2. Use Rails parameter filtering: `config.filter_parameters += [:password, :ssn]`
+3. Pass IDs instead of full objects: `Service.call(user_id: 1)` not `Service.call(user: user_object)`

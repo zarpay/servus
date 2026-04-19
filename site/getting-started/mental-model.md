@@ -1,25 +1,39 @@
 # The Servus Mental Model
 
-Servus works best when you think of each service as a narrow domain endpoint. Controllers, jobs, and other services call into that endpoint. The framework then wraps the domain action with consistent operational behavior so teams do not have to recreate the same execution discipline for every class.
+## How to think about services
 
-## The model in one table
+A Servus service is an internal API for a business action. Controllers, models, jobs, other services, and rake tasks all call it the same way — `Service.call(**args)` — and get back the same `Response`. When the work should happen in the background, `Service.call_async(**args)` enqueues it through ActiveJob without changing the service itself.
 
-| Element | Role |
-| --- | --- |
-| Service class | Names and performs one business action |
-| `.call` | The class-level entry point that runs the framework lifecycle |
-| `call` instance method | The place where business logic is executed |
-| Response object | A standard success or failure wrapper |
-| Framework features | Validation, logging, async execution, guards, and events |
+The caller doesn't need to know how the service works internally. It passes arguments, gets a response, and branches on `success?` if necessary. That contract holds whether the caller is a controller rendering JSON, a job running in the background, or another service composing a larger workflow.
 
-## Why this feels different from plain service objects
+## The execution lifecycle
 
-Many Ruby codebases already contain classes named `SomethingService`. What Servus adds is a real execution model around those classes. That model is what makes the framework useful at scale. A reader can expect the same response semantics, the same validation hooks, and the same extension points across the codebase.
+When you call `Service.call(**args)`, your `call` method isn't invoked directly. Servus wraps it in a lifecycle that handles validation, timing, error handling, event emission, and logging automatically.
 
-## A simple rule for reading services
+```
+Service.call(**args)
+  │
+  ├── Log the call and arguments
+  ├── Validate arguments against schema (if defined)
+  ├── Instantiate the service
+  ├── Run your `call` method
+  ├── Validate the result against schema (if defined)
+  ├── Emit events (if defined)
+  ├── Log success or failure with duration
+  │
+  └── Return Response
+```
 
-When you read a Servus service, assume that the `call` method should contain the business decision. Private methods can support that decision, but they should not become a second response layer or a second orchestration layer. That rule keeps service classes readable even as the system grows.
+Your `call` method only contains business logic. Everything above and below it is handled by the runtime.
 
-## Where the framework stops
+## Why this matters in practice
 
-Servus provides the service framework. A codebase may still add its own conventions for declaration style, schema naming, controller wrappers, or testing style. This handbook keeps those conventions visible, but it describes them separately so the framework remains legible on its own.
+**Testability.** When the business logic lives behind `Service.call(**args) → Response`, you test it by passing arguments and asserting on the response. No controller setup, no job infrastructure, no request context. Inputs in, outputs out.
+
+**Reusability.** A service isn't tied to a controller action, a callback, or a job. The same service can be called from a web request, a background worker, a rake task, or another service — without changing anything.
+
+**Discoverability.** The service name is the action name. `Treasury::TransferGold::Service` tells you what it does and where to find it (`app/services/treasury/transfer_gold/service.rb`). When something breaks, you grep one name and land in one file.
+
+## One rule for reading services
+
+The `call` method should contain the business decision. Private methods and `Support::` classes can support it, but they should not become a second response layer or a second orchestration boundary. If a private method is returning `success` or `failure`, it probably belongs in its own service.

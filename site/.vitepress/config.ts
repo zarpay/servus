@@ -20,7 +20,7 @@ export default defineConfig({
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Quick Start', link: '/getting-started/' },
-      { text: 'Core Concepts', link: '/core/overview' },
+      { text: 'Core Concepts', link: '/core/service-objects' },
       { text: 'Features', link: '/features/schema-validation' },
       { text: 'Rails', link: '/rails/controllers' },
       { text: 'Testing', link: '/testing/framework-testing' },
@@ -39,11 +39,9 @@ export default defineConfig({
       {
         text: 'Core Concepts',
         items: [
-          { text: 'Overview', link: '/core/overview' },
           { text: 'Service Objects', link: '/core/service-objects' },
           { text: 'Call Chain', link: '/core/call-chain' },
           { text: 'Responses', link: '/core/responses' },
-          { text: 'Architecture', link: '/core/architecture' },
         ],
       },
       {
@@ -53,7 +51,7 @@ export default defineConfig({
           { text: 'Error Handling', link: '/features/error-handling' },
           { text: 'Async Execution', link: '/features/async-execution' },
           { text: 'Logging', link: '/features/logging' },
-          { text: 'Event Bus', link: '/features/event-bus' },
+          { text: 'Events', link: '/features/event-bus' },
           { text: 'Guards', link: '/features/guards' },
           { text: 'Lazy Resolvers', link: '/features/lazy-resolvers' },
         ],
