@@ -48,6 +48,7 @@ module Servus
   class Base
     include Servus::Support::Errors
     include Servus::Support::Rescuer
+    include Servus::Support::Lockdown
     include Servus::Events::Emitter
     include Servus::Guards
 
@@ -56,50 +57,6 @@ module Servus
     Emitter = Servus::Events::Emitter
     Response = Servus::Support::Response
     Validator = Servus::Support::Validator
-
-    # Extended into every descendant so that any instance-level `#call`
-    # definition becomes private automatically. Services must be invoked
-    # through the class method {Servus::Base.call}, which applies argument
-    # validation, logging, benchmarking, guard handling, result validation,
-    # and event emission. Calling the instance method directly would silently
-    # skip all of that.
-    module EnforcePrivateCall
-      def method_added(name)
-        super
-        return unless Servus::Base.lockdown_enabled?
-
-        private :call if name == :call && public_method_defined?(:call)
-      end
-    end
-
-    @lockdown_enabled = true
-
-    class << self
-      # Whether external instantiation and direct `#call` invocation are
-      # blocked. Enabled by default in production; the test suite disables
-      # this to let internal specs exercise instance-level behavior in
-      # isolation. Not part of the public API.
-      # @api private
-      def lockdown_enabled?
-        @lockdown_enabled
-      end
-
-      # @api private
-      def lockdown_enabled=(value)
-        @lockdown_enabled = value
-        value ? singleton_class.send(:private, :new) : singleton_class.send(:public, :new)
-      end
-
-      private :new
-    end
-
-    # Installs the auto-privatize hook on every subclass. External
-    # `SomeService.new(...)` is already blocked because `new` is inherited as
-    # private from {Servus::Base}.
-    def self.inherited(subclass)
-      super
-      subclass.extend(EnforcePrivateCall)
-    end
 
     # Creates a successful response with the provided data.
     #

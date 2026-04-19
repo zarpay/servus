@@ -5,20 +5,20 @@ require 'spec_helper'
 # Verifies that callers cannot bypass {Servus::Base.call} by instantiating a
 # service and invoking its `#call` directly. Doing so would skip argument
 # validation, logging, benchmarking, guard handling, result validation, and
-# event emission. The spec_helper re-publicizes `.new` for the rest of the
-# suite, so we re-privatize inside this example group to exercise the
+# event emission. The spec_helper disables lockdown for the rest of the
+# suite, so we re-enable it inside this example group to exercise the
 # production-facing behavior.
-RSpec.describe 'Servus::Base external instantiation lockdown' do
+RSpec.describe Servus::Support::Lockdown do
   around do |example|
-    Servus::Base.lockdown_enabled = true
+    Servus.config.lockdown_enabled = true
     example.run
   ensure
-    Servus::Base.lockdown_enabled = false
+    Servus.config.lockdown_enabled = false
   end
 
   # Named constant so the validator can resolve a schema path (anonymous
   # classes have nil #name). Defined lazily inside the around block so
-  # EnforcePrivateCall privatizes the instance `#call` at definition time.
+  # PrivateCall privatizes the instance `#call` at definition time.
   let(:service_class) do
     stub_const('LockdownTestService', Class.new(Servus::Base) do
       def initialize(**); end

@@ -1,3 +1,14 @@
+## [Unreleased]
+
+### Added
+
+- **Service invocation lockdown**: `Servus::Base` now privatizes `.new` and any instance-level
+  `#call` so services must be invoked through the class-level `.call` pipeline. This guarantees
+  argument validation, logging, benchmarking, guards, result validation, and event emission are
+  never silently skipped by calling `MyService.new.call` directly. Enabled by default; opt out
+  with `Servus.configure { |c| c.lockdown_enabled = false }`. Implemented as
+  `Servus::Support::Lockdown` and gated by a new `Servus::Config#lockdown_enabled` flag.
+
 ## [0.3.0] - 2026-04-03
 
 ### Breaking Changes

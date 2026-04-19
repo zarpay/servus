@@ -56,6 +56,32 @@ module Servus
     # @return [Boolean] true to include default guards, false to exclude them
     attr_accessor :include_default_guards
 
+    # Whether external instantiation of services is blocked and instance
+    # `#call` methods are automatically privatized.
+    #
+    # When enabled (default), callers must invoke services via the class
+    # method {Servus::Base.call}, which runs argument validation, logging,
+    # benchmarking, guards, result validation, and event emission. Calling
+    # `MyService.new` or `instance.call` directly raises `NoMethodError`.
+    #
+    # Disable this if you have existing code that instantiates services
+    # directly or otherwise prefer to opt out of the enforcement.
+    #
+    # @return [Boolean] true to enforce lockdown (default), false to allow
+    #   direct instantiation and public instance `#call`
+    # @see Servus::Support::Lockdown
+    attr_reader :lockdown_enabled
+
+    # Sets whether lockdown is enforced, immediately re-applying the
+    # resulting `.new` visibility to {Servus::Base}.
+    #
+    # @param value [Boolean] the new lockdown setting
+    # @return [Boolean] the new value
+    def lockdown_enabled=(value)
+      @lockdown_enabled = value
+      Servus::Base.apply_lockdown!
+    end
+
     # Initializes a new configuration with default values.
     #
     # @api private
@@ -67,6 +93,7 @@ module Servus
 
       @strict_event_validation = true
       @include_default_guards  = true
+      @lockdown_enabled        = true
     end
 
     # Returns the full path to a service's schema file.
