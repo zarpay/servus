@@ -44,7 +44,7 @@ module Servus
       # @return [String] spec file path
       # @api private
       def handler_spec_path
-        File.join('spec', Servus.config.events_dir, "#{file_name}_handler_spec.rb")
+        File.join(Servus.config.tests_dir, Servus.config.events_dir, "#{file_name}_handler_spec.rb")
       end
 
       # Returns the handler class name.

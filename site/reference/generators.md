@@ -292,6 +292,7 @@ Servus.configure do |config|
   config.schemas_dir  = "app/schemas"   # default: "app/schemas"
   config.events_dir   = "app/events"    # default: "app/events"
   config.guards_dir   = "app/guards"    # default: "app/guards"
+  config.tests_dir    = "spec"          # default: "spec"
 end
 ```
 

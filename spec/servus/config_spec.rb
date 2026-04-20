@@ -32,6 +32,21 @@ RSpec.describe Servus::Config do
     after { Servus.config.guards_dir = default_dir }
   end
 
+  describe '#tests_dir' do
+    let(:default_dir) { 'spec' }
+
+    it 'defaults to spec' do
+      expect(Servus.config.tests_dir).to eq(default_dir)
+    end
+
+    it 'can be customized' do
+      Servus.config.tests_dir = 'test'
+      expect(Servus.config.tests_dir).to eq('test')
+    end
+
+    after { Servus.config.tests_dir = default_dir }
+  end
+
   describe '#include_default_guards' do
     let(:default_value) { true }
 

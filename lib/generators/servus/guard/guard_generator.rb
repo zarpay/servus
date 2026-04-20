@@ -44,7 +44,7 @@ module Servus
       # @return [String] spec file path
       # @api private
       def guard_spec_path
-        File.join('spec', Servus.config.guards_dir, "#{file_name}_guard_spec.rb")
+        File.join(Servus.config.tests_dir, Servus.config.guards_dir, "#{file_name}_guard_spec.rb")
       end
 
       # Returns the guard class name.

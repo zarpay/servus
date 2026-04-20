@@ -57,7 +57,7 @@ module Servus
       # @return [String] spec file path
       # @api private
       def service_path_spec
-        "spec/services/#{file_path}/service_spec.rb"
+        "#{Servus.config.tests_dir}/services/#{file_path}/service_spec.rb"
       end
 
       # Returns the path for the result schema file.
