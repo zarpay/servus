@@ -62,6 +62,55 @@ A guard inherits from `Servus::Guard` and defines its behavior with a small DSL:
 
 The `message` block is evaluated in the guard instance's context, where all kwargs are accessible directly as methods (e.g., `amount` instead of `kwargs[:amount]`).
 
+### Message templates
+
+The `message` class method supports four template formats:
+
+**String with interpolation** — use `%<key>s` placeholders and a block that returns the interpolation data:
+
+```ruby
+message 'Insufficient balance: need %<required>s, have %<available>s' do
+  { required: amount, available: account.balance }
+end
+```
+
+**Static string** — no interpolation needed:
+
+```ruby
+message 'Transfer is not permitted between frozen accounts'
+```
+
+**I18n symbol** — looks up `I18n.t('guards.insufficient_balance')`, falls back to a humanized version of the symbol:
+
+```ruby
+message :insufficient_balance
+# => I18n.t('guards.insufficient_balance')
+# => "Insufficient balance" (fallback if key is missing)
+```
+
+The `guards` scope is added automatically. Use a dotted key to bypass it:
+
+```ruby
+message :'errors.transfers.ineligible'
+# => I18n.t('errors.transfers.ineligible')
+```
+
+**Inline translations** — a hash keyed by locale, useful when you don't want a full I18n setup:
+
+```ruby
+message(
+  en: 'Insufficient balance',
+  es: 'Saldo insuficiente',
+  fr: 'Solde insuffisant'
+)
+```
+
+**Proc** — evaluated in the guard instance's context for fully dynamic messages:
+
+```ruby
+message -> { "Cannot transfer more than #{account.balance} gold dragons" }
+```
+
 ```ruby
 # app/guards/eligible_transfer_guard.rb
 class EligibleTransferGuard < Servus::Guard

@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress';
 
 export default defineConfig({
   title: 'Servus',
-  description: 'A framework for disciplined service objects in Ruby and Rails',
+  description: 'A disciplined service-object pattern for Ruby and Rails',
   lang: 'en-US',
   cleanUrls: true,
   lastUpdated: true,
@@ -23,9 +23,8 @@ export default defineConfig({
       { text: 'Core Concepts', link: '/core/service-objects' },
       { text: 'Features', link: '/features/schema-validation' },
       { text: 'Rails', link: '/rails/controllers' },
-      { text: 'Testing', link: '/testing/framework-testing' },
-      { text: 'Production', link: '/production/overview' },
-      { text: 'Recipes', link: '/recipes/ravenpay-walkthrough' },
+      { text: 'Testing', link: '/testing/services' },
+      { text: 'Reference', link: '/reference/generators' },
     ],
     sidebar: [
       {
@@ -45,7 +44,7 @@ export default defineConfig({
         ],
       },
       {
-        text: 'Framework Features',
+        text: 'Features',
         items: [
           { text: 'Schema Validation', link: '/features/schema-validation' },
           { text: 'Error Handling', link: '/features/error-handling' },
@@ -68,34 +67,16 @@ export default defineConfig({
       {
         text: 'Testing',
         items: [
-          { text: 'Framework Testing', link: '/testing/framework-testing' },
-          { text: 'Guards and Events', link: '/testing/guards-and-events' },
-        ],
-      },
-      {
-        text: 'Production Patterns',
-        items: [
-          { text: 'Overview', link: '/production/overview' },
-          { text: 'Service Conventions', link: '/production/service-conventions' },
-          { text: 'Testing Conventions', link: '/production/testing-conventions' },
-          { text: 'Adoption Path', link: '/production/adoption-path' },
-        ],
-      },
-      {
-        text: 'Recipes and Migration',
-        items: [
-          { text: 'Common Patterns', link: '/recipes/common-patterns' },
-          { text: 'RavenPay Walkthrough', link: '/recipes/ravenpay-walkthrough' },
-          { text: 'Migration', link: '/recipes/migration' },
+          { text: 'Testing Services', link: '/testing/services' },
+          { text: 'Testing Guards', link: '/testing/guards' },
+          { text: 'Testing Events', link: '/testing/events' },
         ],
       },
       {
         text: 'Reference',
         items: [
-          { text: 'Configuration Reference', link: '/reference/configuration' },
-          { text: 'Controller Helpers', link: '/reference/controller-helpers' },
-          { text: 'Guard Naming', link: '/reference/guard-naming' },
           { text: 'Generators', link: '/reference/generators' },
+          { text: 'Dry Initializer', link: '/reference/dry-initializer' },
         ],
       },
     ],

@@ -119,9 +119,7 @@ The handbook moves outward from the basics:
 - **Features** — schema validation, error handling, guards, events, async, lazy resolvers
 - **Rails Integration** — controllers, generators, configuration, background jobs
 - **Testing** — framework testing and the RSpec matchers
-- **Production Patterns** — conventions for adopting Servus in a real codebase
-- **Recipes** — the RavenPay walkthrough and migration notes
-- **Reference** — configuration keys, controller helpers, guard naming, generators
+- **Reference** — generators and dry-initializer
 
 ## The running example
 
