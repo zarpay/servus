@@ -90,5 +90,9 @@ export default defineConfig({
       prev: 'Previous page',
       next: 'Next page',
     },
+    footer: {
+      message: 'Developed at and used extensively by <a href="https://zar.app">ZAR</a>',
+      copyright: 'Released under the MIT License',
+    },
   },
 });
