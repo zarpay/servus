@@ -36,12 +36,12 @@ module Servus
       # Tests whether all provided values are present.
       #
       # A value is considered present if it is not nil and not empty
-      # (for values that respond to empty?).
+      # (for values that respond to empty?). Reads all values from the
+      # kwargs stored at initialization.
       #
-      # @param values [Hash] keyword arguments to validate
       # @return [Boolean] true if all values are present
-      def test(**values)
-        values.all? { |_, value| present?(value) }
+      def test
+        kwargs.all? { |_, value| present?(value) }
       end
 
       private

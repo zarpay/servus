@@ -224,8 +224,8 @@ class EligibleTransferGuard < Servus::Guard
     message_data
   end
 
-  def test(**kwargs)
-    # TODO: Implement validation logic
+  def test
+    # TODO: Implement validation logic — read args via method_missing (e.g., `account`, `amount`)
     true
   end
 

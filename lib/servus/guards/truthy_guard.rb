@@ -24,10 +24,10 @@ module Servus
 
       # Tests whether all specified attributes are truthy.
       #
-      # @param on [Object] the object to check
-      # @param check [Symbol, Array<Symbol>] attribute(s) to verify
+      # Reads `on` and `check` from the kwargs stored at initialization.
+      #
       # @return [Boolean] true if all attributes are truthy
-      def test(on:, check:)
+      def test
         Array(check).all? { |attr| !!on.public_send(attr) }
       end
 

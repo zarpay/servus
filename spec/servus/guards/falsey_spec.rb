@@ -15,28 +15,28 @@ RSpec.describe Servus::Guards::FalseyGuard do
         object = test_class.new(banned: false)
         guard = described_class.new(on: object, check: :banned)
 
-        expect(guard.test(on: object, check: :banned)).to be true
+        expect(guard.test).to be true
       end
 
       it 'passes when attribute is nil' do
         object = test_class.new(banned: nil)
         guard = described_class.new(on: object, check: :banned)
 
-        expect(guard.test(on: object, check: :banned)).to be true
+        expect(guard.test).to be true
       end
 
       it 'fails when attribute is true' do
         object = test_class.new(banned: true)
         guard = described_class.new(on: object, check: :banned)
 
-        expect(guard.test(on: object, check: :banned)).to be false
+        expect(guard.test).to be false
       end
 
       it 'fails when attribute is a truthy value' do
         object = test_class.new(banned: 'yes')
         guard = described_class.new(on: object, check: :banned)
 
-        expect(guard.test(on: object, check: :banned)).to be false
+        expect(guard.test).to be false
       end
     end
 
@@ -45,21 +45,21 @@ RSpec.describe Servus::Guards::FalseyGuard do
         object = test_class.new(banned: false, deleted: nil, flagged: false)
         guard = described_class.new(on: object, check: %i[banned deleted flagged])
 
-        expect(guard.test(on: object, check: %i[banned deleted flagged])).to be true
+        expect(guard.test).to be true
       end
 
       it 'fails when any attribute is truthy' do
         object = test_class.new(banned: false, deleted: true, flagged: false)
         guard = described_class.new(on: object, check: %i[banned deleted flagged])
 
-        expect(guard.test(on: object, check: %i[banned deleted flagged])).to be false
+        expect(guard.test).to be false
       end
 
       it 'fails when first attribute is truthy' do
         object = test_class.new(banned: true, deleted: false, flagged: false)
         guard = described_class.new(on: object, check: %i[banned deleted flagged])
 
-        expect(guard.test(on: object, check: %i[banned deleted flagged])).to be false
+        expect(guard.test).to be false
       end
     end
   end
