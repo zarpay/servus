@@ -83,7 +83,7 @@ All errors inherit from `ServiceError` and map to HTTP status codes:
 | `ServiceUnavailableError` | 503 |
 | `GuardError` | 422 (with custom `code`) |
 
-Servus includes error classes for every standard HTTP status (400–511). [See the full list](/reference/errors).
+Servus includes error classes for every standard HTTP status (400–511). See `Servus::Support::Errors` for the full list.
 
 Use the `type:` keyword to specify which error class a failure should use:
 
