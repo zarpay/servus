@@ -1,3 +1,4 @@
+[![Docs](https://img.shields.io/badge/docs-zarpay.github.io%2Fservus-blue)](https://zarpay.github.io/servus)
 [![Gem Version](https://badge.fury.io/rb/servus.svg)](https://badge.fury.io/rb/servus)
 [![CI](https://github.com/zarpay/servus/actions/workflows/main.yml/badge.svg)](https://github.com/zarpay/servus/actions/workflows/main.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
