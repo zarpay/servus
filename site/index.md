@@ -21,6 +21,7 @@ A Servus service is a Ruby class that inherits from `Servus::Base`, defines `ini
 module Treasury
   module TransferGold
     class Service < Servus::Base
+      # Validate arguments before call, results after
       schema(
         arguments: {
           type: "object",
@@ -42,8 +43,10 @@ module Treasury
         }
       )
 
+      # Fire an event for handlers to pick up
       emits :gold_transferred, on: :success
 
+      # Accept an Account instance or an ID — resolve lazily
       lazily :from_account, finds: Account
       lazily :to_account, finds: Account
 
@@ -54,13 +57,20 @@ module Treasury
       end
 
       def call
+        # Business failure — returns a Response the caller can handle
         return failure("Cannot transfer to the same account") if transferring_to_self?
 
-        enforce_sufficient_balance!(account: from_account, amount: @gold_dragons)
+        # Guard — halts with a structured error if the precondition fails
+        enforce_eligible_transfer!(
+          from: from_account,
+          to: to_account,
+          amount: @gold_dragons
+        )
 
         from_account.withdraw!(@gold_dragons)
         to_account.deposit!(@gold_dragons)
 
+        # Success — wrapped in a DataObject with accessor methods
         success(
           transferred: @gold_dragons,
           from_balance: from_account.balance,
@@ -88,7 +98,7 @@ There's a lot on that page — here's what each piece does, with links to the re
 | `lazily :from_account, finds: Account` | The argument accepts an `Account` instance or an id; the service resolves whichever is passed. | [Lazy Resolvers](/features/lazy-resolvers) |
 | `schema(arguments:, result:)` | Optional JSON Schema validation for arguments (before `call`) and results (after). Here it rejects decimals and amounts below 1. | [Schema Validation](/features/schema-validation) |
 | `emits :gold_transferred, on: :success` | Fires an event on successful completion for handlers to pick up. | [Event Bus](/features/event-bus) |
-| `enforce_sufficient_balance!(...)` | A guard. Halts execution and returns a structured failure if the precondition isn't met. | [Guards](/features/guards) |
+| `enforce_eligible_transfer!(...)` | A guard. Halts execution and returns a structured failure if the precondition isn't met. | [Guards](/features/guards) |
 | `failure(...)` and `success(...)` | The two ways a service returns. Both produce a `Response` the caller can branch on. | [Responses](/core/responses) |
 
 Callers get a single, predictable shape:

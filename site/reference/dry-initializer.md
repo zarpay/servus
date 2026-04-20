@@ -42,7 +42,7 @@ module Treasury
     class Service < Servus::Base
       option :from_account
       option :to_account
-      option :gold_dragons
+      option :gold_dragons, default: -> { 1 }
 
       lazily :from_account, finds: Account
       lazily :to_account, finds: Account
@@ -62,7 +62,7 @@ module Treasury
 end
 ```
 
-No `initialize`, no `@instance_variables`, no manual assignment. Each `option` declares a keyword argument and creates an accessor. Inside `call`, you use `gold_dragons` instead of `@gold_dragons`.
+No `initialize`, no `@instance_variables`, no manual assignment. Each `option` declares a keyword argument and creates an accessor with optional defaults. Inside `call`, you use `gold_dragons` instead of `@gold_dragons`.
 
 ## Installation
 
@@ -150,7 +150,3 @@ end
 ```
 
 Both `option` and `lazily` declare `:from_account`, but `lazily`'s accessor takes precedence. The `option` declaration still handles the initialization — `lazily` just intercepts the read.
-
-## When to use it
-
-dry-initializer is worth adding when your services consistently have 3+ keyword arguments. For simpler services with one or two arguments, a manual `initialize` is fine. The decision is about reducing noise, not about correctness — both approaches work identically with Servus.
