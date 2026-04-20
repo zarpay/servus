@@ -1,0 +1,15 @@
+{
+  "name": "servus-docs-site",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev . --host 0.0.0.0 --port 3000",
+    "build": "vitepress build .",
+    "preview": "vitepress preview . --host 0.0.0.0 --port 4173"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4",
+    "vue": "^3.5.13"
+  }
+}

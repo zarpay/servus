@@ -1,28 +1,30 @@
-name: Deploy YARD docs
+name: Deploy docs
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  yard-docs:
+  deploy-docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
-          ruby-version: 3.3.0
+          node-version: 20
 
       - name: Install dependencies
-        run: bundle install
+        working-directory: site
+        run: npm install
 
-      - name: Generate YARD Documentation
-        run: bundle exec yard doc
+      - name: Build VitePress site
+        working-directory: site
+        run: npm run build
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GH_PAT }}
-          publish_dir: ./docs/yard
+          publish_dir: ./site/.vitepress/dist

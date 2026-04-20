@@ -1,0 +1,37 @@
+:root {
+  --vp-c-brand-1: #8b6d3c;
+  --vp-c-brand-2: #a8864e;
+  --vp-c-brand-3: #6b552f;
+  --vp-c-bg: #f6f1e6;
+  --vp-c-bg-alt: #efe6d6;
+  --vp-c-bg-soft: #f9f5ec;
+  --vp-c-bg-elv: #fbf8f1;
+  --vp-c-border: rgba(104, 84, 57, 0.2);
+  --vp-c-divider: rgba(104, 84, 57, 0.18);
+  --vp-home-hero-image-background-image: none;
+  --vp-home-hero-image-filter: none;
+
+  --vp-custom-block-tip-border: rgba(139, 109, 60, 0.3);
+  --vp-custom-block-tip-bg: rgba(139, 109, 60, 0.08);
+  --vp-custom-block-tip-text: #5b4f42;
+  --vp-custom-block-tip-code-bg: rgba(255, 255, 255, 0.5);
+
+  --vp-custom-block-info-border: rgba(104, 84, 57, 0.2);
+  --vp-custom-block-info-bg: rgba(104, 84, 57, 0.06);
+  --vp-custom-block-info-text: #5b4f42;
+  --vp-custom-block-info-code-bg: rgba(255, 255, 255, 0.5);
+
+  --vp-custom-block-warning-border: rgba(180, 130, 50, 0.35);
+  --vp-custom-block-warning-bg: rgba(180, 130, 50, 0.1);
+  --vp-custom-block-warning-text: #5b4f42;
+  --vp-custom-block-warning-code-bg: rgba(255, 255, 255, 0.5);
+
+  --vp-custom-block-danger-border: rgba(160, 80, 60, 0.3);
+  --vp-custom-block-danger-bg: rgba(160, 80, 60, 0.08);
+  --vp-custom-block-danger-text: #5b4f42;
+  --vp-custom-block-danger-code-bg: rgba(255, 255, 255, 0.5);
+}
+
+.custom-block div[class*='language-'] {
+  background-color: rgba(255, 255, 255, 0.45);
+}
