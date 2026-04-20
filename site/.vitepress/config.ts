@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress';
 
 export default defineConfig({
+  base: '/servus/',
   title: 'Servus',
   description: 'A disciplined service-object pattern for Ruby and Rails',
   lang: 'en-US',
