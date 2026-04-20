@@ -63,7 +63,6 @@ export default defineConfig({
           { text: 'Generators', link: '/rails/generators' },
           { text: 'Configuration', link: '/rails/configuration' },
           { text: 'Autoloading', link: '/rails/autoloading' },
-          { text: 'Background Jobs', link: '/rails/background-jobs' },
         ],
       },
       {
