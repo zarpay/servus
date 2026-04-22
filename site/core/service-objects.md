@@ -35,19 +35,20 @@ If multiple services need the same capability, that's usually a sign that a serv
 
 ## Composition
 
-Services can call other services. The safest default is to return a failed downstream response unchanged unless the calling service has a reason to translate it.
+Services can call other services. Use [`call!`](/core/composition) to invoke a sub-service — on success it returns the data, on failure it halts the outer service with the sub-service's failure `Response` unchanged.
 
 ```ruby
 def call
-  reserve = Treasury::ReserveFunds::Service.call(account: @account, amount: @amount)
-  return reserve unless reserve.success?
+  reserve  = call!(Treasury::ReserveFunds::Service, account: @account, amount: @amount)
+  dispatch = call!(Ravens::DispatchReceipt::Service, transfer: reserve.transfer_id)
 
-  dispatch = Ravens::DispatchReceipt::Service.call(transfer: reserve.data.transfer_id)
-  return dispatch unless dispatch.success?
-
-  success(transfer: reserve.data, receipt: dispatch.data)
+  success(transfer: reserve, receipt: dispatch)
 end
 ```
+
+If any sub-service fails, the outer service's caller receives that failure directly — same error type, message, code, and `http_status`. This keeps compositions flat and failures honest without a single `unless result.success?` branch.
+
+See [Composition](/core/composition) for the full details and the sibling `run_service!` helper.
 
 ## When to extract a service
 

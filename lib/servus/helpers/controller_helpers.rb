@@ -39,6 +39,41 @@ module Servus
         render_service_error(@result.error) unless @result.success?
       end
 
+      # Executes a service and returns its data on success, raising the
+      # failure's error otherwise.
+      #
+      # The bang counterpart to {#run_service}. Use it outside a standard
+      # controller render flow — inside background logic, callbacks, or any
+      # place where a failure should propagate as an exception rather than be
+      # rendered as JSON.
+      #
+      # Inside a service's `#call` method, use
+      # {Servus::Helpers::ServiceHelpers#call!} instead — it preserves the
+      # failure Response for the outer service's caller rather than raising.
+      #
+      # Sugar over:
+      #
+      #   result = Service.call(**params)
+      #   raise result.error unless result.success?
+      #   data = result.data
+      #
+      # @example From a rake task
+      #   data = run_service!(Treasury::Reconcile::Service, date: Date.current)
+      #
+      # @param klass [Class<Servus::Base>] service class to execute
+      # @param params [Hash] keyword arguments to pass to the service
+      # @return [Servus::Support::DataObject, Object] the service's data on success
+      # @raise [Servus::Support::Errors::ServiceError] the failure's error otherwise
+      #
+      # @see #run_service
+      # @see Servus::Helpers::ServiceHelpers#call!
+      def run_service!(klass, **params)
+        result = klass.call(**params)
+        return result.data if result.success?
+
+        raise result.error
+      end
+
       # Renders a service error as a JSON response.
       #
       # Uses error.http_status for the response status code and

@@ -17,6 +17,14 @@
   never silently skipped by calling `MyService.new.call` directly. Enabled by default; opt out
   with `Servus.configure { |c| c.lockdown_enabled = false }`. Implemented as
   `Servus::Support::Lockdown` and gated by a new `Servus::Config#lockdown_enabled` flag.
+- **`call!` service composition helper**: Instance method auto-mixed into `Servus::Base` via
+  `Servus::Helpers::ServiceHelpers`. Invokes a sub-service from within a service's `#call` and
+  returns its data on success; on failure, halts the outer service with the sub-service's
+  Response unchanged (same error object, message, code, http_status).
+- **`run_service!` controller helper**: Bang counterpart to `run_service` on
+  `Servus::Helpers::ControllerHelpers`. Returns the service's data on success, raises the
+  failure's `ServiceError` otherwise — for paths where an exception is preferable to
+  rendering a JSON error.
 
 ## [0.3.0] - 2026-04-03
 

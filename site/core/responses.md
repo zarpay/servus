@@ -118,15 +118,14 @@ Use `failure` for expected business conditions. Use `error!` when something is g
 
 ## Composition
 
-If a downstream service fails and the calling service has no better context to add, return that response unchanged:
+If a downstream service fails and the calling service has no better context to add, use [`call!`](/core/composition) to pass the failure through unchanged:
 
 ```ruby
 def call
-  reserve = Treasury::ReserveFunds::Service.call(account: @account, amount: @amount)
-  return reserve unless reserve.success?
+  reserve = call!(Treasury::ReserveFunds::Service, account: @account, amount: @amount)
 
   # continue with reserved funds...
 end
 ```
 
-Responses travel through a workflow without re-wrapping. The original error type, message, and status code are preserved for the eventual caller.
+`call!` returns the sub-service's data on success. On failure, it halts the outer service with the downstream `Response` — the original error type, message, code, and status code all flow through to the eventual caller, no re-wrapping.

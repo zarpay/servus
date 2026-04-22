@@ -41,19 +41,37 @@ This is where typed errors pay off — a `failure` with `type: NotFoundError` be
 `@result` is always set — on both success and failure. Use it in views, serializers, or anywhere in the request lifecycle after `run_service` is called.
 
 ::: tip Orchestrating multiple services
-When a controller action needs to call multiple services and coordinate their results, skip `run_service` and call the services directly:
+When a controller action needs multiple services, compose them *inside a service* using [`call!`](/core/composition) rather than orchestrating in the controller. The controller stays thin — one service, one `run_service` — and the orchestration lives where it can be tested and reused:
 
 ```ruby
+# app/services/treasury/reserve_and_dispatch/service.rb
+module Treasury
+  module ReserveAndDispatch
+    class Service < Servus::Base
+      def initialize(**reserve_params)
+        @reserve_params = reserve_params
+      end
+
+      def call
+        reserve  = call!(Treasury::ReserveFunds::Service, **@reserve_params)
+        dispatch = call!(Ravens::DispatchReceipt::Service, transfer: reserve.transfer_id)
+
+        success(reserve: reserve, dispatch: dispatch)
+      end
+    end
+  end
+end
+
+# app/controllers/api/v1/treasury_transfers_controller.rb
 def create
-  reserve = Treasury::ReserveFunds::Service.call(**reserve_params)
-  return render_service_error(reserve.error) unless reserve.success?
+  result = run_service(Treasury::ReserveAndDispatch::Service, reserve_params)
+  return unless result.success?
 
-  dispatch = Ravens::DispatchReceipt::Service.call(transfer: reserve.data.transfer_id)
-  return render_service_error(dispatch.error) unless dispatch.success?
-
-  render json: { reserve: reserve.data, dispatch: dispatch.data }, status: :created
+  render json: result.data, status: :created
 end
 ```
+
+If either sub-service fails, `call!` halts the composer with the original failure `Response` — `run_service` then renders the correct HTTP status automatically.
 :::
 
 ## Using `@result` in views
@@ -83,6 +101,24 @@ def create
   render json: @result.data, status: :created
 end
 ```
+
+## `run_service!`
+
+Bang counterpart to `run_service`. Returns the service's data on success and raises the failure's error otherwise — no rendering, no `@result`. Use it in paths where an exception is preferable to a JSON response, such as webhook receivers or endpoints where a failure is a bug:
+
+```ruby
+class WebhooksController < ApplicationController
+  def stripe
+    event = Stripe::Webhook.construct_event(request.body.read, signature, secret)
+
+    run_service!(Payments::RecordWebhook::Service, event: event)
+
+    head :ok
+  end
+end
+```
+
+Inside a service's `#call` method, reach for [`call!`](/core/composition) instead — it preserves the failure `Response` for the outer service's caller rather than raising.
 
 ## `render_service_error`
 

@@ -41,3 +41,6 @@ require_relative 'servus/guards'
 # Core
 require_relative 'servus/version'
 require_relative 'servus/base'
+
+# Service helpers (mixed into Base, so must load after base.rb)
+require_relative 'servus/helpers/service_helpers'
