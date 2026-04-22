@@ -1,3 +1,14 @@
+## [Unreleased]
+
+### Added
+
+- **`PersistedGuard`**: Built-in guard that ensures an ActiveModel-compatible record has been
+  persisted. Surfaces the record's full error messages as the failure message.
+  Method: `enforce_persisted!(record: user)` / `check_persisted?(record: user)`.
+- **`PositivityGuard`**: Built-in guard that ensures all provided numeric values are strictly
+  positive. Fails for zero, negative, and non-numeric values.
+  Method: `enforce_positivity!(amount: 10, fee: 1)` / `check_positivity?(amount: 10)`.
+
 ## [0.3.0] - 2026-04-03
 
 ### Breaking Changes

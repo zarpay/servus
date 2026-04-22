@@ -149,7 +149,7 @@ This gives you a single, testable, and reusable guard that can be applied in any
 
 ## Built-in guards
 
-Servus ships with four basic guards — `PresenceGuard`, `TruthyGuard`, `FalseyGuard`, and `StateGuard`. They're useful as reference implementations for how to build guards, but the real value of the guard system comes from domain-specific guards like `EligibleTransferGuard` above.
+Servus ships with six basic guards — `PresenceGuard`, `TruthyGuard`, `FalseyGuard`, `StateGuard`, `PersistedGuard`, and `PositivityGuard`. They're useful as reference implementations for how to build guards, but the real value of the guard system comes from domain-specific guards like `EligibleTransferGuard` above.
 
 | Guard | Method | What it checks |
 | --- | --- | --- |
@@ -157,6 +157,8 @@ Servus ships with four basic guards — `PresenceGuard`, `TruthyGuard`, `FalseyG
 | `TruthyGuard` | `enforce_truthy!(on: user, check: :active?)` | Attribute is truthy |
 | `FalseyGuard` | `enforce_falsey!(on: user, check: :banned?)` | Attribute is falsey |
 | `StateGuard` | `enforce_state!(on: order, check: :status, is: :open)` | Attribute matches a value |
+| `PersistedGuard` | `enforce_persisted!(record: user)` | Record is persisted (surfaces `errors.full_messages`) |
+| `PositivityGuard` | `enforce_positivity!(amount: 10, fee: 1)` | Values are strictly positive numerics |
 
 ## Bang vs predicate
 

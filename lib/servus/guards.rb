@@ -39,6 +39,8 @@ module Servus
         require_relative 'guards/truthy_guard'
         require_relative 'guards/falsey_guard'
         require_relative 'guards/state_guard'
+        require_relative 'guards/persisted_guard'
+        require_relative 'guards/positivity_guard'
       end
     end
   end
