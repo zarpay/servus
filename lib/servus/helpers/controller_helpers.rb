@@ -47,15 +47,20 @@ module Servus
       # place where a failure should propagate as an exception rather than be
       # rendered as JSON.
       #
-      # Inside a service's `#call` method, use
-      # {Servus::Helpers::ServiceHelpers#call!} instead — it preserves the
-      # failure Response for the outer service's caller rather than raising.
+      # Inside a service's `#call` method, use {Servus::Base#call!} instead —
+      # it preserves the failure Response for the outer service's caller rather
+      # than raising.
+      #
+      # Mirrors {#run_service}: stores the full Response in @result so views
+      # and downstream helpers can reach for it the same way, then returns the
+      # data on success or raises on failure. The only behavioural difference
+      # between the two is raise-vs-render on failure.
       #
       # Sugar over:
       #
-      #   result = Service.call(**params)
-      #   raise result.error unless result.success?
-      #   data = result.data
+      #   @result = Service.call(**params)
+      #   raise @result.error unless @result.success?
+      #   data = @result.data
       #
       # @example From a rake task
       #   data = run_service!(Treasury::Reconcile::Service, date: Date.current)
@@ -66,12 +71,12 @@ module Servus
       # @raise [Servus::Support::Errors::ServiceError] the failure's error otherwise
       #
       # @see #run_service
-      # @see Servus::Helpers::ServiceHelpers#call!
+      # @see Servus::Base#call!
       def run_service!(klass, **params)
-        result = klass.call(**params)
-        return result.data if result.success?
+        @result = klass.call(**params)
+        return @result.data if @result.success?
 
-        raise result.error
+        raise @result.error
       end
 
       # Renders a service error as a JSON response.

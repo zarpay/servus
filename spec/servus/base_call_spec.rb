@@ -2,7 +2,7 @@
 
 require 'spec_helper'
 
-module ServiceHelpersSpecSupport
+module BaseCallSpecSupport
   class InnerService < Servus::Base
     def initialize(should_fail: false)
       @should_fail = should_fail
@@ -27,9 +27,9 @@ module ServiceHelpersSpecSupport
   end
 end
 
-RSpec.describe Servus::Helpers::ServiceHelpers do
+RSpec.describe Servus::Base do
   describe '#call!' do
-    subject(:result) { ServiceHelpersSpecSupport::OuterService.call(should_fail: should_fail) }
+    subject(:result) { BaseCallSpecSupport::OuterService.call(should_fail: should_fail) }
 
     context 'when the sub-service succeeds' do
       let(:should_fail) { false }
@@ -56,7 +56,7 @@ RSpec.describe Servus::Helpers::ServiceHelpers do
       end
     end
 
-    it 'is mixed into Servus::Base' do
+    it 'is defined as an instance method on Servus::Base' do
       expect(Servus::Base.instance_method(:call!)).not_to be_nil
     end
   end

@@ -4,7 +4,7 @@ Most non-trivial actions need to invoke other actions. Servus gives you one help
 
 ## `call!` — inside services
 
-`call!` is the primary composition helper. It is an instance method mixed into every `Servus::Base`, so it's available anywhere your `#call` runs.
+`call!` is the primary composition helper. It is an instance method on `Servus::Base`, so it's available anywhere your `#call` runs.
 
 ```ruby
 module Treasury
@@ -82,7 +82,7 @@ end
 
 ## `run_service!` — outside services
 
-`run_service!` is the bang counterpart to `run_service` on `Servus::Helpers::ControllerHelpers`. It returns the service's data on success and raises the failure's error otherwise. Use it wherever raising is preferable to rendering — background callbacks, rake tasks reachable through a controller context, or any path where a failure is a bug, not a render opportunity.
+`run_service!` is the bang counterpart to `run_service` on `Servus::Helpers::ControllerHelpers`. Like `run_service`, it stores the full `Response` in `@result` so the rest of the action (views, callbacks, after-hooks) can read it the same way. It then returns the service's data on success and raises the failure's error otherwise. Use it wherever raising is preferable to rendering — background callbacks, rake tasks reachable through a controller context, or any path where a failure is a bug, not a render opportunity.
 
 ```ruby
 class WebhooksController < ApplicationController
@@ -102,7 +102,7 @@ end
 | Helper | Lives on | On success | On failure |
 | --- | --- | --- | --- |
 | `run_service` | `ControllerHelpers` | Sets `@result`, returns `Response` | Renders JSON error, returns `Response` |
-| `run_service!` | `ControllerHelpers` | Returns the result's `data` | Raises the failure's `ServiceError` |
+| `run_service!` | `ControllerHelpers` | Sets `@result`, returns the result's `data` | Raises the failure's `ServiceError` |
 | `call!` | `Servus::Base` | Returns the result's `data` | Halts outer service with failure `Response` |
 
 `run_service` is the default for controller actions — it handles the JSON response for you. Reach for `run_service!` only when raising is what you actually want.

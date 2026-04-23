@@ -104,7 +104,7 @@ end
 
 ## `run_service!`
 
-Bang counterpart to `run_service`. Returns the service's data on success and raises the failure's error otherwise — no rendering, no `@result`. Use it in paths where an exception is preferable to a JSON response, such as webhook receivers or endpoints where a failure is a bug:
+Bang counterpart to `run_service`. Sets `@result` the same way `run_service` does, then returns the service's data on success and raises the failure's error otherwise — no rendering. Use it in paths where an exception is preferable to a JSON response, such as webhook receivers or endpoints where a failure is a bug:
 
 ```ruby
 class WebhooksController < ApplicationController
