@@ -1,1 +1,0 @@
-Scan the documentation in docs/ then check the current git changeset. If the changeset has modifications that might affect the documentation, then review the related documentation and make any necessary updates.
