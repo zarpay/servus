@@ -66,7 +66,7 @@ The framework calls `new(**args)`, which runs your `initialize`. Instance variab
 Your `call` method runs inside two wrappers:
 
 - **A benchmark timer** that records how long execution takes.
-- **A guard catch block** — if any `enforce_*!` guard fails, it throws `:guard_failure` with a `GuardError`. The framework catches it and converts it to a failure `Response` automatically. [`call!`](/core/composition) rides on the same catch block: a failing sub-service throws its failure `Response` here, which the framework returns unchanged to the outer caller.
+- **A guard catch block** — if any `enforce_*!` guard fails, it throws `:guard_failure` with a `GuardError`. The framework catches it and converts it to a failure `Response` automatically.
 
 This is the only step you write. Everything else is handled by the framework.
 
