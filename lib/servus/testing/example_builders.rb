@@ -138,6 +138,58 @@ module Servus
         Servus::Support::Response.new(false, example, Servus::Support::Errors::ServiceError.new)
       end
 
+      # Builds a successful Response object with the given data.
+      #
+      # Convenience method for creating successful responses in tests
+      # without calling +Servus::Support::Response.new+ directly.
+      #
+      # @param data [Hash] the success data to wrap in the response
+      # @return [Servus::Support::Response] a successful response wrapping the data
+      #
+      # @example Basic usage
+      #   response = servus_success_response(transferred: 50)
+      #   response.success?           # => true
+      #   response.data[:transferred] # => 50
+      #
+      # @example Stubbing a service call
+      #   allow(TransferService).to receive(:call).and_return(
+      #     servus_success_response(transferred: 50)
+      #   )
+      #
+      # @see #servus_failure_response
+      def servus_success_response(data = {})
+        Servus::Support::Response.new(true, data, nil)
+      end
+
+      # Builds a failure Response object with the given message and error type.
+      #
+      # Convenience method for creating failure responses in tests.
+      # Mirrors the signature of {Servus::Base#failure}.
+      #
+      # @param message [String, nil] the error message (uses error type's default if nil)
+      # @param data [Hash, nil] optional structured data to include with the failure
+      # @param type [Class] the error class to use (default: ServiceError)
+      # @return [Servus::Support::Response] a failure response with the error
+      #
+      # @example Basic usage
+      #   response = servus_failure_response("Insufficient funds")
+      #   response.failure?      # => true
+      #   response.error.message # => "Insufficient funds"
+      #
+      # @example With custom error type
+      #   response = servus_failure_response("Not found", type: Servus::Support::Errors::NotFoundError)
+      #   response.error.http_status # => :not_found
+      #
+      # @example With structured failure data
+      #   response = servus_failure_response("Failed", data: { reason: "expired" })
+      #   response.data[:reason] # => "expired"
+      #
+      # @see #servus_success_response
+      def servus_failure_response(message = nil, data: nil, type: Servus::Support::Errors::ServiceError)
+        error = type.new(message)
+        Servus::Support::Response.new(false, data, error)
+      end
+
       private
 
       # Helper method to extract and merge examples from schema

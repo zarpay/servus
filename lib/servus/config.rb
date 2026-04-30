@@ -65,6 +65,31 @@ module Servus
     # @return [Boolean] true to include default guards, false to exclude them
     attr_accessor :include_default_guards
 
+    # Whether to require all services to define an arguments schema.
+    #
+    # When enabled, raises {Servus::Support::Errors::SchemaRequiredError} when
+    # a service is called without an arguments schema defined.
+    #
+    # @return [Boolean] true to require arguments schemas, false to allow schema-less services
+    attr_accessor :require_service_arguments_schema
+
+    # Whether to require all services to define a result schema.
+    #
+    # When enabled, raises {Servus::Support::Errors::SchemaRequiredError} when
+    # a service returns a successful response without a result schema defined.
+    # Failure schemas remain optional regardless of this setting.
+    #
+    # @return [Boolean] true to require result schemas, false to allow schema-less services
+    attr_accessor :require_service_result_schema
+
+    # Whether to require all event handlers to define a payload schema.
+    #
+    # When enabled, raises {Servus::Support::Errors::SchemaRequiredError} when
+    # an event handler validates a payload without a payload schema defined.
+    #
+    # @return [Boolean] true to require payload schemas, false to allow schema-less handlers
+    attr_accessor :require_event_payload_schema
+
     # Whether external instantiation of services is blocked and instance
     # `#call` methods are automatically privatized.
     #
@@ -95,15 +120,21 @@ module Servus
     #
     # @api private
     def initialize
+      set_default_directories
+      @strict_event_validation          = true
+      @include_default_guards           = true
+      @lockdown_enabled                 = true
+      @require_service_arguments_schema = false
+      @require_service_result_schema    = false
+      @require_event_payload_schema     = false
+    end
+
+    def set_default_directories
       @guards_dir   = 'app/guards'
       @events_dir   = 'app/events'
       @schemas_dir  = 'app/schemas'
       @services_dir = 'app/services'
       @tests_dir    = 'spec'
-
-      @strict_event_validation = true
-      @include_default_guards  = true
-      @lockdown_enabled        = true
     end
 
     # Returns the full path to a service's schema file.

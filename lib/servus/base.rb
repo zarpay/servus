@@ -240,8 +240,10 @@ module Servus
           benchmark(**args) { instance.send(:call) }
         end
 
-        # If result is a GuardError, a guard failed - wrap in failure Response
-        result = Response.new(false, nil, result) if result.is_a?(Servus::Support::Errors::GuardError)
+        if result.is_a?(Servus::Support::Errors::GuardError)
+          Logger.log_guard_failure(self, result)
+          result = Response.new(false, nil, result)
+        end
 
         after_call(result, instance)
 

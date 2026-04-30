@@ -304,6 +304,45 @@ RSpec.describe Servus::Base, 'Guards Integration' do
     end
   end
 
+  describe 'guard failure logging' do
+    it 'logs guard failures at warn level' do
+      test_class = user_class
+      service_class = stub_const('GuardLogTestService', Class.new(described_class) do
+        define_method(:initialize) { |user:| @user = user }
+
+        def call
+          enforce_truthy!(on: @user, check: :active)
+          success({ result: 'processed' })
+        end
+      end)
+
+      allow(Servus::Support::Logger).to receive(:log_guard_failure)
+
+      service_class.call(user: test_class.new(active: false))
+
+      expect(Servus::Support::Logger).to have_received(:log_guard_failure)
+        .with(GuardLogTestService, an_instance_of(Servus::Support::Errors::GuardError))
+    end
+
+    it 'does not log when guard passes' do
+      test_class = user_class
+      service_class = stub_const('GuardLogTestService2', Class.new(described_class) do
+        define_method(:initialize) { |user:| @user = user }
+
+        def call
+          enforce_truthy!(on: @user, check: :active)
+          success({ result: 'processed' })
+        end
+      end)
+
+      allow(Servus::Support::Logger).to receive(:log_guard_failure)
+
+      service_class.call(user: test_class.new(active: true))
+
+      expect(Servus::Support::Logger).not_to have_received(:log_guard_failure)
+    end
+  end
+
   describe 'state guard with multiple values' do
     it 'passes when attribute matches any expected value' do
       test_class = user_class

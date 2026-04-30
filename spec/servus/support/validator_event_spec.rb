@@ -44,5 +44,36 @@ RSpec.describe Servus::Support::Validator, 'event payload validation' do
 
       expect(described_class.validate_event_payload!(handler_class, { any: 'data' })).to be true
     end
+
+    context 'with require_event_payload_schema enabled' do
+      after { Servus.config.require_event_payload_schema = false }
+
+      it 'raises SchemaRequiredError when no payload schema is defined' do
+        Servus.config.require_event_payload_schema = true
+
+        handler_class = Class.new(Servus::EventHandler) do
+          handles :test_event
+        end
+
+        expect do
+          described_class.validate_event_payload!(handler_class, { any: 'data' })
+        end.to raise_error(Servus::Support::Errors::SchemaRequiredError, /require_event_payload_schema/)
+      end
+
+      it 'does not raise when payload schema is defined' do
+        Servus.config.require_event_payload_schema = true
+
+        handler_class = Class.new(Servus::EventHandler) do
+          handles :test_event
+
+          schema payload: {
+            type: 'object',
+            properties: { any: { type: 'string' } }
+          }
+        end
+
+        expect(described_class.validate_event_payload!(handler_class, { any: 'data' })).to be true
+      end
+    end
   end
 end

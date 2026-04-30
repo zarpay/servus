@@ -265,6 +265,58 @@ expected = servus_failure_example(Treasury::TransferGold::Service)
 allow(Treasury::TransferGold::Service).to receive(:call).and_return(expected)
 ```
 
+## Response matchers
+
+These matchers simplify assertions on service responses, replacing multi-line checks with single-line expectations.
+
+### `be_service_success`
+
+```ruby
+expect(result).to be_service_success
+```
+
+### `be_service_failure`
+
+Match any failure, or narrow by error class and message:
+
+```ruby
+expect(result).to be_service_failure
+expect(result).to be_service_failure(Servus::Support::Errors::NotFoundError)
+expect(result).to be_service_failure(Servus::Support::Errors::NotFoundError).with_message("Account not found")
+```
+
+### `be_guard_failure`
+
+Match guard failures, optionally by error code and message:
+
+```ruby
+expect(result).to be_guard_failure
+expect(result).to be_guard_failure("insufficient_balance")
+expect(result).to be_guard_failure("insufficient_balance").with_message("Balance too low")
+```
+
+These replace verbose multi-line assertions:
+
+```ruby
+# Before
+expect(result).to be_failure
+expect(result.error).to be_a(Servus::Support::Errors::GuardError)
+expect(result.error.code).to eq("insufficient_balance")
+
+# After
+expect(result).to be_guard_failure("insufficient_balance")
+```
+
+### `have_schema`
+
+Assert that a service or event handler has a schema defined. See [Enforcing schema usage](/features/schema-validation#enforcing-schema-usage) for details.
+
+```ruby
+expect(described_class).to have_schema(:arguments)
+expect(described_class).to have_schema(:result)
+expect(described_class).to have_schema(:payload)
+```
+
 ## Event matchers
 
 These matchers test that a **service emits the expected events** — they don't test event handler behavior. For testing handlers, see [Testing Events](/testing/events).

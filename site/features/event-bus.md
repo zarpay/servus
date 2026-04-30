@@ -154,7 +154,7 @@ end
 
 ## Payload schema validation
 
-Handlers can define a JSON Schema to validate event payloads. When a service emits an event whose payload doesn't match the handler's schema, Servus raises a `ValidationError` — just like argument or result schema violations. This catches mismatches between what a service emits and what a handler expects at runtime, before any handler logic runs.
+Handlers can define a JSON Schema to validate event payloads. Payload validation runs on both emission paths — the `emits` DSL and `Handler.emit`. When a payload doesn't match the handler's schema, Servus raises a `ValidationError` before any handler logic runs.
 
 ```ruby
 class GoldTransferredHandler < Servus::EventHandler
@@ -245,10 +245,11 @@ Every event is dispatched through `ActiveSupport::Notifications` with the prefix
 
 ### Subscribe to all Servus events
 
+`Bus.subscribe_all` yields every emission with clean arguments — no regex or prefix stripping needed:
+
 ```ruby
-ActiveSupport::Notifications.subscribe(/^servus\.events\./) do |name, start, finish, id, payload|
-  event_name = name.sub("servus.events.", "")
-  duration = ((finish - start) * 1000).round(1)
+Servus::Events::Bus.subscribe_all do |event_name, payload, started_at:, finished_at:, **|
+  duration = ((finished_at - started_at) * 1000).round(1)
   Rails.logger.info "[Servus Event] #{event_name} (#{duration}ms) #{payload}"
 end
 ```
@@ -257,7 +258,29 @@ end
 [Servus Event] gold_transferred (1.2ms) {:transferred=>50, :from_balance=>950, :to_balance=>550}
 ```
 
+The block receives `event_name` and `payload` as positional args, plus `started_at:`, `finished_at:`, and `id:` as keyword args. Use `**` to ignore keywords you don't need.
+
+```ruby
+# Forward all events to an external system
+Servus::Events::Bus.subscribe_all do |event_name, payload, started_at:, **|
+  EventusForwardJob.perform_later(
+    event: event_name.to_s,
+    payload: payload.as_json,
+    occurred_at: started_at.utc.iso8601(6)
+  )
+end
+```
+
+The method returns the subscription object for manual unsubscribe:
+
+```ruby
+subscription = Servus::Events::Bus.subscribe_all { |event_name, payload, **| ... }
+ActiveSupport::Notifications.unsubscribe(subscription)
+```
+
 ### Subscribe to a specific event
+
+For subscribing to a single event, use `ActiveSupport::Notifications` directly:
 
 ```ruby
 ActiveSupport::Notifications.subscribe("servus.events.gold_transferred") do |*args|

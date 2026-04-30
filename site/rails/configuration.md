@@ -30,7 +30,16 @@ Servus.configure do |config|
   # them entirely (your custom guards still load from guards_dir).
 
   config.include_default_guards = true  # default: true
+
+  # ── Schema Enforcement ─────────────────────────────────────────────
+  # When true, Servus raises SchemaRequiredError if a service or handler
+  # is invoked without the corresponding schema defined. Useful for teams
+  # that want to enforce schemas across all services.
+
+  config.require_service_arguments_schema = false  # default: false
+  config.require_service_result_schema    = false  # default: false
+  config.require_event_payload_schema     = false  # default: false
 end
 ```
 
-All seven options are `attr_accessor` — read them with `Servus.config.schemas_dir` and write them in the `configure` block.
+All ten options are `attr_accessor` — read them with `Servus.config.schemas_dir` and write them in the `configure` block.

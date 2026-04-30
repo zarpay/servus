@@ -45,15 +45,14 @@ module Servus
       # @api private
       def self.validate_arguments!(service_class, args)
         schema = load_schema(service_class, 'arguments')
-        return true unless schema # Skip validation if no schema exists
+        enforce_schema_presence!(schema, service_class, :require_service_arguments_schema)
+        return true unless schema
 
-        serialized_result = args.as_json
-        validation_errors = JSON::Validator.fully_validate(schema, serialized_result)
-
-        if validation_errors.any?
-          error_message = "Invalid arguments for #{service_class.name}: #{validation_errors.join(', ')}"
-          raise Servus::Base::ValidationError, error_message
-        end
+        validate_data_against_schema!(
+          args,
+          schema,
+          "Invalid arguments for #{service_class.name}"
+        )
 
         true
       end
@@ -74,19 +73,33 @@ module Servus
       #
       # @api private
       def self.validate_result!(service_class, result)
-        schema = result_schema_for(service_class, result)
+        schema, schema_type = result_schema_for(service_class, result)
         return result unless schema
 
-        serialized_result = result.data.as_json
-        validation_errors = JSON::Validator.fully_validate(schema, serialized_result)
-
-        if validation_errors.any?
-          schema_type = result.success? ? 'result' : 'failure'
-          error_message = "Invalid #{schema_type} structure from #{service_class.name}: #{validation_errors.join(', ')}"
-          raise Servus::Base::ValidationError, error_message
-        end
+        validate_data_against_schema!(
+          result.data,
+          schema,
+          "Invalid #{schema_type} structure from #{service_class.name}"
+        )
 
         result
+      end
+
+      # Resolves the schema and type label for a service result.
+      #
+      # @param service_class [Class] the service class
+      # @param result [Servus::Support::Response] the response object
+      # @return [Array(Hash, String), Array(nil, nil)] the schema and type label
+      #
+      # @api private
+      def self.result_schema_for(service_class, result)
+        if result.success?
+          schema = load_schema(service_class, 'result')
+          enforce_schema_presence!(schema, service_class, :require_service_result_schema)
+          [schema, 'result']
+        elsif result.data
+          [load_schema(service_class, 'failure'), 'failure']
+        end
       end
 
       # Validates event payload against the handler's payload schema.
@@ -103,15 +116,14 @@ module Servus
       # @api private
       def self.validate_event_payload!(handler_class, payload)
         schema = handler_class.payload_schema
+        enforce_schema_presence!(schema, handler_class, :require_event_payload_schema)
         return true unless schema
 
-        serialized_payload = payload.as_json
-        validation_errors = JSON::Validator.fully_validate(schema, serialized_payload)
-
-        if validation_errors.any?
-          raise Servus::Support::Errors::ValidationError,
-                "Invalid payload for event :#{handler_class.event_name}: #{validation_errors.join(', ')}"
-        end
+        validate_data_against_schema!(
+          payload,
+          schema,
+          "Invalid payload for event :#{handler_class.event_name}"
+        )
 
         true
       end
@@ -179,19 +191,38 @@ module Servus
         @schema_cache
       end
 
-      # Resolves the appropriate schema for a result based on its success/failure state.
+      # Serializes data and validates it against a JSON schema.
       #
-      # @param service_class [Class] the service class
-      # @param result [Servus::Support::Response] the response to resolve schema for
-      # @return [Hash, nil] the schema, or nil if none applies
+      # @param data [Object] the data to validate
+      # @param schema [Hash] the JSON schema to validate against
+      # @param message_prefix [String] prefix for the error message on failure
+      # @return [void]
+      # @raise [Servus::Support::Errors::ValidationError] if data fails validation
       #
       # @api private
-      def self.result_schema_for(service_class, result)
-        if result.success?
-          load_schema(service_class, 'result')
-        elsif result.data
-          load_schema(service_class, 'failure')
-        end
+      def self.validate_data_against_schema!(data, schema, message_prefix)
+        errors = JSON::Validator.fully_validate(schema, data.as_json)
+        return if errors.empty?
+
+        raise Servus::Base::ValidationError, "#{message_prefix}: #{errors.join(', ')}"
+      end
+
+      # Returns the schema if present. Raises if absent and the config flag is enabled.
+      #
+      # @param schema [Hash, nil] the loaded schema
+      # @param klass [Class] the service or handler class
+      # @param config_flag [Symbol] the config method to check
+      # @return [Hash, nil] the schema
+      # @raise [Servus::Support::Errors::SchemaRequiredError] if schema is nil and enforcement is enabled
+      #
+      # @api private
+      def self.enforce_schema_presence!(schema, klass, config_flag)
+        return schema if schema
+
+        return unless Servus.config.public_send(config_flag)
+
+        raise Servus::Support::Errors::SchemaRequiredError,
+              "#{klass.name} schema missing! #{config_flag} is set to true."
       end
 
       # Fetches schema from DSL, inline constant, or file.

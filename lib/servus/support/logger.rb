@@ -55,6 +55,22 @@ module Servus
         logger.warn("#{service_class.name} failed in #{duration.round(3)}s with error: #{error}")
       end
 
+      # Logs a guard failure from a service
+      #
+      # @param service_class [Class] The service class
+      # @param error [Servus::Support::Errors::GuardError] The guard error
+      def self.log_guard_failure(service_class, error)
+        logger.warn("#{service_class.name} guard failed: #{error.message}")
+      end
+
+      # Logs an event emission
+      #
+      # @param event_name [Symbol] The event name
+      # @param payload [Hash] The event payload
+      def self.log_event(event_name, payload)
+        logger.info("Event :#{event_name} emitted with payload: #{payload.inspect}")
+      end
+
       # Logs a validation error from a service
       #
       # @param service_class [Class] The service class
