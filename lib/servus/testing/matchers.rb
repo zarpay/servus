@@ -85,4 +85,103 @@ RSpec::Matchers.define :call_service do |service_class|
     "expected #{service_class} to receive #{method}"
   end
 end
+
+# Matcher for asserting schema presence on a service or event handler
+RSpec::Matchers.define :have_schema do |schema_type|
+  match do |klass|
+    if schema_type.to_s == 'payload'
+      !klass.payload_schema.nil?
+    else
+      Servus::Support::Validator.clear_cache!
+      !Servus::Support::Validator.load_schema(klass, schema_type.to_s).nil?
+    end
+  end
+
+  failure_message do |klass|
+    "expected #{klass.name} to have a #{schema_type} schema defined"
+  end
+
+  failure_message_when_negated do |klass|
+    "expected #{klass.name} not to have a #{schema_type} schema defined"
+  end
+end
+
+# Matcher for asserting a successful service response
+RSpec::Matchers.define :be_service_success do
+  match do |result|
+    @result = result
+    result.is_a?(Servus::Support::Response) && result.success?
+  end
+
+  failure_message do
+    if @result.is_a?(Servus::Support::Response)
+      "expected a successful response, but got failure with error: #{@result.error&.message}"
+    else
+      "expected a Servus::Support::Response, got #{@result.class}"
+    end
+  end
+
+  failure_message_when_negated do
+    'expected a failure response, but got success'
+  end
+end
+
+# Matcher for asserting a failed service response with optional error class and message
+RSpec::Matchers.define :be_service_failure do |expected_error_class|
+  chain :with_message do |message|
+    @expected_message = message
+  end
+
+  match do |result|
+    @result = result
+    return false unless result.is_a?(Servus::Support::Response) && result.failure?
+    return false if expected_error_class && !result.error.is_a?(expected_error_class)
+    return false if @expected_message && result.error.message != @expected_message
+
+    true
+  end
+
+  failure_message do
+    if !@result.is_a?(Servus::Support::Response)
+      "expected a Servus::Support::Response, got #{@result.class}"
+    elsif @result.success?
+      'expected a failure response, but got success'
+    elsif expected_error_class && !@result.error.is_a?(expected_error_class)
+      "expected error to be a #{expected_error_class.name}, got #{@result.error.class.name}"
+    elsif @expected_message
+      "expected error message #{@expected_message.inspect}, got #{@result.error.message.inspect}"
+    end
+  end
+end
+
+# Matcher for asserting a guard failure response with optional error code and message
+RSpec::Matchers.define :be_guard_failure do |expected_code|
+  chain :with_message do |message|
+    @expected_message = message
+  end
+
+  match do |result|
+    @result = result
+    return false unless result.is_a?(Servus::Support::Response) && result.failure?
+    return false unless result.error.is_a?(Servus::Support::Errors::GuardError)
+    return false if expected_code && result.error.code != expected_code
+    return false if @expected_message && result.error.message != @expected_message
+
+    true
+  end
+
+  failure_message do
+    if !@result.is_a?(Servus::Support::Response)
+      "expected a Servus::Support::Response, got #{@result.class}"
+    elsif @result.success?
+      'expected a guard failure response, but got success'
+    elsif !@result.error.is_a?(Servus::Support::Errors::GuardError)
+      "expected error to be a GuardError, got #{@result.error.class.name}"
+    elsif expected_code && @result.error.code != expected_code
+      "expected guard error code #{expected_code.inspect}, got #{@result.error.code.inspect}"
+    elsif @expected_message
+      "expected guard error message #{@expected_message.inspect}, got #{@result.error.message.inspect}"
+    end
+  end
+end
 # rubocop:enable Metrics/BlockLength

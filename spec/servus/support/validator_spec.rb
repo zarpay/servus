@@ -946,4 +946,80 @@ RSpec.describe Servus::Support::Validator do
       end
     end
   end
+
+  context 'with schema enforcement' do
+    before { described_class.clear_cache! }
+
+    after do
+      Servus.config.require_service_arguments_schema = false
+      Servus.config.require_service_result_schema = false
+    end
+
+    describe 'require_service_arguments_schema' do
+      it 'raises SchemaRequiredError when enabled and no arguments schema exists' do
+        Servus.config.require_service_arguments_schema = true
+
+        expect do
+          described_class.validate_arguments!(SchemaValidationTest::Service, { name: 'John' })
+        end.to raise_error(Servus::Support::Errors::SchemaRequiredError, /require_service_arguments_schema/)
+      end
+
+      it 'does not raise when disabled and no arguments schema exists' do
+        Servus.config.require_service_arguments_schema = false
+
+        expect(described_class.validate_arguments!(SchemaValidationTest::Service, { name: 'John' })).to eq(true)
+      end
+
+      it 'does not raise when enabled and arguments schema exists' do
+        Servus.config.require_service_arguments_schema = true
+
+        SchemaValidationTest::Service.schema(
+          arguments: {
+            type: 'object',
+            properties: { name: { type: 'string' } }
+          }
+        )
+
+        expect(described_class.validate_arguments!(SchemaValidationTest::Service, { name: 'John' })).to eq(true)
+      end
+    end
+
+    describe 'require_service_result_schema' do
+      let(:success_result) { Servus::Support::Response.new(true, { id: 123 }, nil) }
+      let(:failure_result) { Servus::Support::Response.new(false, nil, Servus::Support::Errors::ServiceError.new) }
+
+      it 'raises SchemaRequiredError when enabled and success has no result schema' do
+        Servus.config.require_service_result_schema = true
+
+        expect do
+          described_class.validate_result!(SchemaValidationTest::Service, success_result)
+        end.to raise_error(Servus::Support::Errors::SchemaRequiredError, /require_service_result_schema/)
+      end
+
+      it 'does not raise for failure responses even when enabled' do
+        Servus.config.require_service_result_schema = true
+
+        expect(described_class.validate_result!(SchemaValidationTest::Service, failure_result)).to eq(failure_result)
+      end
+
+      it 'does not raise when disabled and no result schema exists' do
+        Servus.config.require_service_result_schema = false
+
+        expect(described_class.validate_result!(SchemaValidationTest::Service, success_result)).to eq(success_result)
+      end
+
+      it 'does not raise when enabled and result schema exists' do
+        Servus.config.require_service_result_schema = true
+
+        SchemaValidationTest::Service.schema(
+          result: {
+            type: 'object',
+            properties: { id: { type: 'integer' } }
+          }
+        )
+
+        expect(described_class.validate_result!(SchemaValidationTest::Service, success_result)).to eq(success_result)
+      end
+    end
+  end
 end

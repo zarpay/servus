@@ -267,6 +267,22 @@ module Servus
         def api_error = { code: http_status, message: message }
       end
 
+      # Raised when a service or event handler is invoked without a required schema.
+      #
+      # Triggered by the +require_service_arguments_schema+,
+      # +require_service_result_schema+, or +require_event_payload_schema+
+      # configuration flags.
+      #
+      # @see Servus::Config#require_service_arguments_schema
+      # @see Servus::Config#require_service_result_schema
+      # @see Servus::Config#require_event_payload_schema
+      class SchemaRequiredError < ServiceError
+        DEFAULT_MESSAGE = 'Schema is required but not defined'
+
+        def http_status = :unprocessable_entity
+        def api_error = { code: :schema_required, message: message }
+      end
+
       # 423 Locked - resource is locked.
       class LockedError < ServiceError
         DEFAULT_MESSAGE = 'Locked'

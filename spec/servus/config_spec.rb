@@ -46,4 +46,43 @@ RSpec.describe Servus::Config do
 
     after { Servus.config.include_default_guards = default_value }
   end
+
+  describe '#require_service_arguments_schema' do
+    it 'defaults to false' do
+      expect(Servus.config.require_service_arguments_schema).to be false
+    end
+
+    it 'can be enabled' do
+      Servus.config.require_service_arguments_schema = true
+      expect(Servus.config.require_service_arguments_schema).to be true
+    end
+
+    after { Servus.config.require_service_arguments_schema = false }
+  end
+
+  describe '#require_service_result_schema' do
+    it 'defaults to false' do
+      expect(Servus.config.require_service_result_schema).to be false
+    end
+
+    it 'can be enabled' do
+      Servus.config.require_service_result_schema = true
+      expect(Servus.config.require_service_result_schema).to be true
+    end
+
+    after { Servus.config.require_service_result_schema = false }
+  end
+
+  describe '#require_event_payload_schema' do
+    it 'defaults to false' do
+      expect(Servus.config.require_event_payload_schema).to be false
+    end
+
+    it 'can be enabled' do
+      Servus.config.require_event_payload_schema = true
+      expect(Servus.config.require_event_payload_schema).to be true
+    end
+
+    after { Servus.config.require_event_payload_schema = false }
+  end
 end

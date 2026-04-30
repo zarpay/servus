@@ -350,17 +350,79 @@ RSpec.describe Servus::Testing::ExampleBuilders do
     end
   end
 
+  describe '#servus_success_response' do
+    it 'returns a successful Response' do
+      response = servus_success_response(transferred: 50)
+
+      expect(response).to be_a(Servus::Support::Response)
+      expect(response.success?).to be true
+      expect(response.data[:transferred]).to eq(50)
+    end
+
+    it 'defaults to empty hash when no data provided' do
+      response = servus_success_response
+
+      expect(response.success?).to be true
+      expect(response.data).to eq({})
+    end
+
+    it 'has nil error' do
+      response = servus_success_response(foo: 'bar')
+
+      expect(response.error).to be_nil
+    end
+  end
+
+  describe '#servus_failure_response' do
+    it 'returns a failure Response with default error type' do
+      response = servus_failure_response('Something went wrong')
+
+      expect(response.failure?).to be true
+      expect(response.error).to be_a(Servus::Support::Errors::ServiceError)
+      expect(response.error.message).to eq('Something went wrong')
+    end
+
+    it 'uses specified error type' do
+      response = servus_failure_response('Not found', type: Servus::Support::Errors::NotFoundError)
+
+      expect(response.error).to be_a(Servus::Support::Errors::NotFoundError)
+      expect(response.error.http_status).to eq(:not_found)
+    end
+
+    it 'uses default message when nil' do
+      response = servus_failure_response
+
+      expect(response.error.message).to eq('An error occurred')
+    end
+
+    it 'includes structured failure data when provided' do
+      response = servus_failure_response('Failed', data: { reason: 'expired' })
+
+      expect(response.data[:reason]).to eq('expired')
+    end
+
+    it 'defaults data to nil' do
+      response = servus_failure_response('Error')
+
+      expect(response.data).to be_nil
+    end
+  end
+
   describe 'module inclusion' do
     it 'makes methods available when included' do
       expect(self).to respond_to(:servus_arguments_example)
       expect(self).to respond_to(:servus_result_example)
       expect(self).to respond_to(:servus_failure_example)
+      expect(self).to respond_to(:servus_success_response)
+      expect(self).to respond_to(:servus_failure_response)
     end
 
     it 'does not pollute Object' do
       expect(Object.new).not_to respond_to(:servus_arguments_example)
       expect(Object.new).not_to respond_to(:servus_result_example)
       expect(Object.new).not_to respond_to(:servus_failure_example)
+      expect(Object.new).not_to respond_to(:servus_success_response)
+      expect(Object.new).not_to respond_to(:servus_failure_response)
     end
   end
 end
