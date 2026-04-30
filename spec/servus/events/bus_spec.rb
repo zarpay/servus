@@ -71,9 +71,12 @@ RSpec.describe Servus::Events::Bus do
     end
 
     it 'returns the subscription for manual unsubscribe' do
-      subscription = described_class.subscribe_all { |*, **| }
+      received = false
+      subscription = described_class.subscribe_all { |_event_name, _payload, **| received = true }
 
-      expect(subscription).not_to be_nil
+      described_class.emit(:test_event, {})
+      expect(received).to be true
+
       ActiveSupport::Notifications.unsubscribe(subscription)
     end
   end
