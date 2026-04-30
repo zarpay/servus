@@ -158,7 +158,7 @@ module Servus
       raise type, message
     end
 
-    # Invokes a sub-service from within this service's {#call} and returns its
+    # Invokes another service from within this service's {#call} and returns its
     # data on success. On failure, halts the outer service with the sub-service's
     # failure Response — the outer service's caller receives that Response
     # unchanged (same error object, message, code, http_status).
@@ -175,9 +175,9 @@ module Servus
     # @example Composing services
     #   class SendDigitalCash::Service < Servus::Base
     #     def call
-    #       account = call!(Accounts::Lookup::Service, id: account_id)
-    #       ledger  = call!(Ledger::RecordTransfer::Service, account: account, amount: amount)
-    #       success(ref: ledger.ref)
+    #       data1 = call!(Accounts::Lookup::Service, id: account_id)
+    #       data2 = call!(Ledger::RecordTransfer::Service, account:, amount:)
+    #       success(ref: data2.ref)
     #     end
     #   end
     #
