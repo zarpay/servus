@@ -1,4 +1,4 @@
-## [UNRELEASED]
+## [0.4.0] - 2026-04-30
 
 ### Breaking Changes
 
@@ -8,6 +8,9 @@
   was redundant since `initialize` already stores them as `@kwargs`. Guards with `def test(**)` or
   `def test(foo:)` signatures must be updated — the scaffold generator and built-in guards
   (`Presence`, `Truthy`, `Falsey`, `State`) have all been updated to the new pattern.
+- **Event payload validation on emits DSL**: Payload schemas are now validated when events are
+  emitted via the `emits` DSL, not just via `Handler.emit`. Services emitting payloads that don't
+  match handler schemas will now raise `ValidationError`.
 
 ### Added
 
@@ -26,6 +29,26 @@
   `run_service` does, then returns the service's data on success or raises the failure's
   `ServiceError` otherwise — for paths where an exception is preferable to rendering a
   JSON error.
+- **Schema enforcement config**: Three new config flags — `require_service_arguments_schema`,
+  `require_service_result_schema`, and `require_event_payload_schema` — raise
+  `SchemaRequiredError` when a service or handler is invoked without the corresponding schema.
+  All default to `false`.
+- **`SchemaRequiredError`**: New error class raised when schema enforcement is enabled and a
+  schema is missing.
+- **Response assertion matchers**: `be_service_success`, `be_service_failure(ErrorClass)`, and
+  `be_guard_failure(code)` RSpec matchers with `.with_message` chaining for concise response
+  assertions.
+- **`have_schema` matcher**: RSpec matcher for asserting schema presence on services
+  (`:arguments`, `:result`, `:failure`) and event handlers (`:payload`).
+- **Response builder test helpers**: `servus_success_response(data)` and
+  `servus_failure_response(message, data:, type:)` in `ExampleBuilders` for building mock
+  responses without calling the constructor directly.
+- **Guard failure logging**: Guard failures are now logged at `warn` level with the error message.
+- **Event emission logging**: Event emissions are logged at `info` level with the event name and payload.
+- **`Bus.subscribe_all`**: Subscribe to all Servus event emissions with a clean API. Yields
+  `event_name` and `payload` as positional args, plus `started_at:`, `finished_at:`, and `id:`
+  as keyword args.
+- **`config.tests_dir`**: Configurable directory for generator spec output (default: `"spec"`).
 
 ## [0.3.0] - 2026-04-03
 
