@@ -42,6 +42,7 @@ export default defineConfig({
           { text: 'Service Objects', link: '/core/service-objects' },
           { text: 'Call Chain', link: '/core/call-chain' },
           { text: 'Responses', link: '/core/responses' },
+          { text: 'Composition', link: '/core/composition' },
         ],
       },
       {
