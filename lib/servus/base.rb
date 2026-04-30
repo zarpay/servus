@@ -48,6 +48,7 @@ module Servus
   class Base
     include Servus::Support::Errors
     include Servus::Support::Rescuer
+    include Servus::Support::Lockdown
     include Servus::Events::Emitter
     include Servus::Guards
 
@@ -196,7 +197,7 @@ module Servus
 
         # Wrap execution in catch block to handle guard failures
         result = catch(:guard_failure) do
-          benchmark(**args) { instance.call }
+          benchmark(**args) { instance.send(:call) }
         end
 
         # If result is a GuardError, a guard failed - wrap in failure Response

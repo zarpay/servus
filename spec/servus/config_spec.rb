@@ -46,4 +46,25 @@ RSpec.describe Servus::Config do
 
     after { Servus.config.include_default_guards = default_value }
   end
+
+  describe '#lockdown_enabled' do
+    # spec_helper disables lockdown so internal specs can instantiate
+    # anonymous Servus::Base subclasses directly. Restore that after each
+    # example so this suite doesn't leak state into other specs.
+    after { Servus.config.lockdown_enabled = false }
+
+    it 'toggles the public/private visibility of Servus::Base.new' do
+      Servus.config.lockdown_enabled = true
+      expect(Servus::Base.singleton_class.private_method_defined?(:new)).to be true
+
+      Servus.config.lockdown_enabled = false
+      expect(Servus::Base.singleton_class.public_method_defined?(:new)).to be true
+    end
+
+    it 'can be re-enabled after being disabled' do
+      Servus.config.lockdown_enabled = false
+      Servus.config.lockdown_enabled = true
+      expect(Servus.config.lockdown_enabled).to be true
+    end
+  end
 end
