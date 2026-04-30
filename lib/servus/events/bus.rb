@@ -91,6 +91,35 @@ module Servus
           ActiveSupport::Notifications.instrument(notification_name(event_name), payload)
         end
 
+        # Subscribes to all Servus event emissions.
+        #
+        # Yields the clean event name and payload as positional args, plus
+        # +started_at+, +finished_at+, and +id+ as keyword args.
+        # Returns the subscription for manual unsubscribe.
+        #
+        # @yield [event_name, payload, started_at:, finished_at:, id:]
+        # @yieldparam event_name [Symbol] the event name
+        # @yieldparam payload [Hash] the event payload
+        # @yieldparam started_at [Time] when the event was emitted
+        # @yieldparam finished_at [Time] when the instrumented block completed
+        # @yieldparam id [String] unique notification ID
+        # @return [Object] the ActiveSupport::Notifications subscription
+        #
+        # @example Forward all events to an external system
+        #   Servus::Events::Bus.subscribe_all do |event_name, payload, started_at:, **|
+        #     EventusForwardJob.perform_later(
+        #       event: event_name.to_s,
+        #       payload: payload.as_json,
+        #       occurred_at: started_at.utc.iso8601(6)
+        #     )
+        #   end
+        def subscribe_all(&block)
+          ActiveSupport::Notifications.subscribe(/^servus\.events\./) do |name, started, finished, id, payload|
+            event_name = name.delete_prefix('servus.events.').to_sym
+            block.call(event_name, payload, started_at: started, finished_at: finished, id: id)
+          end
+        end
+
         # Clears all registered handlers and unsubscribes from notifications.
         #
         # Useful for testing and development mode reloading.
