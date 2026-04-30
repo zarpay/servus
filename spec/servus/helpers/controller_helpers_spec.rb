@@ -72,6 +72,47 @@ RSpec.describe Servus::Helpers::ControllerHelpers do
     end
   end
 
+  describe '#run_service!' do
+    let(:error) do
+      klass = Class.new(Servus::Support::Errors::ServiceError) do
+        def self.name = 'TestServiceError'
+      end
+      klass.new('nope')
+    end
+
+    let(:raising_service) do
+      failing_error = error
+      Class.new do
+        define_singleton_method(:call) do |**_args|
+          Servus::Support::Response.new(false, nil, failing_error)
+        end
+      end
+    end
+
+    it 'returns the data on success' do
+      data = controller.run_service!(fake_service_success)
+      expect(data[:hello]).to eq('world')
+    end
+
+    it "raises the failure's error on failure" do
+      expect { controller.run_service!(raising_service) }
+        .to raise_error(Servus::Support::Errors::ServiceError, /nope/)
+    end
+
+    it 'forwards keyword arguments to the service' do
+      captured = nil
+      capturing_service = Class.new do
+        define_singleton_method(:call) do |**args|
+          captured = args
+          Servus::Support::Response.new(true, { ok: true }, nil)
+        end
+      end
+
+      controller.run_service!(capturing_service, foo: 1, bar: 2)
+      expect(captured).to eq(foo: 1, bar: 2)
+    end
+  end
+
   describe '#render_service_error' do
     it 'renders error with http_status and api_error body' do
       controller.render_service_error(error_class.new)
