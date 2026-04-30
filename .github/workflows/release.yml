@@ -1,0 +1,40 @@
+name: Publish Gem
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+defaults:
+  run:
+    working-directory: gem
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: release
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          working-directory: gem
+          bundler-cache: true
+
+      - name: Verify test suite
+        run: bundle exec rspec
+
+      - name: Publish gem to RubyGems.org
+        uses: rubygems/release-gem@v1
+        with:
+          working-directory: gem
