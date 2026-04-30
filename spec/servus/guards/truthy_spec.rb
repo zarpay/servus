@@ -15,28 +15,28 @@ RSpec.describe Servus::Guards::TruthyGuard do
         object = test_class.new(active: true)
         guard = described_class.new(on: object, check: :active)
 
-        expect(guard.test(on: object, check: :active)).to be true
+        expect(guard.test).to be true
       end
 
       it 'fails when attribute is false' do
         object = test_class.new(active: false)
         guard = described_class.new(on: object, check: :active)
 
-        expect(guard.test(on: object, check: :active)).to be false
+        expect(guard.test).to be false
       end
 
       it 'fails when attribute is nil' do
         object = test_class.new(active: nil)
         guard = described_class.new(on: object, check: :active)
 
-        expect(guard.test(on: object, check: :active)).to be false
+        expect(guard.test).to be false
       end
 
       it 'passes when attribute is a truthy value' do
         object = test_class.new(active: 'yes')
         guard = described_class.new(on: object, check: :active)
 
-        expect(guard.test(on: object, check: :active)).to be true
+        expect(guard.test).to be true
       end
     end
 
@@ -45,21 +45,21 @@ RSpec.describe Servus::Guards::TruthyGuard do
         object = test_class.new(active: true, verified: true, confirmed: true)
         guard = described_class.new(on: object, check: %i[active verified confirmed])
 
-        expect(guard.test(on: object, check: %i[active verified confirmed])).to be true
+        expect(guard.test).to be true
       end
 
       it 'fails when any attribute is falsey' do
         object = test_class.new(active: true, verified: false, confirmed: true)
         guard = described_class.new(on: object, check: %i[active verified confirmed])
 
-        expect(guard.test(on: object, check: %i[active verified confirmed])).to be false
+        expect(guard.test).to be false
       end
 
       it 'fails when first attribute is falsey' do
         object = test_class.new(active: false, verified: true, confirmed: true)
         guard = described_class.new(on: object, check: %i[active verified confirmed])
 
-        expect(guard.test(on: object, check: %i[active verified confirmed])).to be false
+        expect(guard.test).to be false
       end
     end
   end

@@ -55,7 +55,7 @@ A guard inherits from `Servus::Guard` and defines its behavior with a small DSL:
 
 | Method | Purpose |
 | --- | --- |
-| `test` | **Required.** Must return `true` (guard passes) or `false` (guard fails). Accepts the same keyword arguments that callers pass to `enforce_*!` |
+| `test` | **Required.** Zero-argument method that must return `true` (guard passes) or `false` (guard fails). Reads call arguments off the instance — they're stored as `@kwargs` and exposed as methods via `method_missing` |
 | `http_status` | HTTP status code returned in the failure response (default: 422) |
 | `error_code` | Machine-readable error code for API clients (default: `'validation_failed'`) |
 | `message` | Human-readable error message, with optional `%<key>s` interpolation via a block |
@@ -121,7 +121,7 @@ class EligibleTransferGuard < Servus::Guard
     { reason: find_reason }
   end
 
-  def test(from:, to:, amount:)
+  def test
     from.open? &&
     to.open? &&
     !from.frozen? &&
@@ -132,10 +132,6 @@ class EligibleTransferGuard < Servus::Guard
   private
 
   def find_reason
-    from = kwargs[:from]
-    to = kwargs[:to]
-    amount = kwargs[:amount]
-
     return "Sender account must be open" unless from.open?
     return "Receiver account must be open" unless to.open?
     return "Sender account is frozen" if from.frozen?

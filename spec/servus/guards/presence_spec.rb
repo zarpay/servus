@@ -7,94 +7,78 @@ RSpec.describe Servus::Guards::PresenceGuard do
     context 'with all present values' do
       it 'returns true for non-nil values' do
         guard = described_class.new(user: 'user123', account: 'account456')
-        expect(guard.test(user: 'user123', account: 'account456')).to be true
+        expect(guard.test).to be true
       end
 
       it 'returns true for non-empty strings' do
         guard = described_class.new(email: 'test@example.com')
-        expect(guard.test(email: 'test@example.com')).to be true
+        expect(guard.test).to be true
       end
 
       it 'returns true for non-empty arrays' do
         guard = described_class.new(items: [1, 2, 3])
-        expect(guard.test(items: [1, 2, 3])).to be true
+        expect(guard.test).to be true
       end
 
       it 'returns true for non-empty hashes' do
         guard = described_class.new(data: { key: 'value' })
-        expect(guard.test(data: { key: 'value' })).to be true
+        expect(guard.test).to be true
       end
 
       it 'returns true for numeric values including zero' do
         guard = described_class.new(amount: 0)
-        expect(guard.test(amount: 0)).to be true
+        expect(guard.test).to be true
       end
 
       it 'returns true for false boolean' do
         guard = described_class.new(flag: false)
-        expect(guard.test(flag: false)).to be true
+        expect(guard.test).to be true
       end
     end
 
     context 'with nil values' do
       it 'returns false for nil' do
         guard = described_class.new(user: nil)
-        expect(guard.test(user: nil)).to be false
+        expect(guard.test).to be false
       end
 
       it 'returns false when any value is nil' do
         guard = described_class.new(user: 'user123', account: nil)
-        expect(guard.test(user: 'user123', account: nil)).to be false
+        expect(guard.test).to be false
       end
     end
 
     context 'with empty values' do
       it 'returns false for empty string' do
         guard = described_class.new(email: '')
-        expect(guard.test(email: '')).to be false
+        expect(guard.test).to be false
       end
 
       it 'returns false for empty array' do
         guard = described_class.new(items: [])
-        expect(guard.test(items: [])).to be false
+        expect(guard.test).to be false
       end
 
       it 'returns false for empty hash' do
         guard = described_class.new(data: {})
-        expect(guard.test(data: {})).to be false
+        expect(guard.test).to be false
       end
 
       it 'returns false when any value is empty' do
         guard = described_class.new(user: 'user123', email: '')
-        expect(guard.test(user: 'user123', email: '')).to be false
+        expect(guard.test).to be false
       end
     end
 
     context 'with multiple values' do
       it 'returns true when all values are present' do
-        guard = described_class.new(
-          user: 'user123',
-          account: 'account456',
-          device: 'device789'
-        )
-        expect(guard.test(
-                 user: 'user123',
-                 account: 'account456',
-                 device: 'device789'
-               )).to be true
+        guard = described_class.new(user: 'user123', account: 'account456', device: 'device789')
+        expect(guard.test).to be true
       end
 
       it 'returns false when any value is missing' do
-        guard = described_class.new(
-          user: 'user123',
-          account: nil,
-          device: 'device789'
-        )
-        expect(guard.test(
-                 user: 'user123',
-                 account: nil,
-                 device: 'device789'
-               )).to be false
+        guard = described_class.new(user: 'user123', account: nil, device: 'device789')
+        expect(guard.test).to be false
       end
     end
   end
