@@ -15,28 +15,28 @@ RSpec.describe Servus::Guards::StateGuard do
         object = test_class.new(status: :pending)
         guard = described_class.new(on: object, check: :status, is: :pending)
 
-        expect(guard.test(on: object, check: :status, is: :pending)).to be true
+        expect(guard.test).to be true
       end
 
       it 'fails when attribute does not match expected value' do
         object = test_class.new(status: :shipped)
         guard = described_class.new(on: object, check: :status, is: :pending)
 
-        expect(guard.test(on: object, check: :status, is: :pending)).to be false
+        expect(guard.test).to be false
       end
 
       it 'passes with string values' do
         object = test_class.new(status: 'active')
         guard = described_class.new(on: object, check: :status, is: 'active')
 
-        expect(guard.test(on: object, check: :status, is: 'active')).to be true
+        expect(guard.test).to be true
       end
 
       it 'fails when symbol does not match string' do
         object = test_class.new(status: :active)
         guard = described_class.new(on: object, check: :status, is: 'active')
 
-        expect(guard.test(on: object, check: :status, is: 'active')).to be false
+        expect(guard.test).to be false
       end
     end
 
@@ -45,21 +45,21 @@ RSpec.describe Servus::Guards::StateGuard do
         object = test_class.new(status: :trial)
         guard = described_class.new(on: object, check: :status, is: %i[active trial])
 
-        expect(guard.test(on: object, check: :status, is: %i[active trial])).to be true
+        expect(guard.test).to be true
       end
 
       it 'passes when attribute matches first expected value' do
         object = test_class.new(status: :active)
         guard = described_class.new(on: object, check: :status, is: %i[active trial])
 
-        expect(guard.test(on: object, check: :status, is: %i[active trial])).to be true
+        expect(guard.test).to be true
       end
 
       it 'fails when attribute matches none of expected values' do
         object = test_class.new(status: :suspended)
         guard = described_class.new(on: object, check: :status, is: %i[active trial])
 
-        expect(guard.test(on: object, check: :status, is: %i[active trial])).to be false
+        expect(guard.test).to be false
       end
     end
   end

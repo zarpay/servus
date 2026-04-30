@@ -224,8 +224,8 @@ class EligibleTransferGuard < Servus::Guard
     message_data
   end
 
-  def test(**kwargs)
-    # TODO: Implement validation logic
+  def test
+    # TODO: Implement validation logic — read args via method_missing (e.g., `account`, `amount`)
     true
   end
 
@@ -292,6 +292,7 @@ Servus.configure do |config|
   config.schemas_dir  = "app/schemas"   # default: "app/schemas"
   config.events_dir   = "app/events"    # default: "app/events"
   config.guards_dir   = "app/guards"    # default: "app/guards"
+  config.tests_dir    = "spec"          # default: "spec"
 end
 ```
 

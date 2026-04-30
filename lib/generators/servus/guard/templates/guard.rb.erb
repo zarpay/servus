@@ -34,14 +34,16 @@ class <%= guard_class_name %> < Servus::Guard
 
   # Tests whether the <%= file_name.humanize.downcase %> condition is met.
   #
-  # @param kwargs [Hash] the arguments to validate
+  # Arguments passed to `enforce_*!` / `check_*?` are stored as `@kwargs`
+  # and exposed via `method_missing`, so read them directly off the instance.
+  #
   # @return [Boolean] true if validation passes
-  def test(**kwargs)
+  def test
     # TODO: Implement validation logic
     # Return true if the condition is met, false otherwise
     #
     # Example:
-    #   def test(account:, amount:)
+    #   def test
     #     account.balance >= amount
     #   end
     true

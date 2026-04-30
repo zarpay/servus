@@ -19,7 +19,7 @@ module Servus
   #       }
   #     end
   #
-  #     def test(account:, amount:)
+  #     def test
   #       account.balance >= amount
   #     end
   #   end
@@ -52,7 +52,7 @@ module Servus
       #   Servus::Guard.execute!(EnsurePositive, amount: -10) # throws :guard_failure
       def execute!(guard_class, **)
         guard = guard_class.new(**)
-        return if guard.test(**)
+        return if guard.test
 
         throw(:guard_failure, guard.error)
       end
@@ -69,7 +69,7 @@ module Servus
       #   Servus::Guard.execute?(EnsurePositive, amount: 100) # => true
       #   Servus::Guard.execute?(EnsurePositive, amount: -10) # => false
       def execute?(guard_class, **)
-        guard_class.new(**).test(**)
+        guard_class.new(**).test
       end
 
       # Declares the HTTP status code for API responses.
@@ -218,14 +218,15 @@ module Servus
 
     # Tests whether the guard passes.
     #
-    # Subclasses must implement this method with explicit keyword arguments
-    # that define the guard's contract.
+    # Subclasses must implement this zero-argument method. Arguments passed
+    # to `new` are stored as `@kwargs` and exposed via `method_missing`, so
+    # `test` reads them directly off the instance.
     #
     # @return [Boolean] true if the guard passes, false otherwise
     # @raise [NotImplementedError] if not implemented by subclass
     #
     # @example
-    #   def test(account:, amount:)
+    #   def test
     #     account.balance >= amount
     #   end
     def test

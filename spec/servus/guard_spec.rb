@@ -72,7 +72,7 @@ RSpec.describe Servus::Guard do
   describe '.inherited' do
     it 'defines bang method on Servus::Guards when class has a name' do
       guard_class = Class.new(described_class) do
-        def test(**) = true
+        def test = true
       end
       stub_const('SufficientBalance', guard_class)
 
@@ -84,7 +84,7 @@ RSpec.describe Servus::Guard do
 
     it 'defines predicate method on Servus::Guards when class has a name' do
       guard_class = Class.new(described_class) do
-        def test(**) = true
+        def test = true
       end
       stub_const('ValidAmount', guard_class)
 
@@ -120,18 +120,15 @@ RSpec.describe Servus::Guard do
       expect { guard.test }.to raise_error(NotImplementedError, /must implement #test/)
     end
 
-    it 'can be overridden with explicit parameters' do
+    it 'can be overridden to read from instance kwargs' do
       guard_class = Class.new(described_class) do
-        def test(amount:)
+        def test
           amount > 0
         end
       end
 
-      guard = guard_class.new(amount: 100)
-      expect(guard.test(amount: 100)).to be true
-
-      guard = guard_class.new(amount: -10)
-      expect(guard.test(amount: -10)).to be false
+      expect(guard_class.new(amount: 100).test).to be true
+      expect(guard_class.new(amount: -10).test).to be false
     end
   end
 
@@ -159,7 +156,7 @@ RSpec.describe Servus::Guard do
             }
           end
 
-          def test(account:, amount:)
+          def test
             account.balance >= amount
           end
         end
@@ -236,16 +233,11 @@ RSpec.describe Servus::Guard do
         guard_class = Class.new(described_class) do
           message -> { "Dynamic: #{limit_type}" }
 
-          def test(limit_type:)
-            @limit_type = limit_type
-            true
-          end
-
-          attr_reader :limit_type
+          def test = true
         end
 
         guard = guard_class.new(limit_type: 'daily')
-        guard.test(limit_type: 'daily')
+        guard.test
         expect(guard.message).to eq('Dynamic: daily')
       end
     end
@@ -287,6 +279,35 @@ RSpec.describe Servus::Guard do
     end
   end
 
+  describe '.execute! and .execute? with zero-arg test (issue #23)' do
+    let(:guard_class) do
+      Class.new(described_class) do
+        error_code 'too_small'
+        message 'Amount too small'
+
+        def test
+          amount > 0
+        end
+      end
+    end
+
+    it 'invokes #test without re-passing kwargs through .execute!' do
+      catch(:guard_failure) do
+        expect(described_class.execute!(guard_class, amount: 100)).to be_nil
+      end
+    end
+
+    it 'throws :guard_failure when zero-arg #test returns false' do
+      thrown = catch(:guard_failure) { described_class.execute!(guard_class, amount: -1) }
+      expect(thrown).to be_a(Servus::Support::Errors::GuardError)
+    end
+
+    it 'invokes #test without re-passing kwargs through .execute?' do
+      expect(described_class.execute?(guard_class, amount: 100)).to be true
+      expect(described_class.execute?(guard_class, amount: -1)).to be false
+    end
+  end
+
   describe 'complete guard example' do
     it 'works end-to-end with all features' do
       account_double = double(balance: 100)
@@ -302,18 +323,18 @@ RSpec.describe Servus::Guard do
           }
         end
 
-        def test(account:, amount:)
+        def test
           account.balance >= amount
         end
       end
 
       # Test passing case
       guard = guard_class.new(account: account_double, amount: 50)
-      expect(guard.test(account: account_double, amount: 50)).to be true
+      expect(guard.test).to be true
 
       # Test failing case
       guard = guard_class.new(account: account_double, amount: 150)
-      expect(guard.test(account: account_double, amount: 150)).to be false
+      expect(guard.test).to be false
       expect(guard.message).to eq('Insufficient balance: need 150, have 100')
 
       # Test error generation

@@ -24,12 +24,11 @@ module Servus
 
       # Tests whether the attribute matches the expected value(s).
       #
-      # @param on [Object] the object to check
-      # @param check [Symbol] the attribute to verify
-      # @param is [Object, Array] expected value(s) - passes if attribute matches any
+      # Reads `on`, `check`, and `is` from the kwargs stored at initialization.
+      #
       # @return [Boolean] true if attribute matches expected value(s)
-      def test(on:, check:, is:) # rubocop:disable Naming/MethodParameterName
-        Array(is).include?(on.public_send(check))
+      def test
+        Array(kwargs[:is]).include?(on.public_send(check))
       end
 
       private

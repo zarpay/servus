@@ -70,7 +70,7 @@ The generated guard includes `http_status`, `error_code`, `message`, and a place
 
 ## Configuration
 
-All generators respect the directory settings in `Servus.configure`. If you've changed `schemas_dir`, `events_dir`, or `guards_dir`, the generated file paths follow those settings:
+All generators respect the directory settings in `Servus.configure`. If you've changed `schemas_dir`, `events_dir`, `guards_dir`, or `tests_dir`, the generated file paths follow those settings:
 
 ```ruby
 # config/initializers/servus.rb
@@ -79,6 +79,7 @@ Servus.configure do |config|
   config.events_dir   = "app/event_handlers" # default: "app/events"
   config.guards_dir   = "lib/guards"         # default: "app/guards"
   config.services_dir = "app/services"       # default: "app/services"
+  config.tests_dir    = "test"               # default: "spec"
 end
 ```
 

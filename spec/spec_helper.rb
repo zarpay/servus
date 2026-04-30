@@ -4,6 +4,13 @@ require 'servus'
 require 'servus/testing'
 require 'spec_support/active_job_loader'
 
+# Internal tests sometimes instantiate anonymous Servus::Base subclasses to
+# exercise instance-level behavior (guards, lazy resolvers) in isolation.
+# Production code blocks `.new` and privatizes `#call`; disable the lockdown
+# for the test suite. The lockdown itself is verified by
+# spec/servus/base_lockdown_spec.rb, which re-enables it within its own scope.
+Servus.config.lockdown_enabled = false
+
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
   config.example_status_persistence_file_path = '.rspec_status'

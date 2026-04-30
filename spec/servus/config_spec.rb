@@ -32,6 +32,21 @@ RSpec.describe Servus::Config do
     after { Servus.config.guards_dir = default_dir }
   end
 
+  describe '#tests_dir' do
+    let(:default_dir) { 'spec' }
+
+    it 'defaults to spec' do
+      expect(Servus.config.tests_dir).to eq(default_dir)
+    end
+
+    it 'can be customized' do
+      Servus.config.tests_dir = 'test'
+      expect(Servus.config.tests_dir).to eq('test')
+    end
+
+    after { Servus.config.tests_dir = default_dir }
+  end
+
   describe '#include_default_guards' do
     let(:default_value) { true }
 
@@ -84,5 +99,23 @@ RSpec.describe Servus::Config do
     end
 
     after { Servus.config.require_event_payload_schema = false }
+  end
+
+  describe '#lockdown_enabled' do
+    after { Servus.config.lockdown_enabled = false }
+
+    it 'toggles the public/private visibility of Servus::Base.new' do
+      Servus.config.lockdown_enabled = true
+      expect(Servus::Base.singleton_class.private_method_defined?(:new)).to be true
+
+      Servus.config.lockdown_enabled = false
+      expect(Servus::Base.singleton_class.public_method_defined?(:new)).to be true
+    end
+
+    it 'can be re-enabled after being disabled' do
+      Servus.config.lockdown_enabled = false
+      Servus.config.lockdown_enabled = true
+      expect(Servus.config.lockdown_enabled).to be true
+    end
   end
 end

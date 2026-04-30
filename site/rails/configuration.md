@@ -15,6 +15,7 @@ Servus.configure do |config|
   config.schemas_dir  = "app/schemas"   # default: "app/schemas"
   config.events_dir   = "app/events"    # default: "app/events"
   config.guards_dir   = "app/guards"    # default: "app/guards"
+  config.tests_dir    = "spec"          # default: "spec"
 
   # ── Event Validation ────────────────────────────────────────────────
   # When true, Servus.validate_all_handlers! raises OrphanedHandlerError
@@ -41,4 +42,4 @@ Servus.configure do |config|
 end
 ```
 
-All nine options are `attr_accessor` — read them with `Servus.config.schemas_dir` and write them in the `configure` block.
+All ten options are `attr_accessor` — read them with `Servus.config.schemas_dir` and write them in the `configure` block.
