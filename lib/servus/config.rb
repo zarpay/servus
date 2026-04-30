@@ -51,6 +51,15 @@ module Servus
     # @return [String] the guards directory path
     attr_accessor :guards_dir
 
+    # The directory where generated spec/test files are placed.
+    #
+    # Defaults to `"spec"`. Projects using Minitest or a custom test layout
+    # can override this (e.g., `"test"`) so generators write files into the
+    # correct location.
+    #
+    # @return [String] the tests directory path
+    attr_accessor :tests_dir
+
     # Whether to include the default built-in guards (EnsurePresent, EnsurePositive).
     #
     # @return [Boolean] true to include default guards, false to exclude them
@@ -90,6 +99,7 @@ module Servus
       @events_dir   = 'app/events'
       @schemas_dir  = 'app/schemas'
       @services_dir = 'app/services'
+      @tests_dir    = 'spec'
 
       @strict_event_validation = true
       @include_default_guards  = true
