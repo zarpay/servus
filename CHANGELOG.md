@@ -1,4 +1,13 @@
-## [Unreleased]
+## [0.4.0] - 2026-04-30
+
+### Breaking Changes
+
+- **`Guard#test` is now zero-arg**: Subclasses of `Servus::Guard` must define `test` without arguments,
+  reading call arguments via `method_missing` on the instance (e.g., `amount` rather than receiving
+  `amount:` as a kwarg). Previously, `execute!` passed the same kwargs to both `new` and `test`, which
+  was redundant since `initialize` already stores them as `@kwargs`. Guards with `def test(**)` or
+  `def test(foo:)` signatures must be updated — the scaffold generator and built-in guards
+  (`Presence`, `Truthy`, `Falsey`, `State`) have all been updated to the new pattern.
 
 ### Added
 
@@ -16,7 +25,7 @@
 - **Failure responses can now carry data**: `failure()` accepts an optional `data:` kwarg. Previously,
   `result.data` was guaranteed to be `nil` on failure. Code that checks `result.data` for truthiness
   to determine success/failure must switch to `result.success?` or `result.failure?`.
-  See the [Migration Guide](docs/guides/2_migration_guide.md#migrating-to-030) for details.
+  See the [Failure response docs](site/core/responses.md) for details.
 - **`Response#with_data` removed**: Replaced by the `data:` kwarg on `failure()`. The `with_data` method
   allowed arbitrary mutation of responses after creation, bypassing schema validation.
 
