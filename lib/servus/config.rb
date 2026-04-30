@@ -120,19 +120,21 @@ module Servus
     #
     # @api private
     def initialize
+      set_default_directories
+      @strict_event_validation          = true
+      @include_default_guards           = true
+      @lockdown_enabled                 = true
+      @require_service_arguments_schema = false
+      @require_service_result_schema    = false
+      @require_event_payload_schema     = false
+    end
+
+    def set_default_directories
       @guards_dir   = 'app/guards'
       @events_dir   = 'app/events'
       @schemas_dir  = 'app/schemas'
       @services_dir = 'app/services'
       @tests_dir    = 'spec'
-
-      @strict_event_validation = true
-      @include_default_guards  = true
-      @lockdown_enabled        = true
-
-      @require_service_arguments_schema = false
-      @require_service_result_schema    = false
-      @require_event_payload_schema     = false
     end
 
     # Returns the full path to a service's schema file.
