@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    servus (0.3.0)
+    servus (0.4.0)
       active_model_serializers (~> 0.10.0)
       activesupport (>= 8.0)
       json-schema (~> 5)
