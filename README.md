@@ -11,6 +11,10 @@ A disciplined service-object pattern for Ruby and Rails.
 
 Most mature Rails apps grow a `services/` directory. Servus gives each service the same shape — one entrypoint, one response object, and opt-in layers for validation, guards, events, and async.
 
+## Documentation
+
+Full documentation at **[zarpay.github.io/servus](https://zarpay.github.io/servus)**
+
 ## Quick Start
 
 Add to your Gemfile:
@@ -70,10 +74,6 @@ result.data.transferred  # => 50
 result.data.from_balance # => 950
 result.data.to_balance   # => 550
 ```
-
-## Documentation
-
-Full documentation at **[zarpay.github.io/servus](https://zarpay.github.io/servus)**
 
 ## Features
 
