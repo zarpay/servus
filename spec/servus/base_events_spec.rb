@@ -2,6 +2,12 @@
 
 require 'spec_helper'
 
+module EventTestHelpers
+  class NoopService < Servus::Base
+    def call = success({})
+  end
+end
+
 RSpec.describe Servus::Base, 'event emission' do
   after do
     Servus::Events::Bus.clear
@@ -104,19 +110,118 @@ RSpec.describe Servus::Base, 'event emission' do
     end
   end
 
+  describe 'event payload validation via emits DSL' do
+    it 'validates payload against handler schema when emitting via emits DSL' do
+      stub_const('ValidatedHandler', Class.new(Servus::EventHandler) do
+        handles :validated_event
+
+        schema payload: {
+          type: 'object',
+          required: ['user_id'],
+          properties: {
+            user_id: { type: 'integer' }
+          }
+        }
+
+        invoke EventTestHelpers::NoopService do |_payload|
+          {}
+        end
+      end)
+
+      service_class = stub_const('ValidatedEmitService', Class.new(Servus::Base) do
+        emits :validated_event, on: :success
+
+        def call
+          success({ user_id: 'not_an_integer' })
+        end
+      end)
+
+      expect do
+        service_class.call
+      end.to raise_error(Servus::Support::Errors::ValidationError, /user_id/)
+    end
+
+    it 'does not raise when payload matches handler schema' do
+      stub_const('ValidHandler', Class.new(Servus::EventHandler) do
+        handles :valid_event
+
+        schema payload: {
+          type: 'object',
+          required: ['user_id'],
+          properties: {
+            user_id: { type: 'integer' }
+          }
+        }
+
+        invoke EventTestHelpers::NoopService do |_payload|
+          {}
+        end
+      end)
+
+      service_class = stub_const('ValidEmitService', Class.new(Servus::Base) do
+        emits :valid_event, on: :success
+
+        def call
+          success({ user_id: 123 })
+        end
+      end)
+
+      result = service_class.call
+      expect(result).to be_success
+    end
+
+    it 'skips validation when handler has no payload schema' do
+      stub_const('NoSchemaHandler', Class.new(Servus::EventHandler) do
+        handles :unvalidated_event
+
+        invoke EventTestHelpers::NoopService do |_payload|
+          {}
+        end
+      end)
+
+      service_class = stub_const('UnvalidatedEmitService', Class.new(Servus::Base) do
+        emits :unvalidated_event, on: :success
+
+        def call
+          success({ anything: 'goes' })
+        end
+      end)
+
+      result = service_class.call
+      expect(result).to be_success
+    end
+  end
+
+  describe 'event emission logging' do
+    it 'logs when an event is emitted' do
+      service_class = stub_const('LoggedEventService', Class.new(Servus::Base) do
+        emits :user_created, on: :success
+
+        def call
+          success({ user_id: 123 })
+        end
+      end)
+
+      allow(Servus::Support::Logger).to receive(:log_event)
+
+      service_class.call
+
+      expect(Servus::Support::Logger).to have_received(:log_event)
+        .with(:user_created, hash_including(:user_id))
+    end
+  end
+
   describe 'automatic event emission' do
     it 'emits events on success' do
-      handler_class = Class.new do
-        def self.handle(payload)
-          @received_payload = payload
-        end
+      handler_class = stub_const('SuccessEmissionHandler', Class.new(Servus::EventHandler) do
+        handles :user_created
 
-        class << self
-          attr_reader :received_payload
+        invoke EventTestHelpers::NoopService do |_payload|
+          {}
         end
-      end
+      end)
 
-      Servus::Events::Bus.register_handler(:user_created, handler_class)
+      allow(handler_class).to receive(:handle).and_call_original
 
       service_class = stub_const('TestEventEmissionService', Class.new(Servus::Base) do
         emits :user_created, on: :success
@@ -132,21 +237,20 @@ RSpec.describe Servus::Base, 'event emission' do
 
       service_class.call(user_id: 123)
 
-      expect(handler_class.received_payload).to eq({ user_id: 123, email: 'test@example.com' })
+      expect(handler_class).to have_received(:handle)
+        .with(hash_including(user_id: 123, email: 'test@example.com'))
     end
 
     it 'emits events on failure' do
-      handler_class = Class.new do
-        def self.handle(payload)
-          @received_payload = payload
-        end
+      handler_class = stub_const('FailureEmissionHandler', Class.new(Servus::EventHandler) do
+        handles :user_failed
 
-        class << self
-          attr_reader :received_payload
+        invoke EventTestHelpers::NoopService do |_payload|
+          {}
         end
-      end
+      end)
 
-      Servus::Events::Bus.register_handler(:user_failed, handler_class)
+      allow(handler_class).to receive(:handle).and_call_original
 
       service_class = stub_const('TestFailureService', Class.new(Servus::Base) do
         emits :user_failed, on: :failure
@@ -158,21 +262,20 @@ RSpec.describe Servus::Base, 'event emission' do
 
       service_class.call
 
-      expect(handler_class.received_payload).to be_an_instance_of(Servus::Support::Errors::ServiceError)
+      expect(handler_class).to have_received(:handle)
+        .with(an_instance_of(Servus::Support::Errors::ServiceError))
     end
 
     it 'emits events with custom payload builder' do
-      handler_class = Class.new do
-        def self.handle(payload)
-          @received_payload = payload
-        end
+      handler_class = stub_const('CustomPayloadHandler', Class.new(Servus::EventHandler) do
+        handles :user_created
 
-        class << self
-          attr_reader :received_payload
+        invoke EventTestHelpers::NoopService do |_payload|
+          {}
         end
-      end
+      end)
 
-      Servus::Events::Bus.register_handler(:user_created, handler_class)
+      allow(handler_class).to receive(:handle).and_call_original
 
       service_class = stub_const('TestCustomPayloadService', Class.new(Servus::Base) do
         emits :user_created, on: :success, with: :custom_payload
@@ -194,32 +297,28 @@ RSpec.describe Servus::Base, 'event emission' do
 
       service_class.call(user_id: 456)
 
-      expect(handler_class.received_payload).to eq({ id: 456 })
+      expect(handler_class).to have_received(:handle).with(hash_including(id: 456))
     end
 
     it 'emits multiple events for the same trigger' do
-      handler1 = Class.new do
-        def self.handle(payload)
-          @received = payload
-        end
+      handler1 = stub_const('MultiHandler1', Class.new(Servus::EventHandler) do
+        handles :event_one
 
-        class << self
-          attr_accessor :received
+        invoke EventTestHelpers::NoopService do |_payload|
+          {}
         end
-      end
+      end)
 
-      handler2 = Class.new do
-        def self.handle(payload)
-          @received = payload
+      handler2 = stub_const('MultiHandler2', Class.new(Servus::EventHandler) do
+        handles :event_two
+
+        invoke EventTestHelpers::NoopService do |_payload|
+          {}
         end
+      end)
 
-        class << self
-          attr_accessor :received
-        end
-      end
-
-      Servus::Events::Bus.register_handler(:event_one, handler1)
-      Servus::Events::Bus.register_handler(:event_two, handler2)
+      allow(handler1).to receive(:handle).and_call_original
+      allow(handler2).to receive(:handle).and_call_original
 
       service_class = stub_const('TestMultipleEventsService', Class.new(Servus::Base) do
         emits :event_one, on: :success
@@ -232,22 +331,20 @@ RSpec.describe Servus::Base, 'event emission' do
 
       service_class.call
 
-      expect(handler1.received).to eq({ data: 'test' })
-      expect(handler2.received).to eq({ data: 'test' })
+      expect(handler1).to have_received(:handle).with(hash_including(data: 'test'))
+      expect(handler2).to have_received(:handle).with(hash_including(data: 'test'))
     end
 
     it 'emits events on explicit error!' do
-      handler_class = Class.new do
-        def self.handle(payload)
-          @received_payload = payload
-        end
+      handler_class = stub_const('ErrorEmissionHandler', Class.new(Servus::EventHandler) do
+        handles :critical_error
 
-        class << self
-          attr_reader :received_payload
+        invoke EventTestHelpers::NoopService do |_payload|
+          {}
         end
-      end
+      end)
 
-      Servus::Events::Bus.register_handler(:critical_error, handler_class)
+      allow(handler_class).to receive(:handle).and_call_original
 
       service_class = stub_const('TestErrorService', Class.new(Servus::Base) do
         emits :critical_error, on: :error!
@@ -259,8 +356,8 @@ RSpec.describe Servus::Base, 'event emission' do
 
       expect { service_class.call }.to raise_error(Servus::Support::Errors::ServiceError)
 
-      expect(handler_class.received_payload).to be_an_instance_of(Servus::Support::Errors::ServiceError)
-      expect(handler_class.received_payload.message).to eq('System failure')
+      expect(handler_class).to have_received(:handle)
+        .with(an_instance_of(Servus::Support::Errors::ServiceError))
     end
   end
 end

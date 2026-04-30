@@ -127,12 +127,27 @@ module Servus
       def emit_events_for(trigger, result)
         self.class.emissions_for(trigger).each do |emission|
           payload = build_event_payload(emission, result)
+          validate_event_payload!(emission[:event_name], payload)
+          Servus::Support::Logger.log_event(emission[:event_name], payload)
           Servus::Events::Bus.emit(emission[:event_name], payload)
         end
       end
 
       # Instance methods for emitting events during service execution
       private
+
+      # Validates the payload against all handler schemas registered for the event.
+      #
+      # @param event_name [Symbol] the event name
+      # @param payload [Hash] the event payload
+      # @return [void]
+      # @raise [Servus::Support::Errors::ValidationError] if payload fails validation
+      # @api private
+      def validate_event_payload!(event_name, payload)
+        Servus::Events::Bus.handlers_for(event_name).each do |handler_class|
+          Servus::Support::Validator.validate_event_payload!(handler_class, payload)
+        end
+      end
 
       # Builds the event payload using the configured payload builder or defaults.
       #
