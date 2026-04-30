@@ -219,6 +219,38 @@ Treasury::TransferGold::Service.call(from_account: 1, to_account: 2, gold_dragon
 
 Both are programming errors, not business failures. The goal is never to catch or rescue a `ValidationError` — it's a signal that something upstream of the service is passing bad data, or the service itself is returning the wrong shape. An argument validation error means the caller has a bug. A result validation error means the service has a bug. Either way, the fix is in the code, not in error handling.
 
+## Enforcing schema usage
+
+By default, services work without schemas. If your team wants to require schemas across all services, enable the enforcement config flags:
+
+```ruby
+# config/initializers/servus.rb
+Servus.configure do |config|
+  config.require_service_arguments_schema = true
+  config.require_service_result_schema    = true
+  config.require_event_payload_schema     = true
+end
+```
+
+When enabled, calling a service without the corresponding schema raises `SchemaRequiredError`. The result schema is only enforced on successful responses — failure schemas remain optional.
+
+### CI enforcement with `have_schema`
+
+For teams that want to enforce schemas in CI without enabling runtime checks, use the `have_schema` matcher:
+
+```ruby
+RSpec.describe Treasury::TransferGold::Service do
+  it { expect(described_class).to have_schema(:arguments) }
+  it { expect(described_class).to have_schema(:result) }
+end
+
+RSpec.describe GoldTransferredHandler do
+  it { expect(described_class).to have_schema(:payload) }
+end
+```
+
+This catches missing schemas at test time without affecting production behavior.
+
 ## Three layers of validation
 
 | Layer | Purpose | When it runs |

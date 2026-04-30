@@ -154,7 +154,7 @@ end
 
 ## Payload schema validation
 
-Handlers can define a JSON Schema to validate event payloads. When a service emits an event whose payload doesn't match the handler's schema, Servus raises a `ValidationError` — just like argument or result schema violations. This catches mismatches between what a service emits and what a handler expects at runtime, before any handler logic runs.
+Handlers can define a JSON Schema to validate event payloads. Payload validation runs on both emission paths — the `emits` DSL and `Handler.emit`. When a payload doesn't match the handler's schema, Servus raises a `ValidationError` before any handler logic runs.
 
 ```ruby
 class GoldTransferredHandler < Servus::EventHandler

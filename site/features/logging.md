@@ -26,6 +26,18 @@ WARN  Treasury::TransferGold::Service failed in 0.008s with error: Cannot transf
 ERROR Treasury::TransferGold::Service validation error: "fifty" is not of type integer
 ```
 
+### Guard failure
+
+```
+WARN  Treasury::TransferGold::Service guard failed: Account must not be frozen
+```
+
+### Event emission
+
+```
+INFO  Event :gold_transferred emitted with payload: {:transferred=>50, :from_balance=>950, :to_balance=>550}
+```
+
 ### Uncaught exception
 
 ```
@@ -39,6 +51,8 @@ ERROR Treasury::TransferGold::Service uncaught exception: ActiveRecord::RecordNo
 | Call started | `info` | Every call, with arguments |
 | Success | `info` | Call completed successfully, with duration |
 | Business failure | `warn` | `failure(...)` returned, with error and duration |
+| Guard failure | `warn` | Guard threw `:guard_failure`, with error message |
+| Event emission | `info` | Event emitted via `emits` DSL, with payload |
 | Validation error | `error` | Schema validation failed (arguments or result) |
 | Uncaught exception | `error` | Exception raised and not handled by `rescue_from` |
 
