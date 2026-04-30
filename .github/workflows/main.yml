@@ -1,36 +1,38 @@
-name: Ruby
+name: CI
 
-# On all pushes and pull requests, run the workflow
 on:
   push:
-    branches:
-      - '**'
+    branches: [main]
   pull_request:
-    branches:
-      - '**'
+
+defaults:
+  run:
+    working-directory: gem
 
 jobs:
-  build:
+  rubocop:
+    name: RuboCop
     runs-on: ubuntu-latest
-    name: Ruby ${{ matrix.ruby }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          working-directory: gem
+          bundler-cache: true
+      - run: bundle exec rubocop
+
+  rspec:
+    name: RSpec
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        ruby:
-          - '3.3.0'
-
+        ruby: ['3.2', '3.3', '3.4']
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Ruby
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: ${{ matrix.ruby }}
-        bundler-cache: true
-    # Install dependencies
-    - name: Install Dependencies
-      run: bundle install
-    # Run linters and static analysis
-    - name: Run RuboCop
-      run: bundle exec rubocop
-    # Run the test suite
-    - name: Run the Specs
-      run: bundle exec rspec
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          working-directory: gem
+          bundler-cache: true
+      - run: bundle exec rspec
