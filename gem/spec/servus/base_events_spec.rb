@@ -112,8 +112,8 @@ RSpec.describe Servus::Base, 'event emission' do
 
   describe 'event payload validation via emits DSL' do
     it 'validates payload against handler schema when emitting via emits DSL' do
-      stub_const('ValidatedHandler', Class.new(Servus::EventHandler) do
-        handles :validated_event
+      stub_const('ValidatedHandler', Class.new(Servus::Event) do
+        event_name :validated_event
 
         schema payload: {
           type: 'object',
@@ -142,8 +142,8 @@ RSpec.describe Servus::Base, 'event emission' do
     end
 
     it 'does not raise when payload matches handler schema' do
-      stub_const('ValidHandler', Class.new(Servus::EventHandler) do
-        handles :valid_event
+      stub_const('ValidHandler', Class.new(Servus::Event) do
+        event_name :valid_event
 
         schema payload: {
           type: 'object',
@@ -171,8 +171,8 @@ RSpec.describe Servus::Base, 'event emission' do
     end
 
     it 'skips validation when handler has no payload schema' do
-      stub_const('NoSchemaHandler', Class.new(Servus::EventHandler) do
-        handles :unvalidated_event
+      stub_const('NoSchemaHandler', Class.new(Servus::Event) do
+        event_name :unvalidated_event
 
         invoke EventTestHelpers::NoopService do |_payload|
           {}
@@ -213,8 +213,8 @@ RSpec.describe Servus::Base, 'event emission' do
 
   describe 'automatic event emission' do
     it 'emits events on success' do
-      handler_class = stub_const('SuccessEmissionHandler', Class.new(Servus::EventHandler) do
-        handles :user_created
+      handler_class = stub_const('SuccessEmissionHandler', Class.new(Servus::Event) do
+        event_name :user_created
 
         invoke EventTestHelpers::NoopService do |_payload|
           {}
@@ -242,8 +242,8 @@ RSpec.describe Servus::Base, 'event emission' do
     end
 
     it 'emits events on failure' do
-      handler_class = stub_const('FailureEmissionHandler', Class.new(Servus::EventHandler) do
-        handles :user_failed
+      handler_class = stub_const('FailureEmissionHandler', Class.new(Servus::Event) do
+        event_name :user_failed
 
         invoke EventTestHelpers::NoopService do |_payload|
           {}
@@ -267,8 +267,8 @@ RSpec.describe Servus::Base, 'event emission' do
     end
 
     it 'emits events with custom payload builder' do
-      handler_class = stub_const('CustomPayloadHandler', Class.new(Servus::EventHandler) do
-        handles :user_created
+      handler_class = stub_const('CustomPayloadHandler', Class.new(Servus::Event) do
+        event_name :user_created
 
         invoke EventTestHelpers::NoopService do |_payload|
           {}
@@ -301,16 +301,16 @@ RSpec.describe Servus::Base, 'event emission' do
     end
 
     it 'emits multiple events for the same trigger' do
-      handler1 = stub_const('MultiHandler1', Class.new(Servus::EventHandler) do
-        handles :event_one
+      handler1 = stub_const('MultiHandler1', Class.new(Servus::Event) do
+        event_name :event_one
 
         invoke EventTestHelpers::NoopService do |_payload|
           {}
         end
       end)
 
-      handler2 = stub_const('MultiHandler2', Class.new(Servus::EventHandler) do
-        handles :event_two
+      handler2 = stub_const('MultiHandler2', Class.new(Servus::Event) do
+        event_name :event_two
 
         invoke EventTestHelpers::NoopService do |_payload|
           {}
@@ -336,8 +336,8 @@ RSpec.describe Servus::Base, 'event emission' do
     end
 
     it 'emits events on explicit error!' do
-      handler_class = stub_const('ErrorEmissionHandler', Class.new(Servus::EventHandler) do
-        handles :critical_error
+      handler_class = stub_const('ErrorEmissionHandler', Class.new(Servus::Event) do
+        event_name :critical_error
 
         invoke EventTestHelpers::NoopService do |_payload|
           {}

@@ -5,8 +5,8 @@ require 'spec_helper'
 RSpec.describe Servus::Support::Validator, 'event payload validation' do
   describe '.validate_event_payload!' do
     it 'returns true when payload is valid' do
-      handler_class = Class.new(Servus::EventHandler) do
-        handles :test_event
+      handler_class = Class.new(Servus::Event) do
+        event_name :test_event
 
         schema payload: {
           type: 'object',
@@ -21,8 +21,8 @@ RSpec.describe Servus::Support::Validator, 'event payload validation' do
     end
 
     it 'raises ValidationError when payload is invalid' do
-      handler_class = Class.new(Servus::EventHandler) do
-        handles :test_event
+      handler_class = Class.new(Servus::Event) do
+        event_name :test_event
 
         schema payload: {
           type: 'object',
@@ -38,8 +38,8 @@ RSpec.describe Servus::Support::Validator, 'event payload validation' do
     end
 
     it 'returns true when no schema is defined' do
-      handler_class = Class.new(Servus::EventHandler) do
-        handles :test_event
+      handler_class = Class.new(Servus::Event) do
+        event_name :test_event
       end
 
       expect(described_class.validate_event_payload!(handler_class, { any: 'data' })).to be true
@@ -51,8 +51,8 @@ RSpec.describe Servus::Support::Validator, 'event payload validation' do
       it 'raises SchemaRequiredError when no payload schema is defined' do
         Servus.config.require_event_payload_schema = true
 
-        handler_class = Class.new(Servus::EventHandler) do
-          handles :test_event
+        handler_class = Class.new(Servus::Event) do
+          event_name :test_event
         end
 
         expect do
@@ -63,8 +63,8 @@ RSpec.describe Servus::Support::Validator, 'event payload validation' do
       it 'does not raise when payload schema is defined' do
         Servus.config.require_event_payload_schema = true
 
-        handler_class = Class.new(Servus::EventHandler) do
-          handles :test_event
+        handler_class = Class.new(Servus::Event) do
+          event_name :test_event
 
           schema payload: {
             type: 'object',

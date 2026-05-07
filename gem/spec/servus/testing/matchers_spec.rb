@@ -105,8 +105,8 @@ RSpec.describe 'Servus Testing Matchers' do
     end
 
     it 'works with payload schemas on event handlers' do
-      handler_class = Class.new(Servus::EventHandler) do
-        handles :test_schema_event
+      handler_class = Class.new(Servus::Event) do
+        event_name :test_schema_event
 
         schema payload: {
           type: 'object',
@@ -118,8 +118,8 @@ RSpec.describe 'Servus Testing Matchers' do
     end
 
     it 'fails when no payload schema is defined on event handler' do
-      handler_class = Class.new(Servus::EventHandler) do
-        handles :test_no_schema_event
+      handler_class = Class.new(Servus::Event) do
+        event_name :test_no_schema_event
       end
 
       expect(handler_class).not_to have_schema(:payload)

@@ -11,22 +11,22 @@ module Servus
     # Events are automatically instrumented and will appear in Rails logs
     # with timing information, making it easy to monitor event performance.
     #
-    # @example Registering a handler
-    #   class UserCreatedHandler < Servus::EventHandler
-    #     handles :user_created
+    # @example Registering an event class
+    #   class UserCreated < Servus::Event
+    #     event_name :user_created
     #   end
     #
-    #   Servus::Events::Bus.register_handler(:user_created, UserCreatedHandler)
+    #   Servus::Events::Bus.register_handler(:user_created, UserCreated)
     #
-    # @example Retrieving handlers for an event
-    #   handlers = Servus::Events::Bus.handlers_for(:user_created)
-    #   handlers.each { |handler| handler.handle(payload) }
+    # @example Retrieving event classes for an event
+    #   events = Servus::Events::Bus.handlers_for(:user_created)
+    #   events.each { |event_class| event_class.handle(payload) }
     #
     # @example Instrumentation in logs
     #   Bus.emit(:user_created, user_id: 123)
     #   # Rails log: servus.events.user_created (1.2ms) {:user_id=>123}
     #
-    # @see Servus::EventHandler
+    # @see Servus::Event
     class Bus
       class << self
         # Registers a handler class for a specific event.
@@ -35,8 +35,8 @@ module Servus
         # will all be invoked when the event is emitted. The handler is
         # automatically subscribed to ActiveSupport::Notifications.
         #
-        # Handlers are typically registered automatically when EventHandler
-        # classes are loaded at boot time via the `handles` DSL method.
+        # Event classes are typically registered automatically at boot time
+        # via the +event_name+ DSL method or name inference.
         #
         # @param event_name [Symbol] the name of the event
         # @param handler_class [Class] the handler class to register

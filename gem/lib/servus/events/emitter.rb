@@ -69,24 +69,24 @@ module Servus
         #
         # @note Best Practice: Services should typically emit ONE event per trigger
         #   that represents their core concern. Multiple downstream reactions should
-        #   be coordinated by EventHandler classes, not by emitting multiple events
+        #   be coordinated by Event classes, not by emitting multiple events
         #   from the service. This maintains separation of concerns.
         #
-        # @example Recommended pattern (one event, multiple handlers)
+        # @example Recommended pattern (one event, multiple reactions)
         #   # Service emits one event
         #   class CreateUser < Servus::Base
         #     emits :user_created, on: :success
         #   end
         #
-        #   # Handler coordinates multiple reactions
-        #   class UserCreatedHandler < Servus::EventHandler
-        #     handles :user_created
+        #   # Event coordinates multiple reactions
+        #   class UserCreated < Servus::Event
+        #     event_name :user_created
         #     invoke SendWelcomeEmail::Service, async: true
         #     invoke TrackAnalytics::Service, async: true
         #   end
         #
         # @see Servus::Events::Bus
-        # @see Servus::EventHandler
+        # @see Servus::Event
         def emits(event_name, on:, with: nil, &block)
           valid_triggers = %i[success failure error!]
 
