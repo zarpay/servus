@@ -305,7 +305,11 @@ RSpec.describe Servus::Base, 'event emission' do
         emitted << event_name
       end
 
-      service_class.call rescue nil
+      begin
+        service_class.call
+      rescue StandardError
+        nil
+      end
 
       ActiveSupport::Notifications.unsubscribe(subscription)
 

@@ -127,9 +127,9 @@ module Servus
         def enable_logging!
           return if @logging_enabled
 
-          subscribe_all do |event_name, payload, started_at:, finished_at:, id:, **|
-            duration_ms = (finished_at - started_at) * 1000
-            Servus::Support::Logger.log_event(event_name, payload, event_id: id, duration_ms:)
+          subscribe_all do |event_name, payload, **meta|
+            duration_ms = (meta[:finished_at] - meta[:started_at]) * 1000
+            Servus::Support::Logger.log_event(event_name, payload, event_id: meta[:id], duration_ms:)
           end
 
           @logging_enabled = true

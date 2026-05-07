@@ -91,11 +91,11 @@ RSpec.describe Servus::Events::Invocation do
       invocation.execute
 
       expect(service_class.async_called_with).to eq({
-        user_id: 1,
-        queue: :critical,
-        wait: 600,
-        priority: 5
-      })
+                                                      user_id: 1,
+                                                      queue: :critical,
+                                                      wait: 600,
+                                                      priority: 5
+                                                    })
     end
   end
 

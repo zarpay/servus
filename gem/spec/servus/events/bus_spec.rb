@@ -24,11 +24,11 @@ RSpec.describe Servus::Events::Bus do
         event_name :duplicate_event
       end
 
-      expect {
+      expect do
         Class.new(Servus::Event) do
           event_name :duplicate_event
         end
-      }.to raise_error(RuntimeError, /already registered/)
+      end.to raise_error(RuntimeError, /already registered/)
     end
   end
 

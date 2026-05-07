@@ -86,7 +86,7 @@ module Servus
         return if @event_name
         return if name.nil?
 
-        event_name(self.name.demodulize.underscore.to_sym)
+        event_name(name.demodulize.underscore.to_sym)
       end
 
       # Declares a service invocation in response to the event.

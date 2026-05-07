@@ -18,12 +18,12 @@ RSpec.describe Servus::Event do
     end
 
     it 'raises if called twice' do
-      expect {
+      expect do
         Class.new(described_class) do
           event_name :first
           event_name :second
         end
-      }.to raise_error(RuntimeError, /already subscribed/)
+      end.to raise_error(RuntimeError, /already subscribed/)
     end
 
     it 'infers the name from a named class' do
@@ -287,9 +287,9 @@ RSpec.describe Servus::Event do
       event_class.handle({ user_id: 123 })
 
       expect(calls).to eq([
-        [:service1, { id: 123 }],
-        [:service2, { user: 123 }]
-      ])
+                            [:service1, { id: 123 }],
+                            [:service2, { user: 123 }]
+                          ])
     end
 
     it 'invokes service asynchronously when async: true' do
@@ -362,11 +362,11 @@ RSpec.describe Servus::Event do
       event_class.handle({ user_id: 123 })
 
       expect(dummy_service.async_called_with).to eq({
-        user_id: 123,
-        queue: :critical,
-        wait: 10.minutes,
-        priority: 5
-      })
+                                                      user_id: 123,
+                                                      queue: :critical,
+                                                      wait: 10.minutes,
+                                                      priority: 5
+                                                    })
     end
   end
 
