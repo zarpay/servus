@@ -43,7 +43,7 @@ module Servus
 
       # Eager load all event classes
       events_path = Rails.root.join(Servus.config.events_dir)
-      Dir[File.join(events_path, '**/*.rb')].each do |file|
+      Dir[File.join(events_path, '**/*_event.rb')].each do |file|
         require_dependency file
       end
 

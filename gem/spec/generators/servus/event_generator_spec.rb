@@ -21,16 +21,16 @@ RSpec.describe Servus::Generators::EventGenerator do
     described_class.start([name], destination_root: tmp_root)
   end
 
-  it 'generates the event class without _handler suffix' do
+  it 'generates the event class with _event suffix' do
     invoke('gold_transferred')
 
-    expect(File).to exist(File.join(tmp_root, 'app/events/gold_transferred.rb'))
+    expect(File).to exist(File.join(tmp_root, 'app/events/gold_transferred_event.rb'))
   end
 
   it 'places the spec under spec/ by default' do
     invoke('gold_transferred')
 
-    expect(File).to exist(File.join(tmp_root, 'spec/app/events/gold_transferred_spec.rb'))
+    expect(File).to exist(File.join(tmp_root, 'spec/app/events/gold_transferred_event_spec.rb'))
   end
 
   it 'honours config.tests_dir when placing the spec' do
@@ -38,14 +38,14 @@ RSpec.describe Servus::Generators::EventGenerator do
 
     invoke('gold_transferred')
 
-    expect(File).to exist(File.join(tmp_root, 'test/app/events/gold_transferred_spec.rb'))
-    expect(File).not_to exist(File.join(tmp_root, 'spec/app/events/gold_transferred_spec.rb'))
+    expect(File).to exist(File.join(tmp_root, 'test/app/events/gold_transferred_event_spec.rb'))
+    expect(File).not_to exist(File.join(tmp_root, 'spec/app/events/gold_transferred_event_spec.rb'))
   end
 
   it 'generates a class inheriting from Servus::Event' do
     invoke('gold_transferred')
 
-    content = File.read(File.join(tmp_root, 'app/events/gold_transferred.rb'))
-    expect(content).to include('class GoldTransferred < Servus::Event')
+    content = File.read(File.join(tmp_root, 'app/events/gold_transferred_event.rb'))
+    expect(content).to include('class GoldTransferredEvent < Servus::Event')
   end
 end

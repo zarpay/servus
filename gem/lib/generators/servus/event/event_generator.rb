@@ -35,19 +35,19 @@ module Servus
       # @return [String] event file path
       # @api private
       def event_path
-        File.join(Servus.config.events_dir, "#{file_name}.rb")
+        File.join(Servus.config.events_dir, "#{file_name}_event.rb")
       end
 
       # @return [String] spec file path
       # @api private
       def event_spec_path
-        File.join(Servus.config.tests_dir, Servus.config.events_dir, "#{file_name}_spec.rb")
+        File.join(Servus.config.tests_dir, Servus.config.events_dir, "#{file_name}_event_spec.rb")
       end
 
-      # @return [String] event class name (e.g. "ReferralVerified")
+      # @return [String] event class name (e.g. "ReferralVerifiedEvent")
       # @api private
       def event_class_name
-        class_name
+        "#{class_name}Event"
       end
     end
   end
