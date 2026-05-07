@@ -42,10 +42,10 @@ RSpec.describe Servus::Generators::EventGenerator do
     expect(File).not_to exist(File.join(tmp_root, 'spec/app/events/gold_transferred_spec.rb'))
   end
 
-  it 'generates a class inheriting from ApplicationEvent' do
+  it 'generates a class inheriting from Servus::Event' do
     invoke('gold_transferred')
 
     content = File.read(File.join(tmp_root, 'app/events/gold_transferred.rb'))
-    expect(content).to include('class GoldTransferred < ApplicationEvent')
+    expect(content).to include('class GoldTransferred < Servus::Event')
   end
 end

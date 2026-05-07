@@ -32,7 +32,7 @@
 # @see Servus::Event
 # @see Servus::Events::Bus
 <%- end -%>
-class <%= event_class_name %> < ApplicationEvent
+class <%= event_class_name %> < Servus::Event
   schema payload: {
     type: 'object',
     description: '<%= event_class_name %> event payload',

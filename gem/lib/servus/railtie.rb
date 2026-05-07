@@ -25,7 +25,11 @@ module Servus
       end
     end
 
-    # Load guards and event handlers, clear caches on reload
+    initializer 'servus.event_logging' do
+      Servus::Events::Bus.enable_logging!
+    end
+
+    # Load guards and event classes, clear caches on reload
     config.to_prepare do
       # Load custom guards from guards_dir
       guards_path = Rails.root.join(Servus.config.guards_dir)

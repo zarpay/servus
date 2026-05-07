@@ -116,6 +116,25 @@ module Servus
           end
         end
 
+        # Installs the internal event logger. Called once at boot via
+        # the Railtie. Logs every event emission with its AS::Notifications
+        # correlation ID and dispatch duration.
+        #
+        # Multiple +subscribe_all+ subscriptions coexist — the app can
+        # add its own (e.g. for Eventus forwarding) independently.
+        #
+        # @return [void]
+        def enable_logging!
+          return if @logging_enabled
+
+          subscribe_all do |event_name, payload, started_at:, finished_at:, id:, **|
+            duration_ms = (finished_at - started_at) * 1000
+            Servus::Support::Logger.log_event(event_name, payload, event_id: id, duration_ms:)
+          end
+
+          @logging_enabled = true
+        end
+
         # Clears all registered events.
         #
         # Useful for testing and development mode reloading.

@@ -67,23 +67,23 @@ end
 
 A service can emit events without knowing or caring whether anything is listening. The service's job ends when the event fires — it has no dependency on what happens next.
 
-When you want to react to an event, you create a handler. A handler is a class that subscribes to a single event and declares which services to invoke when that event fires. It inherits from `Servus::EventHandler`, uses `handles` to name the event, and uses `invoke` to wire up each response. The handler's job is purely coordination — it maps the event payload to service arguments and decides whether to run sync or async. No business logic belongs here.
+When you want to react to an event, you create an Event class. An Event class subscribes to a single event name and declares which services to invoke when that event fires. It inherits from `Servus::Event`, uses `event_name` to set (or override) the name, and uses `invoke` to wire up each response. The Event class's job is purely coordination — it maps the event payload to service arguments and decides whether to run sync or async. No business logic belongs here.
 
 Generate one with the Rails generator:
 
 ```bash
-rails g servus:event_handler gold_transferred
+rails g servus:event gold_transferred
 
-=> create app/events/gold_transferred_handler.rb
-=> create spec/events/gold_transferred_handler_spec.rb
+=> create app/events/gold_transferred.rb
+=> create spec/events/gold_transferred_spec.rb
 ```
 
 Then declare what services should react to the event:
 
 ```ruby
-# app/events/gold_transferred_handler.rb
-class GoldTransferredHandler < Servus::EventHandler
-  handles :gold_transferred
+# app/events/gold_transferred.rb
+class GoldTransferred < Servus::Event
+  # event name inferred as :gold_transferred from class name
 
   invoke Ledger::RecordEntry::Service, async: true do |payload|
     { transfer: payload[:transfer] }
@@ -95,11 +95,11 @@ class GoldTransferredHandler < Servus::EventHandler
 end
 ```
 
-Each `invoke` block maps the event payload to the service's keyword arguments. A single handler can invoke multiple services — they all react to the same event.
+Each `invoke` block maps the event payload to the service's keyword arguments. A single Event class can invoke multiple services — they all react to the same event. If no block is given, the full payload is passed through as params.
 
 ### Sync vs async invocation
 
-Handlers can invoke services synchronously (inline) or asynchronously (enqueued via ActiveJob):
+Event classes can invoke services synchronously (inline) or asynchronously (enqueued via ActiveJob):
 
 ```ruby
 # Synchronous (default) — runs inline
@@ -119,7 +119,7 @@ end
 ```
 
 ::: warning Prefer async invocation
-Synchronous handlers run inline during the emitting service's `after_call` phase — before the result is returned to the caller. If a sync handler raises an exception, it propagates through the emitting service and the caller never receives the result. Async invocation avoids this entirely — the handler work is enqueued and runs independently. Use sync only when the follow-up must complete before the caller gets a response.
+Synchronous invocations run inline during the emitting service's `after_call` phase — before the result is returned to the caller. If a sync invocation raises an exception, it propagates through the emitting service and the caller never receives the result. Async invocation avoids this entirely — the work is enqueued and runs independently. Use sync only when the follow-up must complete before the caller gets a response.
 :::
 
 ### Conditional invocation
@@ -154,12 +154,10 @@ end
 
 ## Payload schema validation
 
-Handlers can define a JSON Schema to validate event payloads. Payload validation runs on both emission paths — the `emits` DSL and `Handler.emit`. When a payload doesn't match the handler's schema, Servus raises a `ValidationError` before any handler logic runs.
+Event classes can define a JSON Schema to validate event payloads. Payload validation runs on both emission paths — the `emits` DSL and `Event.emit`. When a payload doesn't match the Event's schema, Servus raises a `ValidationError` before any invocations run.
 
 ```ruby
-class GoldTransferredHandler < Servus::EventHandler
-  handles :gold_transferred
-
+class GoldTransferred < Servus::Event
   schema payload: {
     type: "object",
     required: ["transferred", "from_balance", "to_balance"],
@@ -178,7 +176,7 @@ end
 
 ## Emitting events without a service
 
-Handlers provide an `emit` class method for triggering events from controllers, jobs, or other code that isn't a Servus service:
+Event classes provide an `emit` class method for triggering events from controllers, jobs, or other code that isn't a Servus service:
 
 ```ruby
 class TransfersController < ApplicationController
@@ -192,7 +190,7 @@ class TransfersController < ApplicationController
   private
 
   def emit_transfer_event
-    GoldTransferredHandler.emit({
+    GoldTransferred.emit({
       transferred: @transfer.amount,
       from_balance: @transfer.from_account.balance,
       to_balance: @transfer.to_account.balance
@@ -201,43 +199,56 @@ class TransfersController < ApplicationController
 end
 ```
 
-When a payload schema is defined on the handler, `emit` validates the payload before dispatching.
+When a payload schema is defined on the Event class, `emit` validates the payload before dispatching.
+
+## Event name inference
+
+The event name is inferred from the class name by default — `GoldTransferred` becomes `:gold_transferred`. You can override this with an explicit `event_name` call:
+
+```ruby
+class GoldTransferred < Servus::Event
+  event_name :custom_gold_event  # overrides inference
+end
+```
+
+Each event name maps to exactly one Event class. Attempting to register a second class for the same name raises an error.
+
+## Routing
+
+When `Bus.emit` fires, it delegates to configured routers to resolve which services to invoke. Each router returns a list of `Invocation` objects; the Bus deduplicates by key (first wins) and executes.
+
+Servus ships with `ClassRouter` as the default — it reads `invoke` declarations from Event classes. Applications can add additional routers (e.g. a data-driven router backed by a database) via configuration:
+
+```ruby
+Servus.configure do |config|
+  config.routers = [
+    Servus::Events::ClassRouter.new,
+    MyApp::DataDrivenRouter.new
+  ]
+end
+```
+
+Routers are processed in array order. Invocations within each router preserve declaration order. This ordering is a guarantee, not an implementation detail.
 
 ## Conventions
 
 ### Location and namespacing
 
-Handlers live in `app/events/` and should always stay top-level — no namespacing. Events are global by design. They exist as an orchestration layer across decoupled domains, not within any single one.
+Event classes live in `app/events/` and should always stay top-level — no namespacing. Events are global by design. They exist as an orchestration layer across decoupled domains, not within any single one.
 
-This is intentional. A service inside one Rails engine can emit an event, and a handler at the project root can subscribe to it and invoke services in a completely different engine. Namespacing handlers inside a domain would defeat that purpose.
+This is intentional. A service inside one Rails engine can emit an event, and an Event class at the project root can subscribe to it and invoke services in a completely different engine. Namespacing Event classes inside a domain would defeat that purpose.
 
 ```
 app/events/
-├── gold_transferred_handler.rb
-├── message_dispatched_handler.rb
-└── account_closed_handler.rb
+├── gold_transferred.rb
+├── message_dispatched.rb
+└── account_closed.rb
 ```
 
 ### Naming
 
 - **Events**: past tense describing what happened — `:gold_transferred`, `:message_dispatched`
-- **Handlers**: event name + `Handler` suffix — `GoldTransferredHandler`, `MessageDispatchedHandler`
-
-## Strict event validation
-
-Enable strict validation to catch handlers that subscribe to events no service emits:
-
-```ruby
-# config/initializers/servus.rb
-Servus.configure do |config|
-  config.strict_event_validation = true  # default
-end
-
-# In a rake task or CI
-Servus::EventHandler.validate_all_handlers!
-```
-
-This raises `OrphanedHandlerError` if any handler subscribes to a non-existent event — catches typos and stale handlers.
+- **Event classes**: event name in PascalCase — `GoldTransferred`, `MessageDispatched`
 
 ## Instrumentation
 
@@ -258,7 +269,7 @@ end
 [Servus Event] gold_transferred (1.2ms) {:transferred=>50, :from_balance=>950, :to_balance=>550}
 ```
 
-The block receives `event_name` and `payload` as positional args, plus `started_at:`, `finished_at:`, and `id:` as keyword args. Use `**` to ignore keywords you don't need.
+The block receives `event_name` and `payload` as positional args, plus `started_at:`, `finished_at:`, and `id:` as keyword args. The `id` is a unique identifier per emission — use it for log correlation. Use `**` to ignore keywords you don't need.
 
 ```ruby
 # Forward all events to an external system
@@ -292,7 +303,7 @@ end
 
 ### Common uses
 
-- **Metrics** — count events, measure payload values, track handler duration
+- **Metrics** — count events, measure payload values, track invocation duration
 - **Alerting** — trigger alerts on specific events or unusual patterns
-- **Audit logging** — write event payloads to an audit trail outside the handler
+- **Audit logging** — write event payloads to an audit trail outside the Event class
 - **Debugging** — temporarily subscribe to see what's flowing through the bus

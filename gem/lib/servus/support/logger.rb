@@ -63,12 +63,14 @@ module Servus
         logger.warn("#{service_class.name} guard failed: #{error.message}")
       end
 
-      # Logs an event emission
+      # Logs an event emission with correlation ID and duration.
       #
       # @param event_name [Symbol] The event name
       # @param payload [Hash] The event payload
-      def self.log_event(event_name, payload)
-        logger.info("Event :#{event_name} emitted with payload: #{payload.inspect}")
+      # @param event_id [String] The unique event correlation ID
+      # @param duration_ms [Float] The dispatch duration in milliseconds
+      def self.log_event(event_name, payload, event_id:, duration_ms:)
+        logger.info("[#{event_id}] Event :#{event_name} (#{duration_ms.round(1)}ms) #{payload.inspect}")
       end
 
       # Logs a validation error from a service

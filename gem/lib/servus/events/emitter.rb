@@ -128,7 +128,6 @@ module Servus
         self.class.emissions_for(trigger).each do |emission|
           payload = build_event_payload(emission, result)
           validate_event_payload!(emission[:event_name], payload)
-          Servus::Support::Logger.log_event(emission[:event_name], payload)
           Servus::Events::Bus.emit(emission[:event_name], payload)
         end
       end

@@ -7,7 +7,7 @@ Servus works without any configuration. All settings have sensible defaults. Whe
 Servus.configure do |config|
 
   # ── Directory Settings ──────────────────────────────────────────────
-  # Controls where Servus looks for file-based schemas, event handlers,
+  # Controls where Servus looks for file-based schemas, Event classes,
   # guards, and services. These paths are relative to Rails.root.
   # Generators also use these paths when creating new files.
 
@@ -17,12 +17,16 @@ Servus.configure do |config|
   config.guards_dir   = "app/guards"    # default: "app/guards"
   config.tests_dir    = "spec"          # default: "spec"
 
-  # ── Event Validation ────────────────────────────────────────────────
-  # When true, Servus.validate_all_handlers! raises OrphanedHandlerError
-  # if any handler subscribes to an event that no service emits.
-  # Useful in CI or a boot-time rake task to catch typos and stale handlers.
+  # ── Routers ────────────────────────────────────────────────────────
+  # Ordered list of routers that resolve service invocations for events.
+  # The Bus iterates in order, deduplicates by key, and executes.
+  # Defaults to [Servus::Events::ClassRouter.new] which reads invoke
+  # declarations from Event classes.
 
-  config.strict_event_validation = true  # default: true
+  config.routers = [
+    Servus::Events::ClassRouter.new,
+    # MyApp::DataDrivenRouter.new
+  ]
 
   # ── Guards ──────────────────────────────────────────────────────────
   # Servus includes four built-in guards: PresenceGuard, TruthyGuard,
@@ -32,14 +36,12 @@ Servus.configure do |config|
   config.include_default_guards = true  # default: true
 
   # ── Schema Enforcement ─────────────────────────────────────────────
-  # When true, Servus raises SchemaRequiredError if a service or handler
-  # is invoked without the corresponding schema defined. Useful for teams
-  # that want to enforce schemas across all services.
+  # When true, Servus raises SchemaRequiredError if a service or Event
+  # class is used without the corresponding schema defined. Useful for
+  # teams that want to enforce schemas across all services.
 
   config.require_service_arguments_schema = false  # default: false
   config.require_service_result_schema    = false  # default: false
   config.require_event_payload_schema     = false  # default: false
 end
 ```
-
-All ten options are `attr_accessor` — read them with `Servus.config.schemas_dir` and write them in the `configure` block.
