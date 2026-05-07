@@ -18,7 +18,7 @@ RSpec.describe Treasury::TransferGold::Service do
         to_account: to_account,
         gold_dragons: 50
       )
-    }.to emit_event(:gold_transferred)
+    }.to emit_event(:gold_transferred_event)
   end
 
   it "emits with the transfer amount in the payload" do
@@ -28,7 +28,7 @@ RSpec.describe Treasury::TransferGold::Service do
         to_account: to_account,
         gold_dragons: 50
       )
-    }.to emit_event(:gold_transferred).with(hash_including(transferred: 50))
+    }.to emit_event(:gold_transferred_event).with(hash_including(transferred: 50))
   end
 end
 ```
@@ -42,7 +42,7 @@ expect {
     to_account: to_account,
     gold_dragons: 50
   )
-}.to emit_event(GoldTransferred)
+}.to emit_event(GoldTransferredEvent)
 ```
 
 ## Testing Event classes
@@ -50,7 +50,7 @@ expect {
 Event classes are tested by calling their `handle` class method with a payload. Use the `call_service` matcher to assert which services are invoked:
 
 ```ruby
-RSpec.describe GoldTransferred do
+RSpec.describe GoldTransferredEvent do
   let(:payload) do
     {
       transferred: 50,
@@ -98,7 +98,7 @@ expect {
 When an Event class uses `if:` or `unless:` conditions, test both paths:
 
 ```ruby
-RSpec.describe GoldTransferred do
+RSpec.describe GoldTransferredEvent do
   context "when transfer exceeds 100 gold dragons" do
     let(:payload) { { transferred: 150, from_balance: 850, to_balance: 650 } }
 

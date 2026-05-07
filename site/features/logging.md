@@ -35,7 +35,7 @@ WARN  Treasury::TransferGold::Service guard failed: Account must not be frozen
 ### Event emission
 
 ```
-INFO  Event :gold_transferred emitted with payload: {:transferred=>50, :from_balance=>950, :to_balance=>550}
+INFO  Event :gold_transferred_event emitted with payload: {:transferred=>50, :from_balance=>950, :to_balance=>550}
 ```
 
 ### Uncaught exception

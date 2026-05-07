@@ -130,9 +130,9 @@ If the service declares events, the framework fires them after validation passes
 
 ```ruby
 class Service < Servus::Base
-  emits :gold_transferred, on: :success
-  emits :transfer_failed, on: :failure
-  emits :transfer_error, on: :error!
+  emits :gold_transferred_event, on: :success
+  emits :transfer_failed_event, on: :failure
+  emits :transfer_error_event, on: :error!
 end
 ```
 

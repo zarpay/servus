@@ -140,8 +140,8 @@ Generates an Event class and spec.
 ```bash
 rails g servus:event gold_transferred
 
-=> create  app/events/gold_transferred.rb
-=> create  spec/app/events/gold_transferred_spec.rb
+=> create  app/events/gold_transferred_event.rb
+=> create  spec/app/events/gold_transferred_event_spec.rb
 ```
 
 | Argument | Required | Description |
@@ -155,11 +155,11 @@ rails g servus:event gold_transferred
 ### Generated Event class
 
 ```ruby
-# app/events/gold_transferred.rb
-class GoldTransferred < Servus::Event
+# app/events/gold_transferred_event.rb
+class GoldTransferredEvent < Servus::Event
   schema payload: {
     type: 'object',
-    description: 'GoldTransferred event payload',
+    description: 'GoldTransferredEvent event payload',
   }
 
   # invoke ExampleService, async: true do |payload|
@@ -171,8 +171,8 @@ end
 ### Generated spec
 
 ```ruby
-# spec/app/events/gold_transferred_spec.rb
-RSpec.describe GoldTransferred do
+# spec/app/events/gold_transferred_event_spec.rb
+RSpec.describe GoldTransferredEvent do
   let(:payload) do
     {
       # TODO: Add sample payload fields

@@ -30,11 +30,11 @@ Guards must follow the `*_guard.rb` naming convention to be discovered.
 
 ## Event classes
 
-The Railtie eager-loads all `.rb` files from the configured `events_dir` (default: `app/events`). In development, the event bus is cleared before reloading to prevent duplicate registrations. After loading, the Railtie calls `ensure_registered!` on each Event subclass to infer event names from classes that didn't set one explicitly:
+The Railtie eager-loads all `*_event.rb` files from the configured `events_dir` (default: `app/events`). In development, the event bus is cleared before reloading to prevent duplicate registrations. After loading, the Railtie calls `ensure_registered!` on each Event subclass to infer event names from classes that didn't set one explicitly:
 
 ```
-app/events/gold_transferred.rb  →  GoldTransferred  (event name: :gold_transferred)
-app/events/message_dispatched.rb →  MessageDispatched (event name: :message_dispatched)
+app/events/gold_transferred_event.rb  →  GoldTransferredEvent  (event name: :gold_transferred_event)
+app/events/message_dispatched_event.rb →  MessageDispatchedEvent (event name: :message_dispatched_event)
 ```
 
 ## Railtie extensions

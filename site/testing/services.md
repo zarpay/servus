@@ -333,7 +333,7 @@ it "emits gold_transferred on success" do
       to_account: to_account,
       gold_dragons: 50
     )
-  }.to emit_event(:gold_transferred)
+  }.to emit_event(:gold_transferred_event)
 end
 ```
 
@@ -347,7 +347,7 @@ it "emits gold_transferred with the transfer amount" do
       to_account: to_account,
       gold_dragons: 50
     )
-  }.to emit_event(:gold_transferred).with(hash_including(transferred: 50))
+  }.to emit_event(:gold_transferred_event).with(hash_including(transferred: 50))
 end
 ```
 
@@ -360,6 +360,6 @@ expect {
     to_account: to_account,
     gold_dragons: 50
   )
-}.to emit_event(GoldTransferred)
+}.to emit_event(GoldTransferredEvent)
 ```
 

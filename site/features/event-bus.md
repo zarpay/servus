@@ -8,9 +8,9 @@ Declare events with the `emits` DSL. The framework fires them automatically afte
 
 ```ruby
 class Treasury::TransferGold::Service < Servus::Base
-  emits :gold_transferred, on: :success
-  emits :transfer_failed, on: :failure
-  emits :transfer_error, on: :error!
+  emits :gold_transferred_event, on: :success
+  emits :transfer_failed_event, on: :failure
+  emits :transfer_error_event, on: :error!
 
   def call
     from_account.withdraw!(@gold_dragons)
@@ -38,7 +38,7 @@ end
 Override the default payload with a block:
 
 ```ruby
-emits :gold_transferred, on: :success do |result|
+emits :gold_transferred_event, on: :success do |result|
   {
     from: result.data.from_balance,
     to: result.data.to_balance,
@@ -50,7 +50,7 @@ end
 Or a method reference:
 
 ```ruby
-emits :gold_transferred, on: :success, with: :transfer_payload
+emits :gold_transferred_event, on: :success, with: :transfer_payload
 
 private
 
@@ -74,16 +74,16 @@ Generate one with the Rails generator:
 ```bash
 rails g servus:event gold_transferred
 
-=> create app/events/gold_transferred.rb
-=> create spec/events/gold_transferred_spec.rb
+=> create app/events/gold_transferred_event.rb
+=> create spec/events/gold_transferred_event_spec.rb
 ```
 
 Then declare what services should react to the event:
 
 ```ruby
-# app/events/gold_transferred.rb
-class GoldTransferred < Servus::Event
-  # event name inferred as :gold_transferred from class name
+# app/events/gold_transferred_event.rb
+class GoldTransferredEvent < Servus::Event
+  # event name inferred as :gold_transferred_event from class name
 
   invoke Ledger::RecordEntry::Service, async: true do |payload|
     { transfer: payload[:transfer] }
@@ -157,7 +157,7 @@ end
 Event classes can define a JSON Schema to validate event payloads. Payload validation runs on both emission paths — the `emits` DSL and `Event.emit`. When a payload doesn't match the Event's schema, Servus raises a `ValidationError` before any invocations run.
 
 ```ruby
-class GoldTransferred < Servus::Event
+class GoldTransferredEvent < Servus::Event
   schema payload: {
     type: "object",
     required: ["transferred", "from_balance", "to_balance"],
@@ -190,7 +190,7 @@ class TransfersController < ApplicationController
   private
 
   def emit_transfer_event
-    GoldTransferred.emit({
+    GoldTransferredEvent.emit({
       transferred: @transfer.amount,
       from_balance: @transfer.from_account.balance,
       to_balance: @transfer.to_account.balance
@@ -203,10 +203,10 @@ When a payload schema is defined on the Event class, `emit` validates the payloa
 
 ## Event name inference
 
-The event name is inferred from the class name by default — `GoldTransferred` becomes `:gold_transferred`. You can override this with an explicit `event_name` call:
+The event name is inferred from the class name by default — `GoldTransferredEvent` becomes `:gold_transferred_event`. You can override this with an explicit `event_name` call:
 
 ```ruby
-class GoldTransferred < Servus::Event
+class GoldTransferredEvent < Servus::Event
   event_name :custom_gold_event  # overrides inference
 end
 ```
@@ -240,15 +240,16 @@ This is intentional. A service inside one Rails engine can emit an event, and an
 
 ```
 app/events/
-├── gold_transferred.rb
-├── message_dispatched.rb
-└── account_closed.rb
+├── gold_transferred_event.rb
+├── message_dispatched_event.rb
+└── account_closed_event.rb
 ```
 
 ### Naming
 
-- **Events**: past tense describing what happened — `:gold_transferred`, `:message_dispatched`
-- **Event classes**: event name in PascalCase — `GoldTransferred`, `MessageDispatched`
+- **Files**: `_event.rb` suffix — `gold_transferred_event.rb`, `message_dispatched_event.rb`
+- **Classes**: PascalCase with `Event` suffix — `GoldTransferredEvent`, `MessageDispatchedEvent`
+- **Event names**: inferred from class name — `:gold_transferred_event`, `:message_dispatched_event`
 
 ## Instrumentation
 
@@ -266,7 +267,7 @@ end
 ```
 
 ```
-[Servus Event] gold_transferred (1.2ms) {:transferred=>50, :from_balance=>950, :to_balance=>550}
+[Servus Event] gold_transferred_event (1.2ms) {:transferred=>50, :from_balance=>950, :to_balance=>550}
 ```
 
 The block receives `event_name` and `payload` as positional args, plus `started_at:`, `finished_at:`, and `id:` as keyword args. The `id` is a unique identifier per emission — use it for log correlation. Use `**` to ignore keywords you don't need.
@@ -294,7 +295,7 @@ ActiveSupport::Notifications.unsubscribe(subscription)
 For subscribing to a single event, use `ActiveSupport::Notifications` directly:
 
 ```ruby
-ActiveSupport::Notifications.subscribe("servus.events.gold_transferred") do |*args|
+ActiveSupport::Notifications.subscribe("servus.events.gold_transferred_event") do |*args|
   event = ActiveSupport::Notifications::Event.new(*args)
   StatsD.increment("transfers.completed")
   StatsD.measure("transfers.amount", event.payload[:transferred])

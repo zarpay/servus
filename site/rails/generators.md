@@ -33,8 +33,8 @@ Generates an Event class and spec.
 ```bash
 rails g servus:event gold_transferred
 
-=> create  app/events/gold_transferred.rb
-=> create  spec/app/events/gold_transferred_spec.rb
+=> create  app/events/gold_transferred_event.rb
+=> create  spec/app/events/gold_transferred_event_spec.rb
 ```
 
 | Argument | Description |
