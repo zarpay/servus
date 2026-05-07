@@ -29,66 +29,61 @@ module Servus
     # @see Servus::Event
     class Bus
       class << self
-        # Registers a handler class for a specific event.
+        # Registers an Event class for a specific event name.
         #
-        # Multiple handlers can be registered for the same event, and they
-        # will all be invoked when the event is emitted. The handler is
-        # automatically subscribed to ActiveSupport::Notifications.
+        # Each event name maps to exactly one Event class. Attempting to
+        # register a second class for the same name raises an error.
         #
         # Event classes are typically registered automatically at boot time
-        # via the +event_name+ DSL method or name inference.
+        # via the +event_name+ DSL method or +ensure_registered!+.
         #
-        # @param event_name [Symbol] the name of the event
-        # @param handler_class [Class] the handler class to register
-        # @return [Array] the updated array of handlers for this event
+        # @param name [Symbol] the event name
+        # @param event_class [Class] the Event subclass to register
+        # @return [void]
+        # @raise [RuntimeError] if the event name is already registered
         #
         # @example
-        #   Bus.register_handler(:user_created, UserCreatedHandler)
-        def register_handler(event_name, handler_class)
-          handlers[event_name] ||= []
-          handlers[event_name] << handler_class
-
-          # Subscribe to ActiveSupport::Notifications
-          subscription = ActiveSupport::Notifications.subscribe(notification_name(event_name)) do |*args|
-            event = ActiveSupport::Notifications::Event.new(*args)
-            handler_class.handle(event.payload)
+        #   Bus.register_event(:user_created, UserCreated)
+        def register_event(name, event_class)
+          if events.key?(name)
+            raise "Event :#{name} is already registered to #{events[name]}. Cannot register #{event_class}"
           end
 
-          # Store subscription for cleanup
-          subscriptions[event_name] ||= []
-          subscriptions[event_name] << subscription
+          events[name] = event_class
         end
 
-        # Retrieves all registered handlers for a specific event.
+        # Returns the Event class registered for the given name.
         #
-        # Returns a duplicate array to prevent external modification of the
-        # internal handler registry.
-        #
-        # @param event_name [Symbol] the name of the event
-        # @return [Array<Class>] array of handler classes registered for this event
+        # @param name [Symbol] the event name
+        # @return [Class, nil] the Event class or nil if not registered
         #
         # @example
-        #   handlers = Bus.handlers_for(:user_created)
-        #   handlers.each { |handler| handler.handle(payload) }
-        def handlers_for(event_name)
-          (handlers[event_name] || []).dup
+        #   event_class = Bus.event_for(:user_created)
+        #   event_class.invocations_for(payload)
+        def event_for(name)
+          events[name]
         end
 
-        # Emits an event to all registered handlers with instrumentation.
+        # Emits an event through the configured routers.
         #
-        # Uses ActiveSupport::Notifications to instrument the event, providing
-        # automatic timing and logging. The event will appear in Rails logs
-        # with duration and payload information.
+        # Collects invocations from all routers (in config array order),
+        # deduplicates by key (first wins), and executes each. The entire
+        # dispatch is wrapped in ActiveSupport::Notifications so that
+        # +subscribe_all+ listeners receive timing information.
         #
         # @param event_name [Symbol] the name of the event to emit
-        # @param payload [Hash] the event payload to pass to handlers
+        # @param payload [Hash] the event payload
         # @return [void]
         #
         # @example
         #   Bus.emit(:user_created, { user_id: 123, email: 'user@example.com' })
         #   # Rails log: servus.events.user_created (1.2ms) {:user_id=>123, :email=>"user@example.com"}
         def emit(event_name, payload)
-          ActiveSupport::Notifications.instrument(notification_name(event_name), payload)
+          ActiveSupport::Notifications.instrument(notification_name(event_name), payload) do
+            resolve_invocations(event_name, payload)
+              .uniq(&:key)
+              .each(&:execute)
+          end
         end
 
         # Subscribes to all Servus event emissions.
@@ -120,7 +115,7 @@ module Servus
           end
         end
 
-        # Clears all registered handlers and unsubscribes from notifications.
+        # Clears all registered events.
         #
         # Useful for testing and development mode reloading.
         #
@@ -129,28 +124,23 @@ module Servus
         # @example
         #   Bus.clear
         def clear
-          subscriptions.values.flatten.each do |subscription|
-            ActiveSupport::Notifications.unsubscribe(subscription)
-          end
-
-          @handlers = nil
-          @subscriptions = nil
+          @events = nil
         end
 
         private
 
-        # Hash storing event handlers.
+        # Collects invocations from all configured routers.
         #
-        # @return [Hash] hash mapping event names to handler arrays
-        def handlers
-          @handlers ||= {}
+        # @param event_name [Symbol] the event name
+        # @param payload [Hash] the event payload
+        # @return [Array<Servus::Events::Invocation>]
+        def resolve_invocations(event_name, payload)
+          Servus.config.routers.flat_map { |router| router.resolve(event_name, payload) }
         end
 
-        # Hash storing ActiveSupport::Notifications subscriptions.
-        #
-        # @return [Hash] hash mapping event names to subscription objects
-        def subscriptions
-          @subscriptions ||= {}
+        # @return [Hash{Symbol => Class}] event name to Event class mapping
+        def events
+          @events ||= {}
         end
 
         # Converts an event name to a namespaced notification name.

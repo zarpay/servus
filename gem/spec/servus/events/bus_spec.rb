@@ -3,40 +3,90 @@
 require 'spec_helper'
 
 RSpec.describe Servus::Events::Bus do
-  # Clear handlers between tests to avoid state leakage
   after do
     described_class.clear
+    Servus.config.routers = nil
+    ServiceA.reset!
+    ServiceB.reset!
   end
 
-  describe '.register_handler' do
-    it 'registers a handler for an event' do
-      handler_class = Class.new
+  describe '.register_event' do
+    it 'registers an event class for an event name' do
+      event_class = Class.new(Servus::Event) do
+        event_name :test_event
+      end
 
-      described_class.register_handler(:test_event, handler_class)
+      expect(described_class.event_for(:test_event)).to eq(event_class)
+    end
 
-      handlers = described_class.handlers_for(:test_event)
-      expect(handlers).to include(handler_class)
+    it 'raises if a second class registers for the same event name' do
+      Class.new(Servus::Event) do
+        event_name :duplicate_event
+      end
+
+      expect {
+        Class.new(Servus::Event) do
+          event_name :duplicate_event
+        end
+      }.to raise_error(RuntimeError, /already registered/)
     end
   end
 
   describe '.emit' do
-    it 'dispatches the event to all registered handlers' do
-      handler_class = Class.new do
-        def self.handle(payload)
-          @handled_payload = payload
-        end
+    it 'delegates to configured routers and executes invocations' do
+      Class.new(Servus::Event) do
+        event_name :test_event
 
-        class << self
-          attr_reader :handled_payload
+        invoke ServiceA do |payload|
+          { user_id: payload[:user_id] }
         end
       end
 
-      described_class.register_handler(:test_event, handler_class)
+      described_class.emit(:test_event, { user_id: 42 })
 
-      payload = { user_id: 123 }
-      described_class.emit(:test_event, payload)
+      expect(ServiceA.calls).to eq([{ user_id: 42 }])
+    end
 
-      expect(handler_class.handled_payload).to eq(payload)
+    it 'deduplicates invocations by key — first wins' do
+      invocation = Servus::Events::Invocation.new(
+        service: ServiceA,
+        params: { user_id: 1 },
+        options: {}
+      )
+
+      router_a = Class.new(Servus::Events::Router) do
+        define_method(:resolve) { |_name, _payload| [invocation] }
+      end
+
+      router_b = Class.new(Servus::Events::Router) do
+        define_method(:resolve) { |_name, _payload| [invocation] }
+      end
+
+      Servus.config.routers = [router_a.new, router_b.new]
+
+      described_class.emit(:test_event, { user_id: 1 })
+
+      expect(ServiceA.calls.length).to eq(1)
+    end
+
+    it 'processes routers in config array order' do
+      inv_a = Servus::Events::Invocation.new(service: ServiceA, params: { id: 1 }, options: {})
+      inv_b = Servus::Events::Invocation.new(service: ServiceB, params: { id: 2 }, options: {})
+
+      router_a = Class.new(Servus::Events::Router) do
+        define_method(:resolve) { |_name, _payload| [inv_a] }
+      end
+
+      router_b = Class.new(Servus::Events::Router) do
+        define_method(:resolve) { |_name, _payload| [inv_b] }
+      end
+
+      Servus.config.routers = [router_a.new, router_b.new]
+
+      described_class.emit(:test_event, {})
+
+      expect(ServiceA.calls).to eq([{ id: 1 }])
+      expect(ServiceB.calls).to eq([{ id: 2 }])
     end
   end
 

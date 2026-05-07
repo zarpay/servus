@@ -144,9 +144,10 @@ module Servus
       # @raise [Servus::Support::Errors::ValidationError] if payload fails validation
       # @api private
       def validate_event_payload!(event_name, payload)
-        Servus::Events::Bus.handlers_for(event_name).each do |handler_class|
-          Servus::Support::Validator.validate_event_payload!(handler_class, payload)
-        end
+        event_class = Servus::Events::Bus.event_for(event_name)
+        return unless event_class
+
+        Servus::Support::Validator.validate_event_payload!(event_class, payload)
       end
 
       # Builds the event payload using the configured payload builder or defaults.

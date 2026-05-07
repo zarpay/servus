@@ -74,7 +74,7 @@ module Servus
         raise "Event already subscribed to :#{@event_name}. Cannot subscribe to :#{name}" if @event_name
 
         @event_name = name
-        Servus::Events::Bus.register_handler(name, self)
+        Servus::Events::Bus.register_event(name, self)
       end
 
       # Infers and registers the event name from the class name if not

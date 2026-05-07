@@ -14,7 +14,7 @@ RSpec.describe Servus::Event do
       end
 
       expect(event_class.event_name).to eq(:user_created)
-      expect(Servus::Events::Bus.handlers_for(:user_created)).to include(event_class)
+      expect(Servus::Events::Bus.event_for(:user_created)).to eq(event_class)
     end
 
     it 'raises if called twice' do
@@ -440,19 +440,13 @@ RSpec.describe Servus::Event do
 
   describe '.emit' do
     it 'emits the event via the Bus' do
-      received_payload = nil
-
       event_class = Class.new(described_class) do
-        event_name :user_created
-
-        define_singleton_method(:handle) do |payload|
-          received_payload = payload
-        end
+        event_name :emit_test_event
       end
 
-      event_class.emit({ user_id: 123, email: 'test@example.com' })
-
-      expect(received_payload).to eq({ user_id: 123, email: 'test@example.com' })
+      expect { event_class.emit({ user_id: 123 }) }
+        .to emit_event(:emit_test_event)
+        .with(hash_including(user_id: 123))
     end
 
     it 'raises if no event name configured' do

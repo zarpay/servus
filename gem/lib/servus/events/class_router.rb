@@ -30,9 +30,10 @@ module Servus
       # @param payload [Hash] the event payload
       # @return [Array<Servus::Events::Invocation>] invocations to execute
       def resolve(event_name, payload)
-        Bus.handlers_for(event_name).flat_map do |event_class|
-          event_class.invocations_for(payload)
-        end
+        event_class = Bus.event_for(event_name)
+        return [] unless event_class
+
+        event_class.invocations_for(payload)
       end
     end
   end
