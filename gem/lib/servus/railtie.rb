@@ -25,7 +25,11 @@ module Servus
       end
     end
 
-    # Load guards and event handlers, clear caches on reload
+    initializer 'servus.event_logging' do
+      Servus::Events::Bus.enable_logging!
+    end
+
+    # Load guards and event classes, clear caches on reload
     config.to_prepare do
       # Load custom guards from guards_dir
       guards_path = Rails.root.join(Servus.config.guards_dir)
@@ -37,16 +41,14 @@ module Servus
 
       Servus::Events::Bus.clear if Rails.env.development?
 
-      # Eager load all event handlers
+      # Eager load all event classes
       events_path = Rails.root.join(Servus.config.events_dir)
-      Dir[File.join(events_path, '**/*_handler.rb')].each do |file|
+      Dir[File.join(events_path, '**/*_event.rb')].each do |file|
         require_dependency file
       end
-    end
 
-    # NOTE: Event validation is available but not run automatically due to load order issues.
-    # To validate handlers match emitted events, call manually:
-    #   Servus::EventHandler.validate_all_handlers!
-    # Or create a rake task for CI validation.
+      # Infer and register event names for classes that didn't call event_name explicitly
+      Servus::Event.descendants.each(&:ensure_registered!)
+    end
   end
 end

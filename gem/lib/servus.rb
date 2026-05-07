@@ -29,10 +29,14 @@ require_relative 'servus/support/lockdown'
 require_relative 'servus/support/message_resolver'
 
 # Events
-require_relative 'servus/events/errors'
 require_relative 'servus/events/bus'
 require_relative 'servus/events/emitter'
-require_relative 'servus/event_handler'
+require_relative 'servus/event'
+
+# Routing
+require_relative 'servus/events/router'
+require_relative 'servus/events/invocation'
+require_relative 'servus/events/class_router'
 
 # Guards (guards.rb loads defaults based on config)
 require_relative 'servus/guard'

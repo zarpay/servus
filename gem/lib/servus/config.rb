@@ -22,7 +22,7 @@ module Servus
     # @return [String] the schemas directory path
     attr_accessor :schemas_dir
 
-    # The directory where event handlers are located.
+    # The directory where Event classes are located.
     #
     # Defaults to `Rails.root/app/events` in Rails applications.
     #
@@ -35,14 +35,6 @@ module Servus
     #
     # @return [String] the services directory path
     attr_accessor :services_dir
-
-    # Whether to validate that all event handlers subscribe to events that are actually emitted by services.
-    #
-    # When enabled, raises an error on boot if handlers subscribe to non-existent events.
-    # Helps catch typos and orphaned handlers.
-    #
-    # @return [Boolean] true to validate, false to skip validation
-    attr_accessor :strict_event_validation
 
     # The directory where guard classes are located.
     #
@@ -82,13 +74,27 @@ module Servus
     # @return [Boolean] true to require result schemas, false to allow schema-less services
     attr_accessor :require_service_result_schema
 
-    # Whether to require all event handlers to define a payload schema.
+    # Whether to require all event classes to define a payload schema.
     #
     # When enabled, raises {Servus::Support::Errors::SchemaRequiredError} when
-    # an event handler validates a payload without a payload schema defined.
+    # an event validates a payload without a payload schema defined.
     #
-    # @return [Boolean] true to require payload schemas, false to allow schema-less handlers
+    # @return [Boolean] true to require payload schemas, false to allow schema-less events
     attr_accessor :require_event_payload_schema
+
+    # The ordered list of routers that resolve invocations for events.
+    #
+    # The Bus iterates routers in order, collects invocations, deduplicates
+    # by key (first wins), and executes. Defaults to +[ClassRouter.new]+
+    # which reads +invoke+ declarations from Event classes.
+    #
+    # @return [Array<Servus::Events::Router>]
+    attr_writer :routers
+
+    # @return [Array<Servus::Events::Router>]
+    def routers
+      @routers || [Servus::Events::ClassRouter.new]
+    end
 
     # Whether external instantiation of services is blocked and instance
     # `#call` methods are automatically privatized.
@@ -121,7 +127,6 @@ module Servus
     # @api private
     def initialize
       set_default_directories
-      @strict_event_validation          = true
       @include_default_guards           = true
       @lockdown_enabled                 = true
       @require_service_arguments_schema = false

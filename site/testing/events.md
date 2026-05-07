@@ -1,6 +1,6 @@
 # Testing Events
 
-Event testing covers two things separately: that a service emits the right events, and that a handler invokes the right services when an event fires. Testing them independently means you can refactor either side with clear feedback about what changed.
+Event testing covers two things separately: that a service emits the right events, and that an Event class invokes the right services when an event fires. Testing them independently means you can refactor either side with clear feedback about what changed.
 
 ## Testing that a service emits events
 
@@ -18,7 +18,7 @@ RSpec.describe Treasury::TransferGold::Service do
         to_account: to_account,
         gold_dragons: 50
       )
-    }.to emit_event(:gold_transferred)
+    }.to emit_event(:gold_transferred_event)
   end
 
   it "emits with the transfer amount in the payload" do
@@ -28,12 +28,12 @@ RSpec.describe Treasury::TransferGold::Service do
         to_account: to_account,
         gold_dragons: 50
       )
-    }.to emit_event(:gold_transferred).with(hash_including(transferred: 50))
+    }.to emit_event(:gold_transferred_event).with(hash_including(transferred: 50))
   end
 end
 ```
 
-You can also pass a handler class instead of a symbol:
+You can also pass an Event class instead of a symbol:
 
 ```ruby
 expect {
@@ -42,15 +42,15 @@ expect {
     to_account: to_account,
     gold_dragons: 50
   )
-}.to emit_event(GoldTransferredHandler)
+}.to emit_event(GoldTransferredEvent)
 ```
 
-## Testing event handlers
+## Testing Event classes
 
-Handlers are tested by calling their `handle` class method with a payload. Use the `call_service` matcher to assert which services are invoked:
+Event classes are tested by calling their `handle` class method with a payload. Use the `call_service` matcher to assert which services are invoked:
 
 ```ruby
-RSpec.describe GoldTransferredHandler do
+RSpec.describe GoldTransferredEvent do
   let(:payload) do
     {
       transferred: 50,
@@ -95,10 +95,10 @@ expect {
 
 ## Testing conditional invocations
 
-When a handler uses `if:` or `unless:` conditions, test both paths:
+When an Event class uses `if:` or `unless:` conditions, test both paths:
 
 ```ruby
-RSpec.describe GoldTransferredHandler do
+RSpec.describe GoldTransferredEvent do
   context "when transfer exceeds 100 gold dragons" do
     let(:payload) { { transferred: 150, from_balance: 850, to_balance: 650 } }
 

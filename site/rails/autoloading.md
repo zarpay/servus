@@ -1,6 +1,6 @@
 # Autoloading
 
-Servus relies on Rails autoloading for services and uses its Railtie to eager-load guards and event handlers. No manual `require` statements needed.
+Servus relies on Rails autoloading for services and uses its Railtie to eager-load guards and Event classes. No manual `require` statements needed.
 
 ## Services
 
@@ -28,13 +28,13 @@ app/guards/sufficient_balance_guard.rb →  SufficientBalanceGuard
 
 Guards must follow the `*_guard.rb` naming convention to be discovered.
 
-## Event handlers
+## Event classes
 
-The Railtie eager-loads all `*_handler.rb` files from the configured `events_dir` (default: `app/events`). In development, the event bus is cleared before reloading to prevent duplicate subscriptions:
+The Railtie eager-loads all `*_event.rb` files from the configured `events_dir` (default: `app/events`). In development, the event bus is cleared before reloading to prevent duplicate registrations. After loading, the Railtie calls `ensure_registered!` on each Event subclass to infer event names from classes that didn't set one explicitly:
 
 ```
-app/events/gold_transferred_handler.rb  →  GoldTransferredHandler
-app/events/message_dispatched_handler.rb →  MessageDispatchedHandler
+app/events/gold_transferred_event.rb  →  GoldTransferredEvent  (event name: :gold_transferred_event)
+app/events/message_dispatched_event.rb →  MessageDispatchedEvent (event name: :message_dispatched_event)
 ```
 
 ## Railtie extensions

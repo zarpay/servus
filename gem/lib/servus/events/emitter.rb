@@ -69,24 +69,24 @@ module Servus
         #
         # @note Best Practice: Services should typically emit ONE event per trigger
         #   that represents their core concern. Multiple downstream reactions should
-        #   be coordinated by EventHandler classes, not by emitting multiple events
+        #   be coordinated by Event classes, not by emitting multiple events
         #   from the service. This maintains separation of concerns.
         #
-        # @example Recommended pattern (one event, multiple handlers)
+        # @example Recommended pattern (one event, multiple reactions)
         #   # Service emits one event
         #   class CreateUser < Servus::Base
         #     emits :user_created, on: :success
         #   end
         #
-        #   # Handler coordinates multiple reactions
-        #   class UserCreatedHandler < Servus::EventHandler
-        #     handles :user_created
+        #   # Event coordinates multiple reactions
+        #   class UserCreated < Servus::Event
+        #     event_name :user_created
         #     invoke SendWelcomeEmail::Service, async: true
         #     invoke TrackAnalytics::Service, async: true
         #   end
         #
         # @see Servus::Events::Bus
-        # @see Servus::EventHandler
+        # @see Servus::Event
         def emits(event_name, on:, with: nil, &block)
           valid_triggers = %i[success failure error!]
 
@@ -128,7 +128,6 @@ module Servus
         self.class.emissions_for(trigger).each do |emission|
           payload = build_event_payload(emission, result)
           validate_event_payload!(emission[:event_name], payload)
-          Servus::Support::Logger.log_event(emission[:event_name], payload)
           Servus::Events::Bus.emit(emission[:event_name], payload)
         end
       end
@@ -136,7 +135,7 @@ module Servus
       # Instance methods for emitting events during service execution
       private
 
-      # Validates the payload against all handler schemas registered for the event.
+      # Validates the payload against the Event class's schema registered for the event.
       #
       # @param event_name [Symbol] the event name
       # @param payload [Hash] the event payload
@@ -144,9 +143,10 @@ module Servus
       # @raise [Servus::Support::Errors::ValidationError] if payload fails validation
       # @api private
       def validate_event_payload!(event_name, payload)
-        Servus::Events::Bus.handlers_for(event_name).each do |handler_class|
-          Servus::Support::Validator.validate_event_payload!(handler_class, payload)
-        end
+        event_class = Servus::Events::Bus.event_for(event_name)
+        return unless event_class
+
+        Servus::Support::Validator.validate_event_payload!(event_class, payload)
       end
 
       # Builds the event payload using the configured payload builder or defaults.

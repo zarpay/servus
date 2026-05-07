@@ -133,15 +133,15 @@ rails d servus:service treasury/transfer_gold
 
 ---
 
-## `servus:event_handler`
+## `servus:event`
 
-Generates an event handler class and spec.
+Generates an Event class and spec.
 
 ```bash
-rails g servus:event_handler gold_transferred
+rails g servus:event gold_transferred
 
-=> create  app/events/gold_transferred_handler.rb
-=> create  spec/app/events/gold_transferred_handler_spec.rb
+=> create  app/events/gold_transferred_event.rb
+=> create  spec/app/events/gold_transferred_event_spec.rb
 ```
 
 | Argument | Required | Description |
@@ -152,16 +152,14 @@ rails g servus:event_handler gold_transferred
 | --- | --- |
 | `--no-docs` | Skip YARD documentation comments and TODO scaffolding |
 
-### Generated handler
+### Generated Event class
 
 ```ruby
-# app/events/gold_transferred_handler.rb
-class GoldTransferredHandler < Servus::EventHandler
-  handles :gold_transferred
-
+# app/events/gold_transferred_event.rb
+class GoldTransferredEvent < Servus::Event
   schema payload: {
     type: 'object',
-    description: 'JSON schema for the GoldTransferredHandler event payload',
+    description: 'GoldTransferredEvent event payload',
   }
 
   # invoke ExampleService, async: true do |payload|
@@ -173,8 +171,8 @@ end
 ### Generated spec
 
 ```ruby
-# spec/app/events/gold_transferred_handler_spec.rb
-RSpec.describe GoldTransferredHandler do
+# spec/app/events/gold_transferred_event_spec.rb
+RSpec.describe GoldTransferredEvent do
   let(:payload) do
     {
       # TODO: Add sample payload fields
@@ -188,7 +186,7 @@ end
 ### Destroy
 
 ```bash
-rails d servus:event_handler gold_transferred
+rails d servus:event gold_transferred
 ```
 
 ---

@@ -43,8 +43,8 @@ module Treasury
         }
       )
 
-      # Fire an event for handlers to pick up
-      emits :gold_transferred, on: :success
+      # Fire an event for Event classes to pick up
+      emits :gold_transferred_event, on: :success
 
       # Accept an Account instance or an ID — resolve lazily
       lazily :from_account, finds: Account
@@ -97,7 +97,7 @@ There's a lot on that page — here's what each piece does, with links to the re
 | `< Servus::Base` | The base class. Wraps your `call` method with validation, logging, event dispatch, and error handling. | [Service Objects](/core/service-objects) |
 | `lazily :from_account, finds: Account` | The argument accepts an `Account` instance or an id; the service resolves whichever is passed. | [Lazy Resolvers](/features/lazy-resolvers) |
 | `schema(arguments:, result:)` | Optional JSON Schema validation for arguments (before `call`) and results (after). Here it rejects decimals and amounts below 1. | [Schema Validation](/features/schema-validation) |
-| `emits :gold_transferred, on: :success` | Fires an event on successful completion for handlers to pick up. | [Event Bus](/features/event-bus) |
+| `emits :gold_transferred_event, on: :success` | Fires an event on successful completion for Event classes to pick up. | [Event Bus](/features/event-bus) |
 | `enforce_eligible_transfer!(...)` | A guard. Halts execution and returns a structured failure if the precondition isn't met. | [Guards](/features/guards) |
 | `failure(...)` and `success(...)` | The two ways a service returns. Both produce a `Response` the caller can branch on. | [Responses](/core/responses) |
 

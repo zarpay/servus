@@ -3,6 +3,7 @@
 require 'servus'
 require 'servus/testing'
 require 'spec_support/active_job_loader'
+require 'spec_support/test_services'
 
 # Internal tests sometimes instantiate anonymous Servus::Base subclasses to
 # exercise instance-level behavior (guards, lazy resolvers) in isolation.

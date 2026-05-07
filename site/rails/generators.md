@@ -1,6 +1,6 @@
 # Generators
 
-Servus ships with three Rails generators for scaffolding services, event handlers, and guards.
+Servus ships with three Rails generators for scaffolding services, events, and guards.
 
 ## `servus:service`
 
@@ -26,15 +26,15 @@ rails g servus:service treasury/transfer_gold from_account to_account gold_drago
 
 When parameters are provided, the generated service includes `initialize` with kwargs, instance variable assignments, and `attr_reader` declarations.
 
-## `servus:event_handler`
+## `servus:event`
 
-Generates an event handler class and spec.
+Generates an Event class and spec.
 
 ```bash
-rails g servus:event_handler gold_transferred
+rails g servus:event gold_transferred
 
-=> create  app/events/gold_transferred_handler.rb
-=> create  spec/app/events/gold_transferred_handler_spec.rb
+=> create  app/events/gold_transferred_event.rb
+=> create  spec/app/events/gold_transferred_event_spec.rb
 ```
 
 | Argument | Description |
@@ -45,7 +45,7 @@ rails g servus:event_handler gold_transferred
 | --- | --- |
 | `--no-docs` | Skip YARD documentation comments in generated files |
 
-The generated handler includes `handles :gold_transferred` and a placeholder `invoke` block.
+The generated class inherits from `Servus::Event` with a payload schema placeholder. The event name is inferred from the class name.
 
 ## `servus:guard`
 
@@ -76,7 +76,7 @@ All generators respect the directory settings in `Servus.configure`. If you've c
 # config/initializers/servus.rb
 Servus.configure do |config|
   config.schemas_dir  = "config/schemas"     # default: "app/schemas"
-  config.events_dir   = "app/event_handlers" # default: "app/events"
+  config.events_dir   = "app/domain_events"  # default: "app/events"
   config.guards_dir   = "lib/guards"         # default: "app/guards"
   config.services_dir = "app/services"       # default: "app/services"
   config.tests_dir    = "test"               # default: "spec"

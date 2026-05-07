@@ -1,0 +1,44 @@
+# frozen_string_literal: true
+
+<%- unless options[:no_docs] -%>
+# Defines the :<%= file_name %> event.
+#
+# Event classes declare the contract (schema) for an event and optionally
+# wire up service invocations that run when the event fires. The event
+# name is inferred from the class name.
+#
+# @example Emit this event from anywhere
+#   <%= event_class_name %>.emit({ user_id: 123 })
+#
+# @example Invoke a service when this event fires
+#   invoke SendEmail::Service, async: true do |payload|
+#     { user_id: payload[:user_id] }
+#   end
+#
+# @example Pass full payload through (no mapper block)
+#   invoke AuditLogger::Service, async: true
+#
+# @example Conditional invocation
+#   invoke GrantRewards::Service, if: ->(payload) { payload[:premium] } do |payload|
+#     { user_id: payload[:user_id] }
+#   end
+#
+# Available options for `invoke`:
+# - async: true            - Invoke service asynchronously via ActiveJob
+# - queue: :queue_name     - Specify ActiveJob queue (requires async: true)
+# - if: ->(payload) {}     - Condition that must be true to invoke
+# - unless: ->(payload) {} - Condition that must be false to invoke
+#
+# @see Servus::Event
+# @see Servus::Events::Bus
+<%- end -%>
+class <%= event_class_name %> < Servus::Event
+  schema payload: {
+    type: 'object',
+    description: '<%= event_class_name %> event payload',
+  }
+
+  # invoke YourService, async: true do |payload|
+  #   { example_arg: payload[:example_field] }
+  # end
+end

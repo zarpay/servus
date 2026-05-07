@@ -102,27 +102,26 @@ module Servus
         end
       end
 
-      # Validates event payload against the handler's payload schema.
+      # Validates event payload against the Event class's payload schema.
       #
-      # @param handler_class [Class] the event handler class
+      # @param event_class [Class] the Event subclass
       # @param payload [Hash] the event payload to validate
       # @return [Boolean] true if validation passes
       # @raise [Servus::Support::Errors::ValidationError] if payload fails validation
       #
-      #
       # @example
-      #   Validator.validate_event_payload!(MyEventHandler, { user_id: 123 })
+      #   Validator.validate_event_payload!(UserCreated, { user_id: 123 })
       #
       # @api private
-      def self.validate_event_payload!(handler_class, payload)
-        schema = handler_class.payload_schema
-        enforce_schema_presence!(schema, handler_class, :require_event_payload_schema)
+      def self.validate_event_payload!(event_class, payload)
+        schema = event_class.payload_schema
+        enforce_schema_presence!(schema, event_class, :require_event_payload_schema)
         return true unless schema
 
         validate_data_against_schema!(
           payload,
           schema,
-          "Invalid payload for event :#{handler_class.event_name}"
+          "Invalid payload for event :#{event_class.event_name}"
         )
 
         true
@@ -210,7 +209,7 @@ module Servus
       # Returns the schema if present. Raises if absent and the config flag is enabled.
       #
       # @param schema [Hash, nil] the loaded schema
-      # @param klass [Class] the service or handler class
+      # @param klass [Class] the service or Event class
       # @param config_flag [Symbol] the config method to check
       # @return [Hash, nil] the schema
       # @raise [Servus::Support::Errors::SchemaRequiredError] if schema is nil and enforcement is enabled

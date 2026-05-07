@@ -244,7 +244,7 @@ RSpec.describe Treasury::TransferGold::Service do
   it { expect(described_class).to have_schema(:result) }
 end
 
-RSpec.describe GoldTransferredHandler do
+RSpec.describe GoldTransferredEvent do
   it { expect(described_class).to have_schema(:payload) }
 end
 ```

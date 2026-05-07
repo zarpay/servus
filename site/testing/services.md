@@ -319,7 +319,7 @@ expect(described_class).to have_schema(:payload)
 
 ## Event matchers
 
-These matchers test that a **service emits the expected events** — they don't test event handler behavior. For testing handlers, see [Testing Events](/testing/events).
+These matchers test that a **service emits the expected events** — they don't test Event class behavior. For testing Event classes, see [Testing Events](/testing/events).
 
 ### `emit_event`
 
@@ -333,7 +333,7 @@ it "emits gold_transferred on success" do
       to_account: to_account,
       gold_dragons: 50
     )
-  }.to emit_event(:gold_transferred)
+  }.to emit_event(:gold_transferred_event)
 end
 ```
 
@@ -347,11 +347,11 @@ it "emits gold_transferred with the transfer amount" do
       to_account: to_account,
       gold_dragons: 50
     )
-  }.to emit_event(:gold_transferred).with(hash_including(transferred: 50))
+  }.to emit_event(:gold_transferred_event).with(hash_including(transferred: 50))
 end
 ```
 
-You can also pass a handler class instead of a symbol:
+You can also pass an Event class instead of a symbol:
 
 ```ruby
 expect {
@@ -360,6 +360,6 @@ expect {
     to_account: to_account,
     gold_dragons: 50
   )
-}.to emit_event(GoldTransferredHandler)
+}.to emit_event(GoldTransferredEvent)
 ```
 
