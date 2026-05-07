@@ -1,0 +1,20 @@
+# frozen_string_literal: true
+
+require 'rails_helper'
+
+RSpec.describe <%= event_class_name %> do
+  let(:payload) do
+    {
+      # TODO: Add sample payload fields
+    }
+  end
+
+<%- unless options[:no_docs] -%>
+  # TODO: Add tests for service invocations
+  # it 'invokes YourService with mapped arguments' do
+  #   expect { described_class.emit(payload) }
+  #     .to emit_event(:<%= file_name %>)
+  #     .with(hash_including(expected_field: 'value'))
+  # end
+<%- end -%>
+end
