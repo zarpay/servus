@@ -2,31 +2,32 @@
 
 module Servus
   module Events
-    # Thread-safe event bus for registering and dispatching event handlers.
+    # Central event bus for registering Event classes and dispatching
+    # events through configured routers.
     #
-    # The Bus acts as a central registry that maps event names to their
-    # corresponding handler classes. It uses ActiveSupport::Notifications
-    # internally to provide instrumentation and thread-safe event dispatch.
-    #
-    # Events are automatically instrumented and will appear in Rails logs
-    # with timing information, making it easy to monitor event performance.
+    # The Bus maintains a registry mapping event names to their Event
+    # class definitions (one-to-one). On +emit+, it delegates to the
+    # configured routers to resolve invocations, deduplicates by key,
+    # and executes. ActiveSupport::Notifications wraps the dispatch
+    # cycle for the +subscribe_all+ hook (e.g. forwarding to Eventus).
     #
     # @example Registering an event class
     #   class UserCreated < Servus::Event
     #     event_name :user_created
     #   end
+    #   # Registration happens automatically via the event_name DSL
     #
-    #   Servus::Events::Bus.register_handler(:user_created, UserCreated)
+    # @example Emitting an event
+    #   Bus.emit(:user_created, { user_id: 123 })
     #
-    # @example Retrieving event classes for an event
-    #   events = Servus::Events::Bus.handlers_for(:user_created)
-    #   events.each { |event_class| event_class.handle(payload) }
-    #
-    # @example Instrumentation in logs
-    #   Bus.emit(:user_created, user_id: 123)
-    #   # Rails log: servus.events.user_created (1.2ms) {:user_id=>123}
+    # @example Forwarding all events to an external system
+    #   Bus.subscribe_all do |event_name, payload, started_at:, **|
+    #     ExternalForwarder.perform_later(event: event_name, payload:)
+    #   end
     #
     # @see Servus::Event
+    # @see Servus::Events::Router
+    # @see Servus::Events::ClassRouter
     class Bus
       class << self
         # Registers an Event class for a specific event name.

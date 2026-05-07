@@ -136,7 +136,7 @@ module Servus
       # Instance methods for emitting events during service execution
       private
 
-      # Validates the payload against all handler schemas registered for the event.
+      # Validates the payload against the Event class's schema registered for the event.
       #
       # @param event_name [Symbol] the event name
       # @param payload [Hash] the event payload

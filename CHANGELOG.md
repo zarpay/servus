@@ -1,3 +1,43 @@
+## [0.5.0] - 2026-05-07
+
+### Breaking Changes
+
+- **`Servus::EventHandler` removed** — use `Servus::Event`. The class represents the event itself,
+  not a handler. Event classes serve three purposes: contract (name), validator (schema), and
+  optional declarative routing (invoke declarations).
+- **`handles :event_name` removed** — use `event_name :name`, or omit it entirely to infer the
+  name from the class (e.g. `OrderPlaced` → `:order_placed`). Inference is triggered by
+  `ensure_registered!` at boot time via the Railtie.
+- **`Bus.register_handler` / `Bus.handlers_for` removed** — replaced by `Bus.register_event`
+  (single Event per name) and `Bus.event_for` (returns one class, not an array).
+- **`Bus.emit` now delegates through configurable routers** — instead of dispatching via
+  ActiveSupport::Notifications handler subscriptions, the Bus iterates `config.routers`,
+  collects Invocation objects, deduplicates by key (first wins), and executes.
+  ActiveSupport::Notifications is still used to wrap dispatch for `subscribe_all`.
+- **`validate_all_handlers!` removed** — the ObjectSpace-scanning validation added complexity
+  for little value. Orphaned events surface quickly at runtime.
+- **`strict_event_validation` config removed** — no longer applicable without `validate_all_handlers!`.
+- **`OrphanedHandlerError` removed** — no longer raised by anything.
+- **`invoke` block now optional** — omitting the block passes the full payload as params.
+- **Generator `servus:event_handler` replaced by `servus:event`** — generates `app/events/name.rb`
+  (no `_handler` suffix), class inherits from `ApplicationEvent`, event name inferred.
+- **Railtie loads `**/*.rb` from events_dir** — instead of `**/*_handler.rb`.
+
+### Added
+
+- **`Servus::Events::Router`** — abstract base class for event routers. Implement `#resolve(event_name, payload)`
+  to return an array of `Invocation` objects.
+- **`Servus::Events::ClassRouter`** — default router that reads `invoke` declarations from Event classes.
+  Ships as the default when no routers are configured.
+- **`Servus::Events::Invocation`** — value object representing a resolved service call. Attributes:
+  `service`, `params`, `options`. Methods: `#execute` (sync or async), `#key` (SHA-256 dedup key).
+- **`config.routers`** — ordered array of routers. Defaults to `[ClassRouter.new]`. The Bus iterates
+  in order, deduplicates invocations by key, and executes.
+- **`Event.invocations_for(payload)`** — returns `Invocation` objects with conditions already evaluated.
+  This is what routers call to resolve actions from Event class declarations.
+- **`Event.ensure_registered!`** — infers event name from class name and registers with the Bus.
+  Called automatically by the Railtie after loading event files.
+
 ## [0.4.0] - 2026-04-30
 
 ### Breaking Changes

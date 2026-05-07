@@ -267,7 +267,7 @@ module Servus
         def api_error = { code: http_status, message: message }
       end
 
-      # Raised when a service or event handler is invoked without a required schema.
+      # Raised when a service or Event class is used without a required schema.
       #
       # Triggered by the +require_service_arguments_schema+,
       # +require_service_result_schema+, or +require_event_payload_schema+

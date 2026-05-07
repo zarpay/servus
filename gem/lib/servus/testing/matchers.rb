@@ -12,7 +12,7 @@ module Servus
 end
 
 # Matcher for asserting event emission
-RSpec::Matchers.define :emit_event do |handler_class_or_symbol|
+RSpec::Matchers.define :emit_event do |event_class_or_symbol|
   supports_block_expectations
 
   chain :with do |payload|
@@ -30,10 +30,10 @@ RSpec::Matchers.define :emit_event do |handler_class_or_symbol|
     block.call
 
     # Determine event name
-    @event_name = if handler_class_or_symbol.is_a?(Symbol)
-                    handler_class_or_symbol
+    @event_name = if event_class_or_symbol.is_a?(Symbol)
+                    event_class_or_symbol
                   else
-                    handler_class_or_symbol.event_name
+                    event_class_or_symbol.event_name
                   end
 
     @matching_event = @captured_events.find { |e| e[:name] == @event_name }
@@ -86,7 +86,7 @@ RSpec::Matchers.define :call_service do |service_class|
   end
 end
 
-# Matcher for asserting schema presence on a service or event handler
+# Matcher for asserting schema presence on a service or Event class
 RSpec::Matchers.define :have_schema do |schema_type|
   match do |klass|
     if schema_type.to_s == 'payload'

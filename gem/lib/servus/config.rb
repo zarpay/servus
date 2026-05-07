@@ -22,7 +22,7 @@ module Servus
     # @return [String] the schemas directory path
     attr_accessor :schemas_dir
 
-    # The directory where event handlers are located.
+    # The directory where Event classes are located.
     #
     # Defaults to `Rails.root/app/events` in Rails applications.
     #
@@ -35,14 +35,6 @@ module Servus
     #
     # @return [String] the services directory path
     attr_accessor :services_dir
-
-    # Whether to validate that all event handlers subscribe to events that are actually emitted by services.
-    #
-    # When enabled, raises an error on boot if handlers subscribe to non-existent events.
-    # Helps catch typos and orphaned handlers.
-    #
-    # @return [Boolean] true to validate, false to skip validation
-    attr_accessor :strict_event_validation
 
     # The directory where guard classes are located.
     #
@@ -135,7 +127,6 @@ module Servus
     # @api private
     def initialize
       set_default_directories
-      @strict_event_validation          = true
       @include_default_guards           = true
       @lockdown_enabled                 = true
       @require_service_arguments_schema = false

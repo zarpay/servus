@@ -128,7 +128,7 @@ module Servus
         }
       end
 
-      # Returns all service invocations declared for this handler.
+      # Returns all service invocations declared for this event.
       #
       # @return [Array<Hash>] array of invocation configurations
       def invocations
