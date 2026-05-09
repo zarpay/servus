@@ -4,6 +4,7 @@
 require 'json-schema'
 require 'active_support'
 require 'active_support/core_ext/class/attribute'
+require 'active_support/core_ext/hash/indifferent_access'
 require 'active_model_serializers'
 
 # Servus namespace
