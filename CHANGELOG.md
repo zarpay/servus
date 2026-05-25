@@ -1,3 +1,13 @@
+## [0.5.2] - 2026-05-25
+
+### Fixed
+
+- **Proc/block context in `emits`**: Payload builder blocks and `if:`/`unless:` condition procs now
+  execute bound to the service instance via `instance_exec`, matching the behaviour of Symbol method
+  references. Previously, `builder.call(result)` left `self` as the class, so instance variables set
+  during `#call` (e.g. `@my_flag`) were silently unreadable inside a block or lambda. Both forms now
+  behave identically — `self` is always the service instance.
+
 ## [0.5.1] - 2026-05-25
 
 ### Added
