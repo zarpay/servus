@@ -1,3 +1,26 @@
+## [0.5.1] - 2026-05-25
+
+### Added
+
+- **Conditional emission on `emits`**: The `emits` macro now accepts `if:` and `unless:` options
+  to gate whether an event fires at runtime. When the condition is not met, the event is completely
+  skipped — no payload is built, no validation runs, and nothing reaches the bus. Both options accept
+  a lambda/proc (receives the `result` object) or a Symbol naming a private instance method.
+  Fully backwards compatible — existing `emits` declarations without conditions are unaffected.
+
+  ```ruby
+  emits :large_transfer_event, on: :success, if: ->(result) { result.data[:transferred] > 100 }
+  emits :standard_transfer_event, on: :success, unless: ->(result) { result.data[:transferred] > 100 }
+  emits :vip_transfer_event, on: :success, if: :vip_sender?
+  ```
+
+- **`failure_message_when_negated` on `emit_event` matcher**: `expect { }.not_to emit_event(:name)`
+  now produces a clear failure message when the event was unexpectedly emitted.
+
+- **`with:` option moved to `**options`**: The `emits` macro signature is now
+  `emits(event_name, on:, **options, &block)` — `with:`, `if:`, and `unless:` are all uniform
+  keyword options. No change to calling code; `emits :name, on: :success, with: :method` still works.
+
 ## [0.5.0] - 2026-05-07
 
 ### Breaking Changes

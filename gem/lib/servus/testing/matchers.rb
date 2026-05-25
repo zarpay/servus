@@ -55,6 +55,11 @@ RSpec::Matchers.define :emit_event do |event_class_or_symbol|
         "got: #{@matching_event[:payload].inspect}"
     end
   end
+
+  failure_message_when_negated do
+    "expected event :#{@event_name} not to be emitted, but it was.\n" \
+      "Payload: #{@matching_event[:payload].inspect}"
+  end
 end
 
 # Matcher for asserting service invocation

@@ -213,6 +213,203 @@ RSpec.describe Servus::Base, 'event emission' do
     end
   end
 
+  describe 'conditional event emission' do
+    describe 'if: condition' do
+      it 'emits when the lambda returns truthy' do
+        service_class = stub_const('IfLambdaTruthyService', Class.new(Servus::Base) do
+          emits :conditional_event, on: :success, if: ->(result) { result.data[:amount] > 100 }
+
+          def call
+            success({ amount: 150 })
+          end
+        end)
+
+        expect { service_class.call }.to emit_event(:conditional_event)
+      end
+
+      it 'does not emit when the lambda returns falsy' do
+        service_class = stub_const('IfLambdaFalsyService', Class.new(Servus::Base) do
+          emits :conditional_event, on: :success, if: ->(result) { result.data[:amount] > 100 }
+
+          def call
+            success({ amount: 50 })
+          end
+        end)
+
+        expect { service_class.call }.not_to emit_event(:conditional_event)
+      end
+
+      it 'emits when the method reference returns truthy' do
+        service_class = stub_const('IfMethodTruthyService', Class.new(Servus::Base) do
+          emits :conditional_event, on: :success, if: :large_amount?
+
+          def call
+            success({ amount: 150 })
+          end
+
+          private
+
+          def large_amount?(result)
+            result.data[:amount] > 100
+          end
+        end)
+
+        expect { service_class.call }.to emit_event(:conditional_event)
+      end
+
+      it 'does not emit when the method reference returns falsy' do
+        service_class = stub_const('IfMethodFalsyService', Class.new(Servus::Base) do
+          emits :conditional_event, on: :success, if: :large_amount?
+
+          def call
+            success({ amount: 50 })
+          end
+
+          private
+
+          def large_amount?(result)
+            result.data[:amount] > 100
+          end
+        end)
+
+        expect { service_class.call }.not_to emit_event(:conditional_event)
+      end
+    end
+
+    describe 'unless: condition' do
+      it 'does not emit when the lambda returns truthy' do
+        service_class = stub_const('UnlessLambdaTruthyService', Class.new(Servus::Base) do
+          emits :conditional_event, on: :success, unless: ->(result) { result.data[:internal] }
+
+          def call
+            success({ internal: true })
+          end
+        end)
+
+        expect { service_class.call }.not_to emit_event(:conditional_event)
+      end
+
+      it 'emits when the lambda returns falsy' do
+        service_class = stub_const('UnlessLambdaFalsyService', Class.new(Servus::Base) do
+          emits :conditional_event, on: :success, unless: ->(result) { result.data[:internal] }
+
+          def call
+            success({ internal: false })
+          end
+        end)
+
+        expect { service_class.call }.to emit_event(:conditional_event)
+      end
+
+      it 'does not emit when the method reference returns truthy' do
+        service_class = stub_const('UnlessMethodTruthyService', Class.new(Servus::Base) do
+          emits :conditional_event, on: :success, unless: :internal_transfer?
+
+          def call
+            success({ internal: true })
+          end
+
+          private
+
+          def internal_transfer?(result)
+            result.data[:internal]
+          end
+        end)
+
+        expect { service_class.call }.not_to emit_event(:conditional_event)
+      end
+
+      it 'emits when the method reference returns falsy' do
+        service_class = stub_const('UnlessMethodFalsyService', Class.new(Servus::Base) do
+          emits :conditional_event, on: :success, unless: :internal_transfer?
+
+          def call
+            success({ internal: false })
+          end
+
+          private
+
+          def internal_transfer?(result)
+            result.data[:internal]
+          end
+        end)
+
+        expect { service_class.call }.to emit_event(:conditional_event)
+      end
+    end
+
+    describe 'combining if: and unless:' do
+      it 'emits when both conditions pass' do
+        service_class = stub_const('BothConditionsPassService', Class.new(Servus::Base) do
+          emits :conditional_event, on: :success,
+                                    if: ->(result) { result.data[:amount] > 50 },
+                                    unless: ->(result) { result.data[:internal] }
+
+          def call
+            success({ amount: 150, internal: false })
+          end
+        end)
+
+        expect { service_class.call }.to emit_event(:conditional_event)
+      end
+
+      it 'does not emit when if: passes but unless: blocks' do
+        service_class = stub_const('UnlessBlocksService', Class.new(Servus::Base) do
+          emits :conditional_event, on: :success,
+                                    if: ->(result) { result.data[:amount] > 50 },
+                                    unless: ->(result) { result.data[:internal] }
+
+          def call
+            success({ amount: 150, internal: true })
+          end
+        end)
+
+        expect { service_class.call }.not_to emit_event(:conditional_event)
+      end
+
+      it 'does not emit when unless: passes but if: blocks' do
+        service_class = stub_const('IfBlocksService', Class.new(Servus::Base) do
+          emits :conditional_event, on: :success,
+                                    if: ->(result) { result.data[:amount] > 50 },
+                                    unless: ->(result) { result.data[:internal] }
+
+          def call
+            success({ amount: 10, internal: false })
+          end
+        end)
+
+        expect { service_class.call }.not_to emit_event(:conditional_event)
+      end
+    end
+
+    it 'backwards compatible: always emits when no condition is given' do
+      service_class = stub_const('UnconditionalEmitService', Class.new(Servus::Base) do
+        emits :unconditional_event, on: :success
+
+        def call
+          success({ data: 'anything' })
+        end
+      end)
+
+      expect { service_class.call }.to emit_event(:unconditional_event)
+    end
+
+    it 'still builds payload correctly when condition passes' do
+      service_class = stub_const('ConditionalPayloadService', Class.new(Servus::Base) do
+        emits :conditional_event, on: :success,
+                                  if: ->(result) { result.data[:amount] > 100 }
+
+        def call
+          success({ amount: 150, label: 'large' })
+        end
+      end)
+
+      expect { service_class.call }
+        .to emit_event(:conditional_event)
+        .with(hash_including(amount: 150, label: 'large'))
+    end
+  end
+
   describe 'automatic event emission' do
     it 'emits events on success' do
       service_class = stub_const('TestEventEmissionService', Class.new(Servus::Base) do

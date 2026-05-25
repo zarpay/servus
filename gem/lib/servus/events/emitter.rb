@@ -33,12 +33,15 @@ module Servus
         # Declares an event that this service will emit.
         #
         # Events are automatically emitted when the service completes with the specified
-        # trigger condition (:success, :failure, or :error). Use the `with` option to
-        # provide a custom payload builder, or pass a block.
+        # trigger condition (:success, :failure, or :error). Use the `with` option or a
+        # block to provide a custom payload builder. Use `if` or `unless` to gate emission
+        # on a runtime condition.
         #
         # @param event_name [Symbol] the name of the event to emit
-        # @param on [Symbol] when to emit (:success, :failure, or :error)
-        # @param with [Symbol, nil] optional instance method name for building the payload
+        # @param on [Symbol] when to emit (:success, :failure, or :error!)
+        # @option options [Symbol, nil] :with instance method name for building the payload
+        # @option options [Proc, Symbol, nil] :if condition proc or method name; event only emits when truthy
+        # @option options [Proc, Symbol, nil] :unless condition proc or method name; event only emits when falsy
         # @yield [result] optional block for building the payload
         # @yieldparam result [Servus::Support::Response] the service result
         # @yieldreturn [Hash] the event payload
@@ -67,6 +70,22 @@ module Servus
         #     end
         #   end
         #
+        # @example Conditional emission with if: lambda
+        #   class CreateUser < Servus::Base
+        #     emits :premium_user_created, on: :success, if: ->(result) { result.data[:plan] == :premium }
+        #   end
+        #
+        # @example Conditional emission with unless: method reference
+        #   class CreateUser < Servus::Base
+        #     emits :user_created, on: :success, unless: :suppressed?
+        #
+        #     private
+        #
+        #     def suppressed?(result)
+        #       result.data[:suppressed]
+        #     end
+        #   end
+        #
         # @note Best Practice: Services should typically emit ONE event per trigger
         #   that represents their core concern. Multiple downstream reactions should
         #   be coordinated by Event classes, not by emitting multiple events
@@ -87,7 +106,7 @@ module Servus
         #
         # @see Servus::Events::Bus
         # @see Servus::Event
-        def emits(event_name, on:, with: nil, &block)
+        def emits(event_name, on:, **options, &block)
           valid_triggers = %i[success failure error!]
 
           unless valid_triggers.include?(on)
@@ -95,10 +114,7 @@ module Servus
           end
 
           @event_emissions ||= { success: [], failure: [], error!: [] }
-          @event_emissions[on] << {
-            event_name: event_name,
-            payload_builder: block || with
-          }
+          @event_emissions[on] << build_emission(event_name, options, block)
         end
 
         # Returns all event emissions declared for this service.
@@ -116,6 +132,17 @@ module Servus
         def emissions_for(trigger)
           event_emissions[trigger] || []
         end
+
+        private
+
+        def build_emission(event_name, options, block)
+          {
+            event_name: event_name,
+            if_condition: options[:if],
+            unless_condition: options[:unless],
+            payload_builder: block || options[:with]
+          }
+        end
       end
 
       # Emits events for a specific trigger with the given result.
@@ -126,6 +153,8 @@ module Servus
       # @api private
       def emit_events_for(trigger, result)
         self.class.emissions_for(trigger).each do |emission|
+          next unless emission_condition_met?(emission, result)
+
           payload = build_event_payload(emission, result)
           validate_event_payload!(emission[:event_name], payload)
           Servus::Events::Bus.emit(emission[:event_name], payload)
@@ -133,7 +162,35 @@ module Servus
       end
 
       # Instance methods for emitting events during service execution
-      private
+
+      # Returns true when all declared conditions on the emission pass.
+      #
+      # @param emission [Hash] the emission configuration
+      # @param result [Servus::Support::Response] the service result
+      # @return [Boolean]
+      # @api private
+      def emission_condition_met?(emission, result)
+        if_condition = emission[:if_condition]
+        unless_condition = emission[:unless_condition]
+
+        return false if if_condition && !evaluate_emission_condition(if_condition, result)
+        return false if unless_condition && evaluate_emission_condition(unless_condition, result)
+
+        true
+      end
+
+      # Evaluates a single emission condition — either a Proc/lambda or a Symbol method reference.
+      #
+      # Both forms receive the result object so conditions can inspect result.data,
+      # result.error, result.success?, etc.
+      #
+      # @param condition [Proc, Symbol] the condition to evaluate
+      # @param result [Servus::Support::Response] the service result
+      # @return [Object] truthy or falsy value
+      # @api private
+      def evaluate_emission_condition(condition, result)
+        condition.is_a?(Proc) ? condition.call(result) : send(condition, result)
+      end
 
       # Validates the payload against the Event class's schema registered for the event.
       #
