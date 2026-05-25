@@ -408,6 +408,45 @@ RSpec.describe Servus::Base, 'event emission' do
         .to emit_event(:conditional_event)
         .with(hash_including(amount: 150, label: 'large'))
     end
+
+    context 'instance variable access in procs (regression: instance_exec binding)' do
+      it 'condition proc can read an instance variable set in initialize' do
+        service_class = stub_const('IvarConditionService', Class.new(Servus::Base) do
+          emits :ivar_event, on: :success, unless: ->(_result) { @suppress }
+
+          def initialize(suppress: false)
+            @suppress = suppress
+          end
+
+          def call
+            success({})
+          end
+        end)
+
+        expect { service_class.call(suppress: false) }.to emit_event(:ivar_event)
+        expect { service_class.call(suppress: true) }.not_to emit_event(:ivar_event)
+      end
+
+      it 'payload builder block can read an instance variable set in initialize' do
+        service_class = stub_const('IvarPayloadService', Class.new(Servus::Base) do
+          emits :ivar_payload_event, on: :success do |_result|
+            { label: @label }
+          end
+
+          def initialize(label:)
+            @label = label
+          end
+
+          def call
+            success({})
+          end
+        end)
+
+        expect { service_class.call(label: 'vip') }
+          .to emit_event(:ivar_payload_event)
+          .with(hash_including(label: 'vip'))
+      end
+    end
   end
 
   describe 'automatic event emission' do
