@@ -189,7 +189,7 @@ module Servus
       # @return [Object] truthy or falsy value
       # @api private
       def evaluate_emission_condition(condition, result)
-        condition.is_a?(Proc) ? condition.call(result) : send(condition, result)
+        condition.is_a?(Proc) ? instance_exec(result, &condition) : send(condition, result)
       end
 
       # Validates the payload against the Event class's schema registered for the event.
@@ -216,8 +216,7 @@ module Servus
         builder = emission[:payload_builder]
 
         if builder.is_a?(Proc)
-          # Block-based payload builder
-          builder.call(result)
+          instance_exec(result, &builder)
         elsif builder.is_a?(Symbol)
           # Method-based payload builder
           send(builder, result)
