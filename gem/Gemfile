@@ -5,7 +5,6 @@ source 'https://rubygems.org'
 # Specify your gem's dependencies in servus.gemspec
 gemspec
 
-gem 'active_model_serializers'
 gem 'activesupport'
 gem 'json-schema'
 gem 'rake', '~> 13.0'

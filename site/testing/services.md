@@ -363,3 +363,33 @@ expect {
 }.to emit_event(GoldTransferredEvent)
 ```
 
+### Asserting non-emission
+
+Use `not_to emit_event` to assert that a service does **not** emit an event. This is particularly useful when testing conditional emissions — verifying the event is suppressed when the condition is not met:
+
+```ruby
+it "does not emit large_transfer_event for small transfers" do
+  expect {
+    described_class.call(
+      from_account: from_account,
+      to_account: to_account,
+      gold_dragons: 10  # below the 100-dragon threshold
+    )
+  }.not_to emit_event(:large_transfer_event)
+end
+```
+
+Combine with `emit_event` in the same example group to fully specify conditional behavior:
+
+```ruby
+context "when transfer exceeds 100 gold dragons" do
+  it { expect { described_class.call(gold_dragons: 150, **accounts) }.to emit_event(:large_transfer_event) }
+  it { expect { described_class.call(gold_dragons: 150, **accounts) }.not_to emit_event(:standard_transfer_event) }
+end
+
+context "when transfer is 100 gold dragons or fewer" do
+  it { expect { described_class.call(gold_dragons: 50, **accounts) }.not_to emit_event(:large_transfer_event) }
+  it { expect { described_class.call(gold_dragons: 50, **accounts) }.to emit_event(:standard_transfer_event) }
+end
+```
+

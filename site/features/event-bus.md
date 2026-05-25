@@ -63,6 +63,116 @@ def transfer_payload(result)
 end
 ```
 
+### Conditional emission
+
+Use `if:` or `unless:` to gate whether an event fires at runtime. When the condition is not met, the event is completely skipped — no payload is built, no validation runs, and nothing reaches the bus.
+
+Both options accept a **lambda/proc** or a **method reference** (Symbol). The condition always receives the `result` object, giving it access to `result.data`, `result.error`, `result.success?`, and `result.failure?`.
+
+::: info Conditions vs payload builders
+The `&block` position on `emits` is already taken by the payload builder. Conditions must be passed as `if:` or `unless:` options — a proc/lambda or a Symbol naming a private instance method.
+:::
+
+#### `if:` with a lambda
+
+The event fires only when the lambda returns a truthy value:
+
+```ruby
+class Treasury::TransferGold::Service < Servus::Base
+  # Only notify the Iron Bank for large transfers
+  emits :large_transfer_event, on: :success, if: ->(result) { result.data[:transferred] > 100 }
+
+  def call
+    from_account.withdraw!(@gold_dragons)
+    to_account.deposit!(@gold_dragons)
+    success(transferred: @gold_dragons, from_balance: from_account.balance, to_balance: to_account.balance)
+  end
+end
+```
+
+#### `unless:` with a lambda
+
+The event fires only when the lambda returns a falsy value:
+
+```ruby
+class Treasury::TransferGold::Service < Servus::Base
+  # Skip the standard receipt for large transfers (they get a different event)
+  emits :standard_transfer_event, on: :success, unless: ->(result) { result.data[:transferred] > 100 }
+
+  def call
+    # ...
+  end
+end
+```
+
+#### `if:` with a method reference
+
+Pass a Symbol to call a private instance method. The method receives the same `result` object:
+
+```ruby
+class Treasury::TransferGold::Service < Servus::Base
+  emits :vip_transfer_event, on: :success, if: :vip_sender?
+
+  def call
+    from_account.withdraw!(@gold_dragons)
+    to_account.deposit!(@gold_dragons)
+    success(transferred: @gold_dragons, account_tier: from_account.tier)
+  end
+
+  private
+
+  def vip_sender?(result)
+    result.data[:account_tier] == :vip
+  end
+end
+```
+
+#### `unless:` with a method reference
+
+```ruby
+class Treasury::TransferGold::Service < Servus::Base
+  emits :transfer_failed_event, on: :failure, unless: :suppressed_account?
+
+  def call
+    # ...
+  end
+
+  private
+
+  def suppressed_account?(result)
+    result.error.message.include?("suppressed")
+  end
+end
+```
+
+#### Combining `if:` and `unless:`
+
+Both conditions must pass for the event to emit. If either blocks, the event is skipped:
+
+```ruby
+class Treasury::TransferGold::Service < Servus::Base
+  emits :audit_transfer_event, on: :success,
+    if: ->(result) { result.data[:transferred] > 50 },
+    unless: :internal_transfer?
+
+  def call
+    # ...
+  end
+
+  private
+
+  def internal_transfer?(result)
+    @to_account.internal?
+  end
+end
+```
+
+::: tip Emission vs invocation conditions
+`if:`/`unless:` on `emits` gate the **event itself** — when the condition fails, the event never enters the bus and no handlers run.
+
+The `if:`/`unless:` on `invoke` (inside an Event class) gate a **specific handler** — the event fires and reaches the bus, but only matching handlers are invoked. Use emission conditions when the entire event is irrelevant; use invocation conditions when only some handlers should react.
+:::
+
 ## Handling events
 
 A service can emit events without knowing or caring whether anything is listening. The service's job ends when the event fires — it has no dependency on what happens next.
