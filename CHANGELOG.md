@@ -1,3 +1,22 @@
+## [Unreleased]
+
+### Added
+
+- **`Servus::Result` as a top-level primary concern**: The result object is now exposed
+  at `Servus::Result` and is usable from any code, not just inside a service. New class-method
+  factories mirror the `Servus::Base` DSL:
+
+  ```ruby
+  Servus::Result.success(user_id: 1)
+  Servus::Result.failure("Card declined", type: Servus::Support::Errors::BadRequestError)
+  Servus::Result.failure("Declined", data: { reason: "insufficient_funds" })
+  ```
+
+  `Servus::Base#success` and `#failure` now delegate to `Servus::Result.success` / `.failure`,
+  giving a single source of truth for result construction. `Servus::Support::Response` remains
+  as a silent alias of `Servus::Result` — existing code referencing the old constant continues
+  to work unchanged.
+
 ## [0.5.2] - 2026-05-25
 
 ### Fixed

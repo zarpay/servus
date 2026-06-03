@@ -20,6 +20,10 @@ require_relative 'servus/config'
 # Support
 require_relative 'servus/support/logger'
 require_relative 'servus/support/data_object'
+
+# Result (top-level primary concern; loaded after DataObject which it wraps)
+require_relative 'servus/result'
+
 require_relative 'servus/support/response'
 require_relative 'servus/support/validator'
 require_relative 'servus/support/errors'

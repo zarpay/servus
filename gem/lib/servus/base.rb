@@ -55,7 +55,8 @@ module Servus
     # Support class aliases
     Logger = Servus::Support::Logger
     Emitter = Servus::Events::Emitter
-    Response = Servus::Support::Response
+    Result = Servus::Result
+    Response = Servus::Support::Response # alias of Servus::Result, kept for back-compat
     Validator = Servus::Support::Validator
 
     # Creates a successful response with the provided data.
@@ -78,9 +79,9 @@ module Servus
     #   end
     #
     # @see #failure
-    # @see Servus::Support::Response
+    # @see Servus::Result
     def success(data)
-      Response.new(true, data, nil)
+      Result.success(data)
     end
 
     # Creates a failure response with an error.
@@ -121,8 +122,7 @@ module Servus
     # @see #error!
     # @see Servus::Support::Errors
     def failure(message = nil, data: nil, type: Servus::Support::Errors::ServiceError)
-      error = type.new(message)
-      Response.new(false, data, error)
+      Result.failure(message, data: data, type: type)
     end
 
     # Logs an error and raises an exception, halting service execution.
