@@ -22,16 +22,6 @@ module Servus
         #   Services::SendEmail::Service.call_async(user_id: 123)
         #   # => Servus::Extensions::Async::Errors::JobEnqueueError: Failed to enqueue async job
         class JobEnqueueError < AsyncError; end
-
-        # Raised when a service class name cannot be found.
-        #
-        # This occurs during job execution when the service class string
-        # cannot be constantized, usually due to typos or deleted classes.
-        #
-        # @example
-        #   Job.perform_later(name: "NonExistent::Service", args: {})
-        #   # => Servus::Extensions::Async::Errors::ServiceNotFoundError: Service class 'NonExistent::Service' not found
-        class ServiceNotFoundError < AsyncError; end
       end
     end
   end

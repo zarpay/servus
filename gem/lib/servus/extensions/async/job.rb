@@ -3,53 +3,46 @@
 module Servus
   module Extensions
     module Async
-      # ActiveJob for executing Servus services asynchronously.
+      # Abstract ActiveJob base class for executing Servus services asynchronously.
       #
-      # This job is used by {Call#call_async} to execute services in the background.
-      # It receives the service class name and arguments, instantiates the service,
-      # and executes it via {Servus::Base.call}.
+      # This class is never enqueued directly. Instead, {Call} generates a named
+      # subclass per service (e.g. +Treasury::TransferGold::ServiceJob+) so that
+      # background runners like Sidekiq and GoodJob display a meaningful, per-service
+      # job name rather than one generic class for every invocation.
       #
-      # @example Enqueued by call_async
-      #   Services::SendEmail::Service.call_async(user_id: 123)
-      #   # Internally enqueues:
-      #   #   Job.perform_later(name: "Services::SendEmail::Service", args: { user_id: 123 })
+      # Each generated subclass carries a reference to its owning service in
+      # {servus_service}, set at generation time. {#perform} uses that reference to
+      # route back through the standard {Servus::Base.call} lifecycle — validation,
+      # logging, benchmarking, guards, and event emission all run exactly as if the
+      # service had been called synchronously.
       #
+      # @example The class Servus generates for a service
+      #   Treasury::TransferGold::ServiceJob < Servus::Extensions::Async::Job
+      #   Treasury::TransferGold::ServiceJob.servus_service
+      #   # => Treasury::TransferGold::Service
+      #
+      # @see Servus::Extensions::Async::Call#call_async
       # @api private
       class Job < ActiveJob::Base
+        # The service class this job invokes. Set on each generated subclass when
+        # {Call.build_servus_job_class} creates it.
+        #
+        # @return [Class<Servus::Base>, nil] the owning service class
+        class_attribute :servus_service
+
         queue_as :default
 
-        # Executes the service with the provided arguments.
+        # Executes the job's service with the provided arguments.
         #
-        # Dynamically loads the service class by name and calls it with the
-        # provided keyword arguments.
+        # The service is identified by {servus_service} rather than a serialized
+        # name — the job class itself encodes which service to run.
         #
-        # @param name [String] fully-qualified service class name
         # @param args [Hash] keyword arguments to pass to the service
         # @return [Servus::Support::Response] the service execution result
-        # @raise [Servus::Extensions::Async::Errors::ServiceNotFoundError] if service class doesn't exist
         #
         # @api private
-        def perform(name:, args:)
-          constantize!(name).call(**args)
-        end
-
-        private
-
-        attr_reader :klass
-
-        # Safely constantizes a class name string.
-        #
-        # Converts a string class name to its corresponding class constant,
-        # raising an error if the class doesn't exist.
-        #
-        # @param class_name [String] the service class name
-        # @return [Class] the service class
-        # @raise [Servus::Extensions::Async::Errors::ServiceNotFoundError] if class not found
-        #
-        # @api private
-        def constantize!(class_name)
-          "::#{class_name}".safe_constantize ||
-            (raise Errors::ServiceNotFoundError, "Service class '#{class_name}' not found.")
+        def perform(**args)
+          self.class.servus_service.call(**args)
         end
       end
     end

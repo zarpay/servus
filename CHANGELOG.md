@@ -1,3 +1,49 @@
+## [Unreleased]
+
+### Added
+
+- **Named job per service**: `.call_async` now enqueues a dedicated ActiveJob class generated for
+  each service — `Treasury::TransferGold::Service` gets `Treasury::TransferGold::ServiceJob` — instead
+  of a single generic `Servus::Extensions::Async::Job` for every invocation. Background dashboards
+  (Sidekiq, GoodJob, …) now show a meaningful per-service job name, so metrics, retries, and log
+  filtering align with the service that ran. These classes are generated automatically; you never
+  write or reference them, and the public `.call_async` API is unchanged.
+
+- **`async` DSL for per-service job configuration**: Services can declare their ActiveJob options via
+  a class method — keyword shortcuts for the common cases plus a block, evaluated in the job class's
+  context, for the full ActiveJob surface.
+
+  ```ruby
+  class Treasury::TransferGold::Service < Servus::Base
+    async queue: :critical, priority: 10
+
+    async do
+      retry_on Gringotts::Timeout, wait: 5.seconds, attempts: 3
+      discard_on ActiveJob::DeserializationError
+    end
+  end
+  ```
+
+  These are class-level defaults; options passed inline to `.call_async` are layered on top per
+  enqueue and win for that call.
+
+### Upgrading
+
+Calling code is unaffected — `.call_async(**args)` on a service works exactly as before. Two things to
+be aware of when deploying:
+
+- **Drain your queues first.** The enqueue payload changed from `perform_later(name:, args:)` to
+  `perform_later(**args)` (the job class now identifies the service). Jobs enqueued by an older
+  version use the old shape and will not run after the upgrade, so let queues empty before deploying.
+- **Workers must eager-load their services.** A job is resolved on the worker by its class name;
+  Servus defines each service's job when the service class loads, so Rails' production eager-loading
+  (the default) covers this. If you run workers with eager-loading off, ensure services get referenced
+  before their jobs run.
+
+Only relevant if you reached into the extension internals: `Job#perform` now takes `(**args)` instead
+of `(name:, args:)`, and `Servus::Extensions::Async::Errors::ServiceNotFoundError` has been removed
+(services are no longer resolved from a serialized name string).
+
 ## [0.5.2] - 2026-05-25
 
 ### Fixed

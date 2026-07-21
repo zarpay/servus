@@ -77,9 +77,47 @@ The service itself doesn't know or care whether it was called synchronously or a
 
 This means you can develop and test a service synchronously — fast feedback, easy debugging — and then switch a call site to `.call_async` when you're ready to move it to the background. Nothing inside the service changes.
 
+## A named job per service
+
+Servus generates a dedicated ActiveJob class for each service, named after it. For `Treasury::TransferGold::Service` the job is `Treasury::TransferGold::ServiceJob` — a sibling constant in the service's namespace. This means your background dashboard (Sidekiq, GoodJob, …) shows a meaningful, per-service job name instead of one generic class for every job in the system, so per-queue metrics, retries, and log filtering all line up with the service that actually ran.
+
+You never write or reference these classes yourself — they're created for you when the service is defined.
+
+## Per-service job configuration
+
+Use the `async` class method to configure a service's job — queue, priority, retries, and anything else ActiveJob supports:
+
+```ruby
+class Treasury::TransferGold::Service < Servus::Base
+  async queue: :critical, priority: 10
+
+  async do
+    retry_on Gringotts::Timeout, wait: 5.seconds, attempts: 3
+    discard_on ActiveJob::DeserializationError
+  end
+end
+```
+
+`queue:` and `priority:` are keyword shortcuts for the two most common options. The block is evaluated in the job class's own context, so anything you'd normally write in an ActiveJob subclass — `retry_on`, `discard_on`, `around_perform`, and friends — works exactly as it does there.
+
+These settings are the job's class-level defaults. Options passed inline to `call_async` are layered on top per enqueue, so an inline `queue:` still wins for that one call:
+
+```ruby
+# Runs on :critical by default (from the async block above)…
+Treasury::TransferGold::Service.call_async(from_account: 1, to_account: 2, gold_dragons: 50)
+
+# …but this one call is routed to :low_priority instead
+Treasury::TransferGold::Service.call_async(
+  from_account: 1,
+  to_account: 2,
+  gold_dragons: 50,
+  queue: :low_priority
+)
+```
+
 ## How it works
 
-`call_async` enqueues a `Servus::Extensions::Async::Job` that stores the service class name and arguments. When the worker picks it up, it calls `Service.call(**args)` — the full lifecycle runs exactly as if you had called `.call` directly.
+`call_async` enqueues the service's named job with just the service arguments — the job class itself already identifies which service to run. When the worker picks it up, it calls `Service.call(**args)`, and the full lifecycle runs exactly as if you had called `.call` directly.
 
 ```ruby
 args = { from_account: 1, to_account: 2, gold_dragons: 50 }
@@ -88,6 +126,10 @@ args = { from_account: 1, to_account: 2, gold_dragons: 50 }
 Treasury::TransferGold::Service.call(**args)
 Treasury::TransferGold::Service.call_async(**args)
 ```
+
+::: warning Workers must eager-load
+Because a job is serialized by its class name, the worker process has to be able to resolve that name. Servus defines each service's job when the service class loads, so under Rails' production eager-loading (the default) every job exists at boot. If you run workers with eager-loading off, make sure the service gets referenced before its jobs run.
+:::
 
 ## Error behavior
 
