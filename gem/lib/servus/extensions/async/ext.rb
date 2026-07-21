@@ -10,6 +10,9 @@ module Servus
     # @see Servus::Extensions::Async::Call
     # @see Servus::Extensions::Async::Job
     module Async
+      require 'active_support/core_ext/module/introspection' # Module#module_parent
+      require 'active_support/core_ext/string/inflections' # String#demodulize
+
       require 'servus/extensions/async/errors'
       require 'servus/extensions/async/job'
       require 'servus/extensions/async/call'

@@ -33,3 +33,37 @@ class UserCreatedEvent < Servus::Event
 
   invoke ServiceA
 end
+
+# --- Async extension fixtures ------------------------------------------------
+#
+# Real, top-level service constants so the async extension generates stable,
+# uniquely-named job classes (e.g. AsyncEmailService -> AsyncEmailServiceJob)
+# that persist for the whole suite — no per-example constant juggling. Each
+# `.async(...)` fixture is dedicated to a single example so configuring its job
+# class can't leak into others.
+class AsyncFixtureService < Servus::Base
+  def initialize(**args)
+    super()
+    @args = args
+  end
+
+  def call
+    success(@args)
+  end
+end
+
+# Each fixture below is dedicated to a single concern so configuring its
+# generated job class (queue, priority, retries) can't leak between examples:
+# AsyncEmailService drives call_async + job perform; AsyncQueueService,
+# AsyncPriorityService, AsyncBlockService and AsyncRetryService each exercise one
+# facet of the `.async` DSL.
+class AsyncEmailService < AsyncFixtureService; end
+class AsyncQueueService < AsyncFixtureService; end
+class AsyncPriorityService < AsyncFixtureService; end
+class AsyncBlockService < AsyncFixtureService; end
+class AsyncRetryService < AsyncFixtureService; end
+
+# Namespaced fixture — its sibling job is AsyncNamespace::DeliverServiceJob.
+module AsyncNamespace
+  class DeliverService < AsyncFixtureService; end
+end

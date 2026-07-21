@@ -6,34 +6,23 @@ require 'active_job'
 require 'servus/extensions/async/ext'
 
 RSpec.describe Servus::Extensions::Async::Job, type: :job do
-  # Include error modules for easier testing
-  let(:errors) { Servus::Extensions::Async::Errors }
+  before { Servus::Base.extend(Servus::Extensions::Async::Call) }
 
-  before do
-    stub_const('DummyService', Class.new(Servus::Base) do
-      def initialize(arg1:, arg2:)
-        super()
-        @a = arg1
-        @b = arg2
-      end
+  let(:job) { AsyncEmailService.servus_job_class.new }
 
-      def call
-        success("#{@a}, #{@b}")
-      end
-    end)
+  it 'invokes its bound service with the given arguments' do
+    expect(AsyncEmailService).to receive(:call).with(
+      a: 1,
+      b: 2
+    )
+
+    job.perform(
+      a: 1,
+      b: 2
+    )
   end
 
-  let(:job) { described_class.new }
-
-  it 'calls the correct service with given arguments' do
-    expect(DummyService).to receive(:call).with(a: 1, b: 2)
-
-    job.perform(name: 'DummyService', args: { a: 1, b: 2 })
-  end
-
-  it 'raises NameError if the service class does not exist' do
-    expect do
-      job.perform(name: 'NonExistentService', args: {})
-    end.to raise_error(errors::ServiceNotFoundError, /Service class 'NonExistentService' not found/)
+  it 'carries a reference back to the service it runs' do
+    expect(AsyncEmailService.servus_job_class.servus_service).to eq(AsyncEmailService)
   end
 end
