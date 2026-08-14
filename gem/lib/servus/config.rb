@@ -15,6 +15,9 @@ module Servus
   # @see Servus.config
   # @see Servus.configure
   class Config
+    # Credential-shaped keys filtered from argument logging by default.
+    DEFAULT_LOG_FILTER_PARAMETERS = %i[passw secret token _key crypt salt auth certificate otp].freeze
+
     # The directory where JSON schema files are located.
     #
     # Defaults to `Rails.root/app/schemas/services` in Rails applications.
@@ -112,6 +115,17 @@ module Servus
     # @see Servus::Support::Lockdown
     attr_reader :lockdown_enabled
 
+    # Keys whose values are filtered from Servus's service-call argument
+    # logging. Accepts the same notations as ActiveSupport::ParameterFilter
+    # (partial-match strings/symbols, regexps, procs).
+    #
+    # Defaults to a credential-shaped deny-list. In Rails applications the
+    # railtie replaces the default with the app's `filter_parameters` after
+    # boot, so filtering matches request-log filtering exactly.
+    #
+    # @return [Array] parameter filter patterns
+    attr_accessor :log_filter_parameters
+
     # Sets whether lockdown is enforced, immediately re-applying the
     # resulting `.new` visibility to {Servus::Base}.
     #
@@ -132,6 +146,7 @@ module Servus
       @require_service_arguments_schema = false
       @require_service_result_schema    = false
       @require_event_payload_schema     = false
+      @log_filter_parameters            = DEFAULT_LOG_FILTER_PARAMETERS.dup
     end
 
     def set_default_directories
