@@ -82,8 +82,33 @@ end
 
 ## Sensitive data
 
-Arguments are logged at `info` level. In production, either:
+Arguments are logged verbatim at `info` level. To keep credentials (tokens, passwords, auth hashes) out of your logs, configure `log_filter_parameters` — matching values are replaced with `[FILTERED]`:
+
+```ruby
+# config/initializers/servus.rb
+Servus.configure do |config|
+  config.log_filter_parameters = [
+    :passw, :email, :secret, :token, :_key, :crypt, :salt,
+    :certificate, :otp, :ssn, :cvv, :cvc
+  ]
+end
+```
+
+```
+INFO  Calling Sessions::Resolve::Service with args: {token: "[FILTERED]"}
+```
+
+The option accepts the same notations as `ActiveSupport::ParameterFilter`: partial-match strings/symbols, regexps, and procs. It defaults to `[]` — no filtering — so it's entirely opt-in, and it works in any Ruby app, not just Rails.
+
+Rails users can simply reuse their app's request-log filtering as the value, so Servus's argument logging matches it exactly (Rails' `filter_parameters` only applies to Servus logs if you assign it here — it isn't picked up automatically):
+
+```ruby
+config.log_filter_parameters = Rails.application.config.filter_parameters
+```
+
+Rails loads initializers alphabetically, so `config/initializers/filter_parameter_logging.rb` runs before `servus.rb` — any `filter_parameters += [...]` additions are included.
+
+Other options for production:
 
 1. Set the log level to `:warn` to suppress argument logging entirely
-2. Use Rails parameter filtering: `config.filter_parameters += [:password, :ssn]`
-3. Pass IDs instead of full objects: `Service.call(user_id: 1)` not `Service.call(user: user_object)`
+2. Pass IDs instead of full objects: `Service.call(user_id: 1)` not `Service.call(user: user_object)`

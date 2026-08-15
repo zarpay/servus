@@ -1,3 +1,34 @@
+## [0.7.0] - 2026-08-15
+
+### Added
+
+- **Opt-in credential filtering in service-call logging**: new `Servus.config.log_filter_parameters`
+  filters sensitive argument values out of `Servus::Support::Logger.log_call` lines via
+  `ActiveSupport::ParameterFilter`. Accepts the same notations as Rails' parameter filtering
+  (partial-match strings/symbols, regexps, procs). Filtered values appear as `[FILTERED]`:
+
+  ```
+  Calling Sessions::Resolve::Service with args: {token: "[FILTERED]"}
+  ```
+
+  Defaults to `[]` — no filtering — so Servus imposes nothing and existing logging behavior is
+  unchanged. To enable it, set the keys you want masked in your app's initializer:
+
+  ```ruby
+  # config/initializers/servus.rb
+  Servus.configure do |config|
+    config.log_filter_parameters = [
+      :passw, :email, :secret, :token, :_key, :crypt, :salt,
+      :certificate, :otp, :ssn, :cvv, :cvc
+    ]
+  end
+  ```
+
+  Rails users can simply reuse their app's request-log filtering as the value:
+  `config.log_filter_parameters = Rails.application.config.filter_parameters`.
+
+  The assigned list is frozen — reconfigure by assigning a new list rather than mutating in place.
+
 ## [0.6.0] - 2026-07-21
 
 ### Added

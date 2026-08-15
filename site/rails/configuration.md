@@ -35,6 +35,19 @@ Servus.configure do |config|
 
   config.include_default_guards = true  # default: true
 
+  # ── Log Filtering ───────────────────────────────────────────────────
+  # Filters sensitive argument values out of Servus's service-call log
+  # lines (shown as [FILTERED]). Accepts the same notations as
+  # ActiveSupport::ParameterFilter: partial-match strings/symbols,
+  # regexps, and procs. Defaults to [] (no filtering).
+  # Rails users can simply reuse their app's request-log filtering:
+  # config.log_filter_parameters = Rails.application.config.filter_parameters
+
+  config.log_filter_parameters = [                                    # default: []
+    :passw, :email, :secret, :token, :_key, :crypt, :salt,
+    :certificate, :otp, :ssn, :cvv, :cvc
+  ]
+
   # ── Schema Enforcement ─────────────────────────────────────────────
   # When true, Servus raises SchemaRequiredError if a service or Event
   # class is used without the corresponding schema defined. Useful for

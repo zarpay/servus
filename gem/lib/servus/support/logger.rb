@@ -17,12 +17,17 @@ module Servus
         end
       end
 
-      # Logs a call to a service
+      # Logs a call to a service.
+      #
+      # When {Servus::Config#log_filter_parameters} is configured, matching
+      # argument values are replaced with `[FILTERED]` before logging. With
+      # the default empty list, arguments are logged verbatim.
       #
       # @param service_class [Class] The service class
       # @param args [Hash] The arguments passed to the service
       def self.log_call(service_class, args)
-        logger.info("Calling #{service_class.name} with args: #{args.inspect}")
+        rendered = log_parameters(args)
+        logger.info("Calling #{service_class.name} with args: #{rendered.inspect}")
       end
 
       # Logs a result from a service
@@ -87,6 +92,18 @@ module Servus
       # @param exception [Exception] The uncaught exception
       def self.log_exception(service_class, exception)
         logger.error("#{service_class.name} uncaught exception: #{exception.class} - #{exception.message}")
+      end
+
+      # Filters parameters for logging based on the configured filter list.
+      #
+      # @param params [Hash] The parameters to filter
+      # @return [Hash] The filtered parameters
+      def self.log_parameters(params)
+        if Servus.config.log_filter_parameters.empty?
+          params
+        else
+          Servus.config.parameter_filter.filter(params)
+        end
       end
     end
   end

@@ -112,6 +112,39 @@ module Servus
     # @see Servus::Support::Lockdown
     attr_reader :lockdown_enabled
 
+    # Keys whose values are filtered from Servus's service-call argument
+    # logging, shown as `[FILTERED]`. Accepts the same notations as
+    # ActiveSupport::ParameterFilter (partial-match strings/symbols,
+    # regexps, procs).
+    #
+    # Defaults to `[]` — no filtering. Set the keys you want masked in your
+    # initializer; Rails users can simply reuse their app's request-log
+    # filtering as the value:
+    #
+    #   config.log_filter_parameters = Rails.application.config.filter_parameters
+    #
+    # @return [Array] parameter filter patterns
+    attr_reader :log_filter_parameters
+
+    # Sets the log filter list, invalidating the memoized
+    # {#parameter_filter}. The list is frozen on assignment — reconfigure
+    # by assigning a new list, not by mutating in place.
+    #
+    # @param value [Array] parameter filter patterns
+    # @return [Array] the new value
+    def log_filter_parameters=(value)
+      @log_filter_parameters = Array(value).dup.freeze
+      @parameter_filter      = nil
+    end
+
+    # Parameter filter built from {#log_filter_parameters}, memoized until
+    # the list is reassigned.
+    #
+    # @return [ActiveSupport::ParameterFilter]
+    def parameter_filter
+      @parameter_filter ||= ActiveSupport::ParameterFilter.new(log_filter_parameters)
+    end
+
     # Sets whether lockdown is enforced, immediately re-applying the
     # resulting `.new` visibility to {Servus::Base}.
     #
@@ -132,6 +165,7 @@ module Servus
       @require_service_arguments_schema = false
       @require_service_result_schema    = false
       @require_event_payload_schema     = false
+      @log_filter_parameters            = [].freeze
     end
 
     def set_default_directories
