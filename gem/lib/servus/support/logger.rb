@@ -20,14 +20,17 @@ module Servus
 
       # Logs a call to a service.
       #
-      # Argument values are filtered through
-      # {Servus::Config#log_filter_parameters} so credentials (tokens,
-      # passwords, auth hashes) never reach the log line.
+      # When {Servus::Config#log_filter_parameters} is configured, matching
+      # argument values are replaced with `[FILTERED]` before logging. With
+      # the default empty list, arguments are logged verbatim.
       #
       # @param service_class [Class] The service class
       # @param args [Hash] The arguments passed to the service
       def self.log_call(service_class, args)
-        logger.info("Calling #{service_class.name} with args: #{parameter_filter.filter(args).inspect}")
+        filters = Servus.config.log_filter_parameters
+        rendered = Array(filters).empty? ? args : parameter_filter.filter(args)
+
+        logger.info("Calling #{service_class.name} with args: #{rendered.inspect}")
       end
 
       # Parameter filter built from the current configuration, rebuilt

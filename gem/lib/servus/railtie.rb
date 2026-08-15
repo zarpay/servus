@@ -29,15 +29,6 @@ module Servus
       Servus::Events::Bus.enable_logging!
     end
 
-    # Runs after app initializers so additions made in
-    # config/initializers/filter_parameter_logging.rb are included. The app
-    # list is merged with (never replaces) the gem default, so an app with
-    # empty filter_parameters keeps credential filtering.
-    config.after_initialize do |app|
-      Servus.config.log_filter_parameters =
-        (app.config.filter_parameters + Servus::Config::DEFAULT_LOG_FILTER_PARAMETERS).uniq
-    end
-
     # Load guards and event classes, clear caches on reload
     config.to_prepare do
       # Load custom guards from guards_dir

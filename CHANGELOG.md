@@ -1,26 +1,31 @@
-## [0.7.0] - 2026-08-14
+## [0.7.0] - 2026-08-15
 
 ### Added
 
-- **Credential filtering in service-call logging**: `Servus::Support::Logger.log_call` previously
-  logged service arguments verbatim (`args.inspect`), leaking credentials passed as service args
-  (session tokens, OmniAuth hashes, passwords) into application logs. Argument values are now
-  filtered through `ActiveSupport::ParameterFilter` before logging.
-
-  - New `Servus.config.log_filter_parameters` — accepts the same notations as
-    `ActiveSupport::ParameterFilter` (partial-match strings/symbols, regexps, procs). Defaults to a
-    credential-shaped deny-list (`passw`, `secret`, `token`, `_key`, `crypt`, `salt`, `auth`,
-    `certificate`, `otp`).
-  - In Rails applications the railtie merges the app's `config.filter_parameters` into the
-    default after boot, so Servus log filtering covers everything request-log filtering does —
-    no configuration needed, and an app with empty `filter_parameters` keeps the default
-    protection.
-
-  Filtered values appear as `[FILTERED]`:
+- **Opt-in credential filtering in service-call logging**: new `Servus.config.log_filter_parameters`
+  filters sensitive argument values out of `Servus::Support::Logger.log_call` lines via
+  `ActiveSupport::ParameterFilter`. Accepts the same notations as Rails' parameter filtering
+  (partial-match strings/symbols, regexps, procs). Filtered values appear as `[FILTERED]`:
 
   ```
   Calling Sessions::Resolve::Service with args: {token: "[FILTERED]"}
   ```
+
+  Defaults to `[]` — no filtering — so Servus imposes nothing and existing logging behavior is
+  unchanged. To enable it, set the keys you want masked in your app's initializer:
+
+  ```ruby
+  # config/initializers/servus.rb
+  Servus.configure do |config|
+    config.log_filter_parameters = [
+      :passw, :email, :secret, :token, :_key, :crypt, :salt,
+      :certificate, :otp, :ssn, :cvv, :cvc
+    ]
+  end
+  ```
+
+  Rails users can simply reuse their app's request-log filtering as the value:
+  `config.log_filter_parameters = Rails.application.config.filter_parameters`.
 
 ## [0.6.0] - 2026-07-21
 
