@@ -27,6 +27,8 @@
   Rails users can simply reuse their app's request-log filtering as the value:
   `config.log_filter_parameters = Rails.application.config.filter_parameters`.
 
+  The assigned list is frozen — reconfigure by assigning a new list rather than mutating in place.
+
 ## [0.6.0] - 2026-07-21
 
 ### Added

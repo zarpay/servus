@@ -87,6 +87,34 @@ RSpec.describe Servus::Config do
     after { Servus.config.require_event_payload_schema = false }
   end
 
+  describe '#log_filter_parameters' do
+    after { Servus.config.log_filter_parameters = [] }
+
+    it 'defaults to an empty list' do
+      expect(Servus.config.log_filter_parameters).to eq([])
+    end
+
+    it 'can be customized' do
+      Servus.config.log_filter_parameters = %i[token]
+      expect(Servus.config.log_filter_parameters).to eq(%i[token])
+    end
+
+    it 'freezes the assigned list so it cannot be mutated in place' do
+      Servus.config.log_filter_parameters = %i[token]
+      expect { Servus.config.log_filter_parameters << :wand }.to raise_error(FrozenError)
+    end
+
+    it 'rebuilds the memoized parameter filter on reassignment' do
+      Servus.config.log_filter_parameters = %i[token]
+      stale_filter = Servus.config.parameter_filter
+
+      Servus.config.log_filter_parameters = %i[wand]
+
+      expect(Servus.config.parameter_filter).not_to be(stale_filter)
+      expect(Servus.config.parameter_filter.filter({ wand: 'elder' })).to eq({ wand: '[FILTERED]' })
+    end
+  end
+
   describe '#lockdown_enabled' do
     after { Servus.config.lockdown_enabled = false }
 

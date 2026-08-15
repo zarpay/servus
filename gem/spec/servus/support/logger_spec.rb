@@ -48,11 +48,11 @@ RSpec.describe Servus::Support::Logger do
         expect(messages.last).not_to include('hidden')
       end
 
-      it 'picks up in-place mutations of the filter list' do
+      it 'applies a reassigned filter list on the next call' do
         described_class.log_call(String, { wand: 'elder' })
         expect(messages.last).to include('elder')
 
-        Servus.config.log_filter_parameters << :wand
+        Servus.config.log_filter_parameters = %i[wand]
         described_class.log_call(String, { wand: 'elder' })
 
         expect(messages.last).not_to include('elder')

@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require 'logger'
-require 'active_support/parameter_filter'
 
 module Servus
   module Support
@@ -27,26 +26,10 @@ module Servus
       # @param service_class [Class] The service class
       # @param args [Hash] The arguments passed to the service
       def self.log_call(service_class, args)
-        filters = Servus.config.log_filter_parameters
-        rendered = Array(filters).empty? ? args : parameter_filter.filter(args)
+        config = Servus.config
+        rendered = config.log_filter_parameters.empty? ? args : config.parameter_filter.filter(args)
 
         logger.info("Calling #{service_class.name} with args: #{rendered.inspect}")
-      end
-
-      # Parameter filter built from the current configuration, rebuilt
-      # whenever the configured filter list changes. The comparison snapshot
-      # is a copy, so in-place mutation of the list also triggers a rebuild.
-      #
-      # @return [ActiveSupport::ParameterFilter]
-      def self.parameter_filter
-        filters = Servus.config.log_filter_parameters
-
-        if @parameter_filter.nil? || @parameter_filter_source != filters
-          @parameter_filter_source = filters.dup
-          @parameter_filter = ActiveSupport::ParameterFilter.new(filters)
-        end
-
-        @parameter_filter
       end
 
       # Logs a result from a service
