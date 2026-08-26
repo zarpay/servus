@@ -1,12 +1,10 @@
 # Schema Validation
 
-Servus can validate a service's arguments before execution and its result after execution using [JSON Schema](https://json-schema.org/understanding-json-schema). Validation is opt-in — services work without schemas. Servus uses the [`json-schema`](https://github.com/voxpupuli/json-schema) gem (draft-04 by default).
+Servus can validate a service's arguments before execution and its result after execution using [JSON Schema](https://json-schema.org/understanding-json-schema). Validation is opt-in — services work without schemas. Servus uses the [`json-schema`](https://github.com/voxpupuli/json-schema) gem, which supports up to draft-06 and defaults to it.
 
 ## Defining schemas
 
-There are three ways to define schemas for a service. Servus checks them in this order — the first one found wins:
-
-### 1. The `schema` DSL (recommended)
+Schemas are declared inline with the `schema` DSL, in the service class itself:
 
 ```ruby
 class Treasury::TransferGold::Service < Servus::Base
@@ -45,37 +43,38 @@ schema arguments: {
 }
 ```
 
-### 2. Inline constants
+Calling `schema` again only touches the keys you pass, so you can declare each
+one separately. Passing a key explicitly as `nil` raises — an explicit `nil` is
+almost always a lookup that failed, and accepting it would leave the service
+silently unvalidated.
 
-::: warning Deprecated — will be removed in v1.0.0
-Servus also checks for `ARGUMENTS_SCHEMA`, `RESULT_SCHEMA`, and `FAILURE_SCHEMA` constants on the service class. Migrate to the `schema` DSL before upgrading to v1.0.0.
-:::
-
-### 3. JSON files
-
-For complex schemas, use JSON files. The framework looks for them at:
-
-```
-app/schemas/treasury/transfer_gold/arguments.json
-app/schemas/treasury/transfer_gold/result.json
-app/schemas/treasury/transfer_gold/failure.json
-```
-
-The path is derived from the service's class name — `Treasury::TransferGold::Service` becomes `treasury/transfer_gold`. The base directory defaults to `app/schemas` and can be configured:
+Events declare a payload schema the same way:
 
 ```ruby
-# config/initializers/servus.rb
-Servus.configure do |config|
-  config.schemas_dir = "app/services"  # colocates schemas next to service files
-  # or
-  config.schemas_dir = "config/schemas" # keeps schemas outside of app/
+class GoldTransferred < Servus::Event
+  schema payload: {
+    type: "object",
+    required: ["from_account", "gold_dragons"]
+  }
 end
 ```
 
-Schemas are cached after first load. In development, clear the cache when you change a file-based schema:
+Subclasses inherit their parent's schemas, and can override any of them
+without affecting the parent.
+
+## Sharing schemas between services
+
+Declaring schemas inline keeps a service's contract in the file that implements
+it. To avoid re-typing the same shapes across services, register the shared
+parts once and reference them with `$ref` — see [Shared Schemas](/features/shared-schemas).
 
 ```ruby
-Servus::Support::Validator.clear_cache!
+schema arguments: {
+  type: "object",
+  properties: {
+    gold_dragons: { "$ref" => "#/core/$defs/amount" }
+  }
+}
 ```
 
 ## What schemas buy you

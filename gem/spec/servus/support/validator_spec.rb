@@ -2,985 +2,273 @@
 
 require 'spec_helper'
 
-RSpec.describe Servus::Support::Validator do
-  # Create a test service class
-  module SchemaValidationTest
-    class Service < Servus::Base
-      def initialize(name:, age:)
-        @name = name
-        @age = age
-      end
+RSpec.describe Servus::Support::Validator, :schema_registry do
+  # A fresh class per example. Schemas live on the class, so sharing one across
+  # examples lets a schema declared in one leak into the next.
+  let(:service_class) do
+    stub_const(
+      'SchemaValidationTest::Service',
+      Class.new(Servus::Base) do
+        def initialize(name:, age:)
+          @name = name
+          @age = age
+        end
 
-      def call
-        success(
-          {
-            id: 123,
-            name: @name,
-            age: @age
-          }
-        )
+        def call
+          success({ id: 123, name: @name, age: @age })
+        end
       end
-    end
-
-    class ServiceWithNonPrimitiveArguments < Servus::Base
-      def initialize(user:)
-        @user = user
-      end
-
-      def call
-        success({ user: @user })
-      end
-    end
+    )
   end
 
-  context 'with inline schema' do
-    before { described_class.clear_cache! }
+  before { described_class.clear_cache! }
 
-    after do
-      if defined?(SchemaValidationTest::Service::ARGUMENTS_SCHEMA)
-        SchemaValidationTest::Service.send(:remove_const, :ARGUMENTS_SCHEMA)
-      end
-
-      if defined?(SchemaValidationTest::Service::RESULT_SCHEMA)
-        SchemaValidationTest::Service.send(:remove_const, :RESULT_SCHEMA)
-      end
-
-      if defined?(SchemaValidationTest::Service::FAILURE_SCHEMA)
-        SchemaValidationTest::Service.send(:remove_const, :FAILURE_SCHEMA)
-      end
+  describe '.load_schema' do
+    it 'returns nil when no schema is declared' do
+      expect(described_class.load_schema(service_class, 'arguments')).to be_nil
     end
 
-    describe '.load_schema' do
-      context 'when inline schema exists' do
-        before do
-          module SchemaValidationTest
-            class Service
-              ARGUMENTS_SCHEMA = {
-                type: 'object',
-                required: %w[name age],
-                properties: { name: { type: 'string' }, age: { type: 'integer' } }
-              }.freeze
-            end
-          end
-        end
+    it 'returns the declared schema' do
+      service_class.schema arguments: { type: 'object', required: ['name'] }
 
-        it 'loads and returns the schema' do
-          schema = described_class.load_schema(SchemaValidationTest::Service, 'arguments')
+      schema = described_class.load_schema(service_class, 'arguments')
 
-          expect(schema).to be_a(Hash)
-          expect(schema['type']).to eq('object')
-          expect(schema['required']).to include('name', 'age')
-        end
-
-        it 'caches the schema' do
-          # Load once
-          described_class.load_schema(SchemaValidationTest::Service, 'arguments')
-
-          # Modify the inline schema
-          SchemaValidationTest::Service::ARGUMENTS_SCHEMA = {
-            type: 'object',
-            required: ['modified']
-          }.freeze
-          # Load again - should return cached version
-          schema = described_class.load_schema(SchemaValidationTest::Service, 'arguments')
-
-          expect(schema['required']).to include('name', 'age')
-          expect(schema['required']).not_to include('modified')
-        end
-      end
-
-      context 'when inline schema does not exist' do
-        it 'returns nil' do
-          schema = described_class.load_schema(SchemaValidationTest::Service, 'nonexistent')
-
-          expect(schema).to be_nil
-        end
-
-        it 'caches the nil result' do
-          expect(File).to receive(:exist?).once.and_call_original
-
-          # Load twice
-          described_class.load_schema(SchemaValidationTest::Service, 'nonexistent')
-          described_class.load_schema(SchemaValidationTest::Service, 'nonexistent')
-        end
-      end
+      expect(schema['type']).to eq('object')
+      expect(schema['required']).to include('name')
     end
 
-    describe '.validate_arguments' do
-      context 'when no schema exists' do
-        it 'returns true without validation' do
-          expect(described_class.validate_arguments!(SchemaValidationTest::Service, { any: 'args' })).to eq(true)
-        end
-      end
+    it 'resolves $refs against the registry' do
+      Servus::Schema.register('core', { '$defs' => { 'name' => { 'type' => 'string' } } })
+      service_class.schema arguments: {
+        type: 'object',
+        properties: { name: { '$ref' => '#/core/$defs/name' } }
+      }
 
-      context 'when schema exists' do
-        before do
-          module SchemaValidationTest
-            class Service
-              ARGUMENTS_SCHEMA = {
-                type: 'object',
-                required: ['name'],
-                properties: {
-                  name: { type: 'string' },
-                  age: { type: 'integer', minimum: 18 }
-                }
-              }.freeze
-            end
-          end
-        end
+      schema = described_class.load_schema(service_class, 'arguments')
 
-        it 'returns true for valid arguments' do
-          expect(described_class.validate_arguments!(SchemaValidationTest::Service,
-                                                     { name: 'John', age: 25 })).to eq(true)
-        end
-
-        it 'raises ValidationError for missing required field' do
-          expect do
-            described_class.validate_arguments!(SchemaValidationTest::Service, { age: 25 })
-          end.to raise_error(Servus::Base::ValidationError, /required property of 'name'/)
-        end
-
-        it 'raises ValidationError for invalid field type' do
-          expect do
-            described_class.validate_arguments!(SchemaValidationTest::Service, { name: 'John', age: 'twenty' })
-          end.to raise_error(Servus::Base::ValidationError, /did not match the following type: integer/)
-        end
-
-        it 'raises ValidationError for out of range value' do
-          expect do
-            described_class.validate_arguments!(SchemaValidationTest::Service, { name: 'John', age: 17 })
-          end.to raise_error(Servus::Base::ValidationError, /did not have a minimum value of 18/)
-        end
-      end
+      expect(schema.dig('properties', 'name')).to eq({ 'type' => 'string' })
     end
 
-    describe '.validate_result' do
-      let(:success_result) { Servus::Support::Response.new(true, { id: 123 }, nil) }
-      let(:error_result) { Servus::Support::Response.new(false, nil, 'Error') }
+    it 'raises rather than skipping validation when a $ref cannot be resolved' do
+      service_class.schema arguments: { '$ref' => '#/nope/$defs/thing' }
 
-      context 'when no schema exists' do
-        it 'returns the result unchanged' do
-          expect(described_class.validate_result!(SchemaValidationTest::Service, success_result)).to eq(success_result)
-        end
-      end
-
-      context 'when schema exists' do
-        before do
-          module SchemaValidationTest
-            class Service
-              RESULT_SCHEMA = {
-                type: 'object',
-                required: %w[id status],
-                properties: {
-                  id: { type: 'integer' },
-                  status: { type: 'string' }
-                }
-              }.freeze
-            end
-          end
-        end
-
-        it 'returns error results unchanged without validation' do
-          expect(described_class.validate_result!(SchemaValidationTest::Service, error_result)).to eq(error_result)
-        end
-
-        it 'returns the success result unchanged if valid' do
-          valid_result = Servus::Support::Response.new(true, { id: 123, status: 'complete' }, nil)
-          expect(described_class.validate_result!(SchemaValidationTest::Service, valid_result)).to eq(valid_result)
-        end
-
-        it 'raises ValidationError if success result has invalid structure' do
-          expect do
-            described_class.validate_result!(SchemaValidationTest::Service, success_result)
-          end.to raise_error(Servus::Base::ValidationError, /did not contain a required property of 'status'/)
-        end
-
-        it 'raises ValidationError if success result has invalid types' do
-          invalid_result = Servus::Support::Response.new(true, { id: '123', status: 'complete' }, nil)
-          expect do
-            described_class.validate_result!(SchemaValidationTest::Service, invalid_result)
-          end.to raise_error(Servus::Base::ValidationError, /did not match the following type: integer/)
-        end
-      end
-
-      context 'when non-primitive values are passed' do
-        # Defines a test user object class
-        class TestUserObject
-          attr_reader :id, :name, :age
-
-          def initialize(id:, name:, age:)
-            @id = id
-            @age = age
-            @name = name
-          end
-        end
-
-        before do
-          module SchemaValidationTest
-            class ServiceWithNonPrimitiveArguments
-              RESULT_SCHEMA = {
-                type: 'object',
-                required: ['user'],
-                properties: {
-                  user: {
-                    type: 'object',
-                    properties: {
-                      id: { type: 'string' },
-                      age: { type: 'integer' },
-                      name: { type: 'string' }
-                    }
-                  }
-                }
-              }.freeze
-            end
-          end
-        end
-
-        it 'returns the success result unchanged if valid' do
-          user = TestUserObject.new(id: '123e4567-e89b-12d3-a456-426614174000', name: 'John Doe', age: 30)
-
-          valid_result = Servus::Support::Response.new(true, { user: user }, nil)
-
-          expect(described_class.validate_result!(SchemaValidationTest::ServiceWithNonPrimitiveArguments,
-                                                  valid_result)).to eq(valid_result)
-        end
-
-        it 'raises ValidationError if success result has invalid types' do
-          user = TestUserObject.new(id: 1, name: 'John Doe', age: 30) # Invalid UUID (string)
-          invalid_result = Servus::Support::Response.new(true, { user: user }, nil)
-          expect do
-            described_class.validate_result!(SchemaValidationTest::ServiceWithNonPrimitiveArguments, invalid_result)
-          end.to raise_error(Servus::Base::ValidationError, /did not match the following type: string/)
-        end
-      end
+      expect { described_class.load_schema(service_class, 'arguments') }
+        .to raise_error(Servus::Schema::UnknownKeyError)
     end
 
-    describe '.validate_result! with failure schema' do
-      let(:error) { Servus::Support::Errors::ServiceError.new('something failed') }
-      let(:failure_with_data) { Servus::Support::Response.new(false, { reason: 'invalid', code: 42 }, error) }
-      let(:failure_without_data) { Servus::Support::Response.new(false, nil, error) }
-      let(:success_result) { Servus::Support::Response.new(true, { id: 123 }, nil) }
-
-      context 'when no failure schema exists' do
-        it 'returns the failure result unchanged' do
-          expect(described_class.validate_result!(SchemaValidationTest::Service,
-                                                  failure_with_data)).to eq(failure_with_data)
-        end
-      end
-
-      context 'when failure schema exists via DSL' do
-        before do
-          SchemaValidationTest::Service.schema(
-            failure: {
-              type: 'object',
-              required: %w[reason],
-              properties: {
-                reason: { type: 'string' },
-                code: { type: 'integer' }
-              }
-            }
-          )
-        end
-
-        it 'returns failure result unchanged if data matches schema' do
-          expect(described_class.validate_result!(SchemaValidationTest::Service,
-                                                  failure_with_data)).to eq(failure_with_data)
-        end
-
-        it 'raises ValidationError if failure data does not match schema' do
-          bad_failure = Servus::Support::Response.new(false, { reason: 123 }, error)
-          expect do
-            described_class.validate_result!(SchemaValidationTest::Service, bad_failure)
-          end.to raise_error(Servus::Base::ValidationError, /Invalid failure structure/)
-        end
-
-        it 'skips validation when failure has nil data' do
-          expect(described_class.validate_result!(SchemaValidationTest::Service,
-                                                  failure_without_data)).to eq(failure_without_data)
-        end
-
-        it 'does not apply failure schema to success results' do
-          expect(described_class.validate_result!(SchemaValidationTest::Service, success_result)).to eq(success_result)
-        end
-      end
-
-      context 'when failure schema exists via inline constant' do
-        before do
-          module SchemaValidationTest
-            class Service
-              FAILURE_SCHEMA = {
-                type: 'object',
-                required: %w[reason],
-                properties: {
-                  reason: { type: 'string' }
-                }
-              }.freeze
-            end
-          end
-        end
-
-        after do
-          SchemaValidationTest::Service.send(:remove_const, :FAILURE_SCHEMA)
-        end
-
-        it 'validates failure data against the inline constant schema' do
-          bad_failure = Servus::Support::Response.new(false, { reason: 123 }, error)
-          expect do
-            described_class.validate_result!(SchemaValidationTest::Service, bad_failure)
-          end.to raise_error(Servus::Base::ValidationError, /Invalid failure structure/)
-        end
-      end
+    it 'raises for an unknown schema type' do
+      expect { described_class.load_schema(service_class, 'nonexistent') }
+        .to raise_error(ArgumentError, /unknown schema type/)
     end
 
-    describe '.clear_cache!' do
-      module SchemaValidationTest
-        class Service
-          RESULT_SCHEMA = { type: 'object' }.freeze
-        end
+    it 'accepts a symbol type' do
+      service_class.schema arguments: { type: 'object' }
+
+      expect(described_class.load_schema(service_class, :arguments)).to be_a(Hash)
+    end
+
+    describe 'caching' do
+      before { service_class.schema arguments: { type: 'object', required: ['name'] } }
+
+      it 'serves later reads from the cache' do
+        described_class.load_schema(service_class, 'arguments')
+        service_class.schema arguments: { type: 'object', required: ['changed'] }
+
+        expect(described_class.load_schema(service_class, 'arguments')['required']).to include('name')
       end
 
-      before do
-        described_class.load_schema(SchemaValidationTest::Service, 'arguments')
-      end
-
-      it 'clears the schema cache' do
-        # Load once (should use cache)
-        described_class.load_schema(SchemaValidationTest::Service, 'arguments')
-
-        # Check cache
-        expect(described_class.cache).not_to be_empty
-
-        # Clear cache
+      it 'picks up changes after the cache is cleared' do
+        described_class.load_schema(service_class, 'arguments')
+        service_class.schema arguments: { type: 'object', required: ['changed'] }
         described_class.clear_cache!
 
-        # Check cache is cleared
-        expect(described_class.cache).to be_empty
+        expect(described_class.load_schema(service_class, 'arguments')['required']).to include('changed')
+      end
+
+      # The cache used to be keyed by a file path derived from the class's
+      # namespace, which dropped the final segment — so two services in the
+      # same namespace silently shared a schema.
+      it 'does not confuse two classes in the same namespace' do
+        other = stub_const('SchemaValidationTest::Other', Class.new(Servus::Base))
+        other.schema arguments: { type: 'object', required: ['other_field'] }
+
+        expect(described_class.load_schema(service_class, 'arguments')['required']).to include('name')
+        expect(described_class.load_schema(other, 'arguments')['required']).to include('other_field')
       end
     end
   end
 
-  context 'with file schema' do
-    # Set up temp directory for test schemas
-    let(:schema_dir) { Servus.config.schema_dir_for('schema_validation_test') }
+  describe '.validate_arguments!' do
+    before do
+      service_class.schema arguments: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name: { type: 'string' },
+          age: { type: 'integer', minimum: 18 }
+        }
+      }
+    end
+
+    it 'returns true for valid arguments' do
+      expect(described_class.validate_arguments!(service_class, { name: 'John', age: 25 })).to be(true)
+    end
+
+    it 'returns true when no schema is declared' do
+      expect(described_class.validate_arguments!(stub_const('Bare::Service', Class.new(Servus::Base)), {}))
+        .to be(true)
+    end
+
+    it 'raises for a missing required field' do
+      expect { described_class.validate_arguments!(service_class, { age: 25 }) }
+        .to raise_error(Servus::Base::ValidationError, /required property of 'name'/)
+    end
+
+    it 'raises for an invalid field type' do
+      expect { described_class.validate_arguments!(service_class, { name: 'John', age: 'twenty' }) }
+        .to raise_error(Servus::Base::ValidationError, /did not match the following type: integer/)
+    end
+
+    it 'raises for an out of range value' do
+      expect { described_class.validate_arguments!(service_class, { name: 'John', age: 17 }) }
+        .to raise_error(Servus::Base::ValidationError, /did not have a minimum value of 18/)
+    end
+
+    it 'names the service in the error' do
+      expect { described_class.validate_arguments!(service_class, {}) }
+        .to raise_error(Servus::Base::ValidationError, /Invalid arguments for SchemaValidationTest::Service/)
+    end
+  end
+
+  describe '.validate_result!' do
+    let(:success_result) { Servus::Support::Response.new(true, { id: 123 }, nil) }
+    let(:error_result) { Servus::Support::Response.new(false, nil, 'Error') }
 
     before do
-      # Create schema directory if it doesn't exist
-      FileUtils.mkdir_p(schema_dir)
-      described_class.clear_cache!
+      service_class.schema result: {
+        type: 'object',
+        required: %w[id status],
+        properties: { id: { type: 'integer' }, status: { type: 'string' } }
+      }
     end
 
-    after do
-      # Clean up test schemas
-      FileUtils.rm_rf(schema_dir)
+    it 'returns a valid success result unchanged' do
+      valid = Servus::Support::Response.new(true, { id: 123, status: 'complete' }, nil)
+
+      expect(described_class.validate_result!(service_class, valid)).to eq(valid)
     end
 
-    describe '.load_schema' do
-      context 'when schema file exists' do
-        before do
-          File.write(
-            "#{schema_dir}/arguments.json",
-            {
-              type: 'object',
-              required: %w[name age],
-              properties: { name: { type: 'string' }, age: { type: 'integer' } }
-            }.to_json
-          )
-        end
-
-        it 'loads and returns the schema' do
-          schema = described_class.load_schema(SchemaValidationTest::Service, 'arguments')
-
-          expect(schema).to be_a(Hash)
-          expect(schema['type']).to eq('object')
-          expect(schema['required']).to include('name', 'age')
-        end
-
-        it 'caches the schema' do
-          # Load once
-          described_class.load_schema(SchemaValidationTest::Service, 'arguments')
-
-          # Modify the file
-          File.write(
-            "#{schema_dir}/arguments.json",
-            {
-              type: 'object',
-              required: ['modified']
-            }.to_json
-          )
-
-          # Load again - should return cached version
-          schema = described_class.load_schema(SchemaValidationTest::Service, 'arguments')
-
-          expect(schema['required']).to include('name', 'age')
-          expect(schema['required']).not_to include('modified')
-        end
-      end
-
-      context 'when schema file does not exist' do
-        it 'returns nil' do
-          schema = described_class.load_schema(SchemaValidationTest::Service, 'nonexistent')
-
-          expect(schema).to be_nil
-        end
-
-        it 'caches the nil result' do
-          expect(File).to receive(:exist?).once.and_call_original
-
-          # Load twice
-          described_class.load_schema(SchemaValidationTest::Service, 'nonexistent')
-          described_class.load_schema(SchemaValidationTest::Service, 'nonexistent')
-        end
-      end
+    it 'returns failure results without validating them' do
+      expect(described_class.validate_result!(service_class, error_result)).to eq(error_result)
     end
 
-    describe '.validate_arguments' do
-      context 'when no schema exists' do
-        it 'returns true without validation' do
-          expect(described_class.validate_arguments!(SchemaValidationTest::Service, { any: 'args' })).to eq(true)
-        end
-      end
-
-      context 'when schema exists' do
-        before do
-          File.write(
-            "#{schema_dir}/arguments.json",
-            {
-              type: 'object',
-              required: ['name'],
-              properties: {
-                name: { type: 'string' },
-                age: { type: 'integer', minimum: 18 }
-              }
-            }.to_json
-          )
-        end
-
-        it 'returns true for valid arguments' do
-          expect(described_class.validate_arguments!(SchemaValidationTest::Service,
-                                                     { name: 'John', age: 25 })).to eq(true)
-        end
-
-        it 'raises ValidationError for missing required field' do
-          expect do
-            described_class.validate_arguments!(SchemaValidationTest::Service, { age: 25 })
-          end.to raise_error(Servus::Base::ValidationError, /required property of 'name'/)
-        end
-
-        it 'raises ValidationError for invalid field type' do
-          expect do
-            described_class.validate_arguments!(SchemaValidationTest::Service, { name: 'John', age: 'twenty' })
-          end.to raise_error(Servus::Base::ValidationError, /did not match the following type: integer/)
-        end
-
-        it 'raises ValidationError for out of range value' do
-          expect do
-            described_class.validate_arguments!(SchemaValidationTest::Service, { name: 'John', age: 17 })
-          end.to raise_error(Servus::Base::ValidationError, /did not have a minimum value of 18/)
-        end
-      end
+    it 'raises when a success result is missing a required property' do
+      expect { described_class.validate_result!(service_class, success_result) }
+        .to raise_error(Servus::Base::ValidationError, /did not contain a required property of 'status'/)
     end
 
-    describe '.validate_result' do
-      let(:success_result) { Servus::Support::Response.new(true, { id: 123 }, nil) }
-      let(:error_result) { Servus::Support::Response.new(false, nil, 'Error') }
+    it 'raises when a success result has the wrong type' do
+      invalid = Servus::Support::Response.new(true, { id: '123', status: 'complete' }, nil)
 
-      context 'when no schema exists' do
-        it 'returns the result unchanged' do
-          expect(described_class.validate_result!(SchemaValidationTest::Service, success_result)).to eq(success_result)
-        end
-      end
-
-      context 'when schema exists' do
-        before do
-          File.write(
-            "#{schema_dir}/result.json", {
-              type: 'object',
-              required: %w[id status],
-              properties: {
-                id: { type: 'integer' },
-                status: { type: 'string' }
-              }
-            }.to_json
-          )
-        end
-
-        it 'returns error results unchanged without validation' do
-          expect(described_class.validate_result!(SchemaValidationTest::Service, error_result)).to eq(error_result)
-        end
-
-        it 'returns the success result unchanged if valid' do
-          valid_result = Servus::Support::Response.new(true, { id: 123, status: 'complete' }, nil)
-          expect(described_class.validate_result!(SchemaValidationTest::Service, valid_result)).to eq(valid_result)
-        end
-
-        it 'raises ValidationError if success result has invalid structure' do
-          expect do
-            described_class.validate_result!(SchemaValidationTest::Service, success_result)
-          end.to raise_error(Servus::Base::ValidationError, /did not contain a required property of 'status'/)
-        end
-
-        it 'raises ValidationError if success result has invalid types' do
-          invalid_result = Servus::Support::Response.new(true, { id: '123', status: 'complete' }, nil)
-          expect do
-            described_class.validate_result!(SchemaValidationTest::Service, invalid_result)
-          end.to raise_error(Servus::Base::ValidationError, /did not match the following type: integer/)
-        end
-      end
-
-      context 'when non-primitive values are passed' do
-        class TestUserObject
-          attr_reader :id, :name, :age # leftovers:keep
-
-          def initialize(id:, name:, age:)
-            @id = id
-            @age = age
-            @name = name
-          end
-        end
-
-        before do
-          File.write(
-            "#{schema_dir}/result.json",
-            {
-              type: 'object',
-              required: ['user'],
-              properties: {
-                user: {
-                  type: 'object',
-                  properties: {
-                    id: { type: 'string' },
-                    age: { type: 'integer' },
-                    name: { type: 'string' }
-                  }
-                }
-              }
-            }.to_json
-          )
-        end
-
-        it 'returns the success result unchanged if valid' do
-          user = TestUserObject.new(id: '123e4567-e89b-12d3-a456-426614174000', name: 'John Doe', age: 30)
-
-          valid_result = Servus::Support::Response.new(true, { user: user }, nil)
-
-          expect(described_class.validate_result!(
-                   SchemaValidationTest::ServiceWithNonPrimitiveArguments,
-                   valid_result
-                 )).to eq(valid_result)
-        end
-
-        it 'raises ValidationError if success result has invalid types' do
-          user = TestUserObject.new(id: 1, name: 'John Doe', age: 30) # Invalid UUID (string)
-          invalid_result = Servus::Support::Response.new(true, { user: user }, nil)
-          expect do
-            described_class.validate_result!(SchemaValidationTest::ServiceWithNonPrimitiveArguments, invalid_result)
-          end.to raise_error(Servus::Base::ValidationError, /did not match the following type: string/)
-        end
-      end
-    end
-
-    describe '.clear_cache!' do
-      before do
-        File.write("#{schema_dir}/arguments.json", { type: 'object' }.to_json)
-        described_class.load_schema(SchemaValidationTest::Service, 'arguments')
-      end
-
-      it 'clears the schema cache' do
-        # Load once (should use cache)
-        described_class.load_schema(SchemaValidationTest::Service, 'arguments')
-
-        # Check cache
-        expect(described_class.cache).not_to be_empty
-
-        # Clear cache
-        described_class.clear_cache!
-
-        # Check cache is cleared
-        expect(described_class.cache).to be_empty
-      end
+      expect { described_class.validate_result!(service_class, invalid) }
+        .to raise_error(Servus::Base::ValidationError, /did not match the following type: integer/)
     end
   end
 
-  context 'with schema DSL method' do
-    before { described_class.clear_cache! }
+  describe '.validate_result! with a failure schema' do
+    let(:error) { Servus::Support::Errors::ServiceError.new('failed') }
 
-    after do
-      # Clean up class instance variables
-      if SchemaValidationTest::Service.instance_variable_defined?(:@arguments_schema)
-        SchemaValidationTest::Service.remove_instance_variable(:@arguments_schema)
-      end
-
-      if SchemaValidationTest::Service.instance_variable_defined?(:@result_schema)
-        SchemaValidationTest::Service.remove_instance_variable(:@result_schema)
-      end
-
-      if SchemaValidationTest::Service.instance_variable_defined?(:@failure_schema)
-        SchemaValidationTest::Service.remove_instance_variable(:@failure_schema)
-      end
-
-      # Clean up constants if they exist
-      if defined?(SchemaValidationTest::Service::ARGUMENTS_SCHEMA)
-        SchemaValidationTest::Service.send(:remove_const, :ARGUMENTS_SCHEMA)
-      end
-
-      if defined?(SchemaValidationTest::Service::RESULT_SCHEMA)
-        SchemaValidationTest::Service.send(:remove_const, :RESULT_SCHEMA)
-      end
-
-      if defined?(SchemaValidationTest::Service::FAILURE_SCHEMA)
-        SchemaValidationTest::Service.send(:remove_const, :FAILURE_SCHEMA)
-      end
+    before do
+      service_class.schema failure: {
+        type: 'object',
+        required: %w[reason],
+        properties: { reason: { type: 'string' }, code: { type: 'integer' } }
+      }
     end
 
-    describe 'schema class method' do
-      context 'when defining both arguments and result schemas' do
-        before do
-          SchemaValidationTest::Service.schema(
-            arguments: {
-              type: 'object',
-              required: ['name'],
-              properties: { name: { type: 'string' } }
-            },
-            result: {
-              type: 'object',
-              required: ['id'],
-              properties: { id: { type: 'integer' } }
-            }
-          )
-        end
+    it 'validates failure data against the failure schema' do
+      valid = Servus::Support::Response.new(false, { reason: 'declined' }, error)
 
-        it 'stores the arguments schema' do
-          expect(SchemaValidationTest::Service.arguments_schema).to be_a(Hash)
-          expect(SchemaValidationTest::Service.arguments_schema['type']).to eq('object')
-        end
-
-        it 'stores the result schema' do
-          expect(SchemaValidationTest::Service.result_schema).to be_a(Hash)
-          expect(SchemaValidationTest::Service.result_schema['type']).to eq('object')
-        end
-      end
-
-      context 'when defining only arguments schema' do
-        before do
-          SchemaValidationTest::Service.schema(
-            arguments: {
-              type: 'object',
-              required: ['name'],
-              properties: { name: { type: 'string' } }
-            }
-          )
-        end
-
-        it 'stores the arguments schema' do
-          expect(SchemaValidationTest::Service.arguments_schema).to be_a(Hash)
-        end
-
-        it 'does not set result schema' do
-          expect(SchemaValidationTest::Service.result_schema).to be_nil
-        end
-      end
-
-      context 'when defining only result schema' do
-        before do
-          SchemaValidationTest::Service.schema(
-            result: {
-              type: 'object',
-              required: ['id'],
-              properties: { id: { type: 'integer' } }
-            }
-          )
-        end
-
-        it 'stores the result schema' do
-          expect(SchemaValidationTest::Service.result_schema).to be_a(Hash)
-        end
-
-        it 'does not set arguments schema' do
-          expect(SchemaValidationTest::Service.arguments_schema).to be_nil
-        end
-      end
+      expect(described_class.validate_result!(service_class, valid)).to eq(valid)
     end
 
-    describe '.load_schema with DSL method' do
-      context 'when schema is defined via DSL' do
-        before do
-          SchemaValidationTest::Service.schema(
-            arguments: {
-              type: 'object',
-              required: %w[name age],
-              properties: { name: { type: 'string' }, age: { type: 'integer' } }
-            }
-          )
-        end
+    it 'raises when failure data does not match' do
+      invalid = Servus::Support::Response.new(false, { reason: 123 }, error)
 
-        it 'loads and returns the schema from DSL' do
-          schema = described_class.load_schema(SchemaValidationTest::Service, 'arguments')
-
-          expect(schema).to be_a(Hash)
-          expect(schema['type']).to eq('object')
-          expect(schema['required']).to include('name', 'age')
-        end
-
-        it 'caches the schema' do
-          # Load once
-          described_class.load_schema(SchemaValidationTest::Service, 'arguments')
-
-          # Change the DSL schema
-          SchemaValidationTest::Service.schema(
-            arguments: {
-              type: 'object',
-              required: ['modified']
-            }
-          )
-
-          # Load again - should return cached version
-          schema = described_class.load_schema(SchemaValidationTest::Service, 'arguments')
-
-          expect(schema['required']).to include('name', 'age')
-          expect(schema['required']).not_to include('modified')
-        end
-      end
-
-      context 'when both DSL and constant exist' do
-        before do
-          # Define via DSL first
-          SchemaValidationTest::Service.schema(
-            arguments: {
-              type: 'object',
-              required: ['dsl_field'],
-              properties: { dsl_field: { type: 'string' } }
-            }
-          )
-
-          # Define constant
-          module SchemaValidationTest
-            class Service
-              ARGUMENTS_SCHEMA = {
-                type: 'object',
-                required: ['constant_field'],
-                properties: { constant_field: { type: 'string' } }
-              }.freeze
-            end
-          end
-        end
-
-        it 'uses DSL schema and ignores constant' do
-          schema = described_class.load_schema(SchemaValidationTest::Service, 'arguments')
-
-          expect(schema['required']).to include('dsl_field')
-          expect(schema['required']).not_to include('constant_field')
-        end
-      end
-
-      context 'when DSL schema is nil but constant exists' do
-        before do
-          # Define constant
-          module SchemaValidationTest
-            class Service
-              ARGUMENTS_SCHEMA = {
-                type: 'object',
-                required: ['constant_field'],
-                properties: { constant_field: { type: 'string' } }
-              }.freeze
-            end
-          end
-
-          # Set DSL schema to nil explicitly
-          SchemaValidationTest::Service.instance_variable_set(:@arguments_schema, nil)
-        end
-
-        it 'falls back to constant' do
-          schema = described_class.load_schema(SchemaValidationTest::Service, 'arguments')
-
-          expect(schema['required']).to include('constant_field')
-        end
-      end
-
-      context 'when no DSL, no constant, but file exists' do
-        let(:schema_dir) { Servus.config.schema_dir_for('schema_validation_test') }
-
-        before do
-          FileUtils.mkdir_p(schema_dir)
-          File.write(
-            "#{schema_dir}/arguments.json",
-            {
-              type: 'object',
-              required: ['file_field'],
-              properties: { file_field: { type: 'string' } }
-            }.to_json
-          )
-        end
-
-        after do
-          FileUtils.rm_rf(schema_dir)
-        end
-
-        it 'falls back to file-based schema' do
-          schema = described_class.load_schema(SchemaValidationTest::Service, 'arguments')
-
-          expect(schema['required']).to include('file_field')
-        end
-      end
+      expect { described_class.validate_result!(service_class, invalid) }
+        .to raise_error(Servus::Base::ValidationError, /Invalid failure structure/)
     end
 
-    describe '.validate_arguments with DSL schema' do
-      context 'when schema defined via DSL' do
-        before do
-          SchemaValidationTest::Service.schema(
-            arguments: {
-              type: 'object',
-              required: ['name'],
-              properties: {
-                name: { type: 'string' },
-                age: { type: 'integer', minimum: 18 }
-              }
-            }
-          )
-        end
+    it 'skips failures that carry no data' do
+      no_data = Servus::Support::Response.new(false, nil, error)
 
-        it 'returns true for valid arguments' do
-          expect(described_class.validate_arguments!(SchemaValidationTest::Service,
-                                                     { name: 'John', age: 25 })).to eq(true)
-        end
-
-        it 'raises ValidationError for missing required field' do
-          expect do
-            described_class.validate_arguments!(SchemaValidationTest::Service, { age: 25 })
-          end.to raise_error(Servus::Base::ValidationError, /required property of 'name'/)
-        end
-
-        it 'raises ValidationError for invalid field type' do
-          expect do
-            described_class.validate_arguments!(SchemaValidationTest::Service, { name: 'John', age: 'twenty' })
-          end.to raise_error(Servus::Base::ValidationError, /did not match the following type: integer/)
-        end
-
-        it 'raises ValidationError for out of range value' do
-          expect do
-            described_class.validate_arguments!(SchemaValidationTest::Service, { name: 'John', age: 17 })
-          end.to raise_error(Servus::Base::ValidationError, /did not have a minimum value of 18/)
-        end
-      end
-    end
-
-    describe '.validate_result with DSL schema' do
-      let(:success_result) { Servus::Support::Response.new(true, { id: 123 }, nil) }
-      let(:error_result) { Servus::Support::Response.new(false, nil, 'Error') }
-
-      context 'when schema defined via DSL' do
-        before do
-          SchemaValidationTest::Service.schema(
-            result: {
-              type: 'object',
-              required: %w[id status],
-              properties: {
-                id: { type: 'integer' },
-                status: { type: 'string' }
-              }
-            }
-          )
-        end
-
-        it 'returns error results unchanged without validation' do
-          expect(described_class.validate_result!(SchemaValidationTest::Service, error_result)).to eq(error_result)
-        end
-
-        it 'returns the success result unchanged if valid' do
-          valid_result = Servus::Support::Response.new(true, { id: 123, status: 'complete' }, nil)
-          expect(described_class.validate_result!(SchemaValidationTest::Service, valid_result)).to eq(valid_result)
-        end
-
-        it 'raises ValidationError if success result has invalid structure' do
-          expect do
-            described_class.validate_result!(SchemaValidationTest::Service, success_result)
-          end.to raise_error(Servus::Base::ValidationError, /did not contain a required property of 'status'/)
-        end
-
-        it 'raises ValidationError if success result has invalid types' do
-          invalid_result = Servus::Support::Response.new(true, { id: '123', status: 'complete' }, nil)
-          expect do
-            described_class.validate_result!(SchemaValidationTest::Service, invalid_result)
-          end.to raise_error(Servus::Base::ValidationError, /did not match the following type: integer/)
-        end
-      end
-    end
-
-    describe 'integration with service call' do
-      context 'when using DSL schema' do
-        before do
-          SchemaValidationTest::Service.schema(
-            arguments: {
-              type: 'object',
-              required: %w[name age],
-              properties: {
-                name: { type: 'string' },
-                age: { type: 'integer', minimum: 18 }
-              }
-            },
-            result: {
-              type: 'object',
-              required: %w[id name age],
-              properties: {
-                id: { type: 'integer' },
-                name: { type: 'string' },
-                age: { type: 'integer' }
-              }
-            }
-          )
-        end
-
-        it 'validates arguments before call and result after call' do
-          result = SchemaValidationTest::Service.call(name: 'John', age: 25)
-
-          expect(result).to be_success
-          expect(result.data[:id]).to eq(123)
-          expect(result.data[:name]).to eq('John')
-          expect(result.data[:age]).to eq(25)
-        end
-
-        it 'raises ValidationError for invalid arguments' do
-          expect do
-            SchemaValidationTest::Service.call(name: 'John', age: 17)
-          end.to raise_error(Servus::Base::ValidationError, /did not have a minimum value of 18/)
-        end
-      end
+      expect(described_class.validate_result!(service_class, no_data)).to eq(no_data)
     end
   end
 
-  context 'with schema enforcement' do
-    before { described_class.clear_cache! }
+  describe 'integration with .call' do
+    before do
+      service_class.schema(
+        arguments: {
+          type: 'object',
+          required: %w[name age],
+          properties: { name: { type: 'string' }, age: { type: 'integer', minimum: 18 } }
+        },
+        result: {
+          type: 'object',
+          required: %w[id name age],
+          properties: { id: { type: 'integer' }, name: { type: 'string' }, age: { type: 'integer' } }
+        }
+      )
+    end
 
+    it 'validates arguments before the call and the result after it' do
+      result = service_class.call(name: 'John', age: 25)
+
+      expect(result).to be_success
+      expect(result.data[:id]).to eq(123)
+    end
+
+    it 'raises before the call for invalid arguments' do
+      expect { service_class.call(name: 'John', age: 17) }
+        .to raise_error(Servus::Base::ValidationError, /did not have a minimum value of 18/)
+    end
+  end
+
+  describe '.clear_cache!' do
+    it 'empties the cache' do
+      service_class.schema arguments: { type: 'object' }
+      described_class.load_schema(service_class, 'arguments')
+
+      expect { described_class.clear_cache! }.to change { described_class.cache.size }.to(0)
+    end
+  end
+
+  describe 'schema enforcement' do
     after do
       Servus.config.require_service_arguments_schema = false
       Servus.config.require_service_result_schema = false
     end
 
     describe 'require_service_arguments_schema' do
-      it 'raises SchemaRequiredError when enabled and no arguments schema exists' do
+      it 'raises when enabled and no arguments schema is declared' do
         Servus.config.require_service_arguments_schema = true
 
-        expect do
-          described_class.validate_arguments!(SchemaValidationTest::Service, { name: 'John' })
-        end.to raise_error(Servus::Support::Errors::SchemaRequiredError, /require_service_arguments_schema/)
+        expect { described_class.validate_arguments!(service_class, { name: 'John' }) }
+          .to raise_error(Servus::Support::Errors::SchemaRequiredError, /require_service_arguments_schema/)
       end
 
-      it 'does not raise when disabled and no arguments schema exists' do
+      it 'does not raise when disabled' do
         Servus.config.require_service_arguments_schema = false
 
-        expect(described_class.validate_arguments!(SchemaValidationTest::Service, { name: 'John' })).to eq(true)
+        expect(described_class.validate_arguments!(service_class, { name: 'John' })).to be(true)
       end
 
-      it 'does not raise when enabled and arguments schema exists' do
+      it 'does not raise when enabled and a schema is declared' do
         Servus.config.require_service_arguments_schema = true
+        service_class.schema arguments: { type: 'object', properties: { name: { type: 'string' } } }
 
-        SchemaValidationTest::Service.schema(
-          arguments: {
-            type: 'object',
-            properties: { name: { type: 'string' } }
-          }
-        )
-
-        expect(described_class.validate_arguments!(SchemaValidationTest::Service, { name: 'John' })).to eq(true)
+        expect(described_class.validate_arguments!(service_class, { name: 'John' })).to be(true)
       end
     end
 
@@ -988,37 +276,30 @@ RSpec.describe Servus::Support::Validator do
       let(:success_result) { Servus::Support::Response.new(true, { id: 123 }, nil) }
       let(:failure_result) { Servus::Support::Response.new(false, nil, Servus::Support::Errors::ServiceError.new) }
 
-      it 'raises SchemaRequiredError when enabled and success has no result schema' do
+      it 'raises when enabled and a success result has no schema' do
         Servus.config.require_service_result_schema = true
 
-        expect do
-          described_class.validate_result!(SchemaValidationTest::Service, success_result)
-        end.to raise_error(Servus::Support::Errors::SchemaRequiredError, /require_service_result_schema/)
+        expect { described_class.validate_result!(service_class, success_result) }
+          .to raise_error(Servus::Support::Errors::SchemaRequiredError, /require_service_result_schema/)
       end
 
       it 'does not raise for failure responses even when enabled' do
         Servus.config.require_service_result_schema = true
 
-        expect(described_class.validate_result!(SchemaValidationTest::Service, failure_result)).to eq(failure_result)
+        expect(described_class.validate_result!(service_class, failure_result)).to eq(failure_result)
       end
 
-      it 'does not raise when disabled and no result schema exists' do
+      it 'does not raise when disabled' do
         Servus.config.require_service_result_schema = false
 
-        expect(described_class.validate_result!(SchemaValidationTest::Service, success_result)).to eq(success_result)
+        expect(described_class.validate_result!(service_class, success_result)).to eq(success_result)
       end
 
-      it 'does not raise when enabled and result schema exists' do
+      it 'does not raise when enabled and a result schema is declared' do
         Servus.config.require_service_result_schema = true
+        service_class.schema result: { type: 'object', properties: { id: { type: 'integer' } } }
 
-        SchemaValidationTest::Service.schema(
-          result: {
-            type: 'object',
-            properties: { id: { type: 'integer' } }
-          }
-        )
-
-        expect(described_class.validate_result!(SchemaValidationTest::Service, success_result)).to eq(success_result)
+        expect(described_class.validate_result!(service_class, success_result)).to eq(success_result)
       end
     end
   end

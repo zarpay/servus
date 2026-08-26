@@ -49,6 +49,7 @@ export default defineConfig({
         text: 'Features',
         items: [
           { text: 'Schema Validation', link: '/features/schema-validation' },
+          { text: 'Shared Schemas', link: '/features/shared-schemas' },
           { text: 'Error Handling', link: '/features/error-handling' },
           { text: 'Async Execution', link: '/features/async-execution' },
           { text: 'Logging', link: '/features/logging' },

@@ -35,4 +35,18 @@ RSpec.describe Servus::Generators::ServiceGenerator do
     expect(File).to exist(File.join(tmp_root, 'test/services/treasury/transfer_gold/service_spec.rb'))
     expect(File).not_to exist(File.join(tmp_root, 'spec/services/treasury/transfer_gold/service_spec.rb'))
   end
+
+  it 'generates the service class' do
+    invoke('treasury/transfer_gold', 'from_account')
+
+    expect(File).to exist(File.join(tmp_root, 'app/services/treasury/transfer_gold/service.rb'))
+  end
+
+  it 'scaffolds the schema DSL in the generated service' do
+    invoke('treasury/transfer_gold', 'from_account')
+
+    contents = File.read(File.join(tmp_root, 'app/services/treasury/transfer_gold/service.rb'))
+
+    expect(contents).to include('schema')
+  end
 end

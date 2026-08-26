@@ -2,42 +2,46 @@
 
 module Servus
   module Support
-    # Handles JSON Schema validation for service arguments and results.
+    # Validates service arguments and results, and event payloads, against the
+    # JSON schemas declared with the +schema+ DSL.
     #
-    # The Validator class provides automatic validation of service inputs and outputs
-    # against JSON Schema definitions. Schemas can be defined as inline constants
-    # (ARGUMENTS_SCHEMA, RESULT_SCHEMA) or as external JSON files.
+    # Arguments are validated before +call+ runs, so a service body can trust
+    # the shape of its inputs. Result data is validated after it returns, so a
+    # service that stops honouring its own contract fails loudly rather than
+    # passing the wrong shape to its callers. Both raise
+    # {Servus::Support::Errors::ValidationError}, which signals a bug — in the
+    # caller for arguments, in the service itself for results — and is not
+    # meant to be rescued.
     #
-    # @example Inline schema validation
+    # Schemas come from the +schema+ DSL and nowhere else. The class-level
+    # readers resolve any +$ref+s against {Servus::Schema}, so what arrives
+    # here is always a self-contained schema.
+    #
+    # @example
     #   class MyService < Servus::Base
-    #     ARGUMENTS_SCHEMA = {
-    #       type: "object",
-    #       required: ["user_id"],
-    #       properties: {
-    #         user_id: { type: "integer" }
-    #       }
-    #     }
+    #     schema arguments: { type: 'object', required: ['user_id'] }
     #   end
     #
-    # @example File-based schema validation
-    #   # app/schemas/services/my_service/arguments.json
-    #   # { "type": "object", "required": ["user_id"], ... }
-    #
+    # @see Servus::Base.schema
+    # @see Servus::Schema
     # @see https://json-schema.org/specification.html
     class Validator
+      # Schema kinds that may be requested from {.load_schema}.
+      #
+      # @api private
+      SCHEMA_TYPES = %w[arguments result failure payload].freeze
+
       # @api private
       @schema_cache = {}
 
-      # Validates service arguments against the ARGUMENTS_SCHEMA.
-      #
-      # Checks arguments against either an inline ARGUMENTS_SCHEMA constant or
-      # a file-based schema at app/schemas/services/namespace/arguments.json.
-      # Validation is skipped if no schema is defined.
+      # Validates service arguments against the service's arguments schema.
       #
       # @param service_class [Class] the service class being validated
       # @param args [Hash] keyword arguments passed to the service
       # @return [Boolean] true if validation passes
       # @raise [Servus::Support::Errors::ValidationError] if arguments fail validation
+      # @raise [Servus::Support::Errors::SchemaRequiredError] if no schema is
+      #   declared and +require_service_arguments_schema+ is enabled
       #
       # @example
       #   Validator.validate_arguments!(MyService, { user_id: 123 })
@@ -48,11 +52,7 @@ module Servus
         enforce_schema_presence!(schema, service_class, :require_service_arguments_schema)
         return true unless schema
 
-        validate_data_against_schema!(
-          args,
-          schema,
-          "Invalid arguments for #{service_class.name}"
-        )
+        validate_data_against_schema!(args, schema, "Invalid arguments for #{service_class.name}")
 
         true
       end
@@ -102,7 +102,7 @@ module Servus
         end
       end
 
-      # Validates event payload against the Event class's payload schema.
+      # Validates an event payload against the event's payload schema.
       #
       # @param event_class [Class] the Event subclass
       # @param payload [Hash] the event payload to validate
@@ -114,7 +114,7 @@ module Servus
       #
       # @api private
       def self.validate_event_payload!(event_class, payload)
-        schema = event_class.payload_schema
+        schema = load_schema(event_class, 'payload')
         enforce_schema_presence!(schema, event_class, :require_event_payload_schema)
         return true unless schema
 
@@ -127,50 +127,36 @@ module Servus
         true
       end
 
-      # Loads and caches a schema for a service.
+      # Returns a class's compiled schema of the given kind.
       #
-      # Implements a three-tier lookup strategy:
-      # 1. Check for schema defined via DSL method (service_class.arguments_schema/result_schema)
-      # 2. Check for inline constant (ARGUMENTS_SCHEMA or RESULT_SCHEMA)
-      # 3. Fall back to JSON file in app/schemas/services/namespace/type.json
+      # Cached per class and kind. The underlying compilation is also memoized
+      # on the class itself and rebuilds when {Servus::Schema} changes, so this
+      # cache exists to skip the lookup, not to hold compilation results.
       #
-      # Schemas are cached after first load for performance.
-      #
-      # @param service_class [Class] the service class
-      # @param type [String] schema type ("arguments", "result", or "failure")
-      # @return [Hash, nil] the schema hash, or nil if no schema found
+      # @param klass [Class] a {Servus::Base} or {Servus::Event} subclass
+      # @param type [String, Symbol] one of {SCHEMA_TYPES}
+      # @return [Hash, nil] the compiled schema, or nil if none is declared
+      # @raise [ArgumentError] if +type+ is not a known schema kind
       #
       # @api private
-      # rubocop:disable Metrics/MethodLength
-      def self.load_schema(service_class, type)
-        # Get service path based on class name (e.g., "process_payment" from "Servus::ProcessPayment::Service")
-        service_namespace = parse_service_namespace(service_class)
-        schema_path = Servus.config.schema_path_for(service_namespace, type)
+      def self.load_schema(klass, type)
+        type = type.to_s
 
-        # Return from cache if available
-        return @schema_cache[schema_path] if @schema_cache.key?(schema_path)
+        unless SCHEMA_TYPES.include?(type)
+          raise ArgumentError, "unknown schema type #{type.inspect}. Valid: #{SCHEMA_TYPES.join(', ')}."
+        end
 
-        # Check for DSL-defined schema first
-        dsl_schema = case type
-                     when 'arguments' then service_class.arguments_schema
-                     when 'result'    then service_class.result_schema
-                     when 'failure'   then service_class.failure_schema
-                     end
+        key = [klass, type]
+        return @schema_cache[key] if @schema_cache.key?(key)
 
-        inline_schema_constant_name = "#{service_class}::#{type.upcase}_SCHEMA"
-        inline_schema_constant = if Object.const_defined?(inline_schema_constant_name)
-                                   Object.const_get(inline_schema_constant_name)
-                                 end
-
-        @schema_cache[schema_path] = fetch_schema_from_sources(dsl_schema, inline_schema_constant, schema_path)
-        @schema_cache[schema_path]
+        @schema_cache[key] = klass.public_send(:"#{type}_schema")
       end
-      # rubocop:enable Metrics/MethodLength
 
       # Clears the schema cache.
       #
-      # Useful in development when schema files are modified, or in tests
-      # to ensure fresh schema loading between test cases.
+      # Useful in tests, and in development after changing a schema. Registry
+      # changes invalidate compiled schemas on their own, so this is rarely
+      # needed in application code.
       #
       # @return [Hash] empty hash
       #
@@ -184,7 +170,7 @@ module Servus
 
       # Returns the current schema cache.
       #
-      # @return [Hash] cache mapping schema paths to loaded schemas
+      # @return [Hash] cache mapping [class, type] pairs to compiled schemas
       # @api private
       def self.cache
         @schema_cache
@@ -206,12 +192,12 @@ module Servus
         raise Servus::Base::ValidationError, "#{message_prefix}: #{errors.join(', ')}"
       end
 
-      # Returns the schema if present. Raises if absent and the config flag is enabled.
+      # Raises if a schema is absent and the corresponding config flag is on.
       #
       # @param schema [Hash, nil] the loaded schema
       # @param klass [Class] the service or Event class
       # @param config_flag [Symbol] the config method to check
-      # @return [Hash, nil] the schema
+      # @return [Hash, nil] the schema, unchanged
       # @raise [Servus::Support::Errors::SchemaRequiredError] if schema is nil and enforcement is enabled
       #
       # @api private
@@ -222,49 +208,6 @@ module Servus
 
         raise Servus::Support::Errors::SchemaRequiredError,
               "#{klass.name} schema missing! #{config_flag} is set to true."
-      end
-
-      # Fetches schema from DSL, inline constant, or file.
-      #
-      # Implements the schema resolution precedence:
-      # 1. DSL-defined schema (if provided)
-      # 2. Inline constant (if provided)
-      # 3. File at schema_path (if exists)
-      # 4. nil (no schema found)
-      #
-      # @param dsl_schema [Hash, nil] schema from DSL method (e.g., schema arguments: Hash)
-      # @param inline_schema_constant [Hash, nil] inline schema constant (e.g., ARGUMENTS_SCHEMA)
-      # @param schema_path [String] file path to external schema JSON
-      # @return [Hash, nil] schema with indifferent access, or nil if not found
-      #
-      # @api private
-      def self.fetch_schema_from_sources(dsl_schema, inline_schema_constant, schema_path)
-        if dsl_schema
-          dsl_schema.with_indifferent_access
-        elsif inline_schema_constant
-          inline_schema_constant.with_indifferent_access
-        elsif File.exist?(schema_path)
-          JSON.load_file(schema_path).with_indifferent_access
-        end
-      end
-
-      # Converts service class name to file path namespace.
-      #
-      # Transforms a class name like "Services::ProcessPayment::Service" into
-      # "services/process_payment" for locating schema files.
-      #
-      # @param service_class [Class] the service class
-      # @return [String] underscored namespace path
-      #
-      # @example
-      #   parse_service_namespace(Services::ProcessPayment::Service)
-      #   # => "services/process_payment"
-      #
-      # @api private
-      def self.parse_service_namespace(service_class)
-        service_class.name.split('::')[..-2].map do |s|
-          s.gsub(/([a-z])([A-Z])/, '\1_\2').downcase
-        end.join('/')
       end
     end
   end

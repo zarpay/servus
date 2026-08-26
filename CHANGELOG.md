@@ -1,3 +1,187 @@
+## [1.0.0] - 2026-08-26
+
+Schema declaration is now inline-only, and shared schemas arrive to make that
+practical at scale.
+
+Servus resolved schemas from three places: the `schema` DSL, `ARGUMENTS_SCHEMA`
+/ `RESULT_SCHEMA` / `FAILURE_SCHEMA` constants, and mirror-directory JSON files
+under `app/schemas`. Two of those put a service's contract somewhere other than
+the service — hidden in a sibling file, or resolved reflectively from a constant
+name. Both are gone. A service's inputs and outputs are now stated in the file
+that implements it.
+
+The obvious cost of inline-only declaration is duplication, so this release also
+adds a registry of reusable schema fragments that services reference with a
+standard JSON Schema `$ref`. A service referencing a shared type still declares
+that type explicitly; it just names it once.
+
+### Added
+
+- **Shared schemas**: register a reusable fragment with `Servus::Schema.register`
+  and reference it from any service or event schema.
+
+  ```ruby
+  # config/initializers/servus_schemas.rb
+  Servus::Schema.register('core', {
+    '$defs' => { 'amount' => { 'type' => 'integer', 'minimum' => 0 } }
+  })
+  ```
+
+  ```ruby
+  class Treasury::TransferGold::Service < Servus::Base
+    schema arguments: {
+      type: 'object',
+      properties: { gold_dragons: { '$ref' => '#/core/$defs/amount' } }
+    }
+  end
+  ```
+
+  Refs take one of two forms — `#/<key>` for a whole fragment, `#/<key>/<path>`
+  for a path within it. Keys beside a `$ref` override the fragment they resolve
+  to, so a shared shape can be re-described at the site that uses it.
+
+  Compilation is lazy and memoized: a schema is compiled the first time it is
+  read — by validation, by the test example builders, or by your own code — and
+  a fragment referenced by two hundred services is expanded once. Registering a
+  changed fragment invalidates every schema that depends on it.
+
+  Lookups never return nil. An unregistered key raises
+  `Servus::Schema::UnknownKeyError` naming the key, the schema being compiled,
+  the chain of refs that led there, and the nearest registered key. Cycles raise
+  `CircularReferenceError` naming every hop, and are detected on first
+  recurrence rather than by exhausting a depth budget.
+
+  See [Shared Schemas](https://zarpay.github.io/servus/features/shared-schemas).
+
+- **`Servus::Schema.ref`** builds ref hashes without hand-writing the prefix and
+  separator: `Servus::Schema.ref('core', '$defs', 'amount')`.
+
+- **`Servus::Schema.fetch` reads a path within a fragment**, using the same
+  addressing a `$ref` uses — `fetch('models::trade', '$defs', 'representation')`.
+  A missing path raises `RefNotFoundError` listing what was available, rather
+  than returning nil the way `dig` would.
+
+- **`Servus::Schema.resolve(key, *path)`** returns a fragment or definition with
+  all refs resolved — the compiled counterpart to `fetch`, and usually what
+  application code outside a service wants:
+
+  ```ruby
+  schema = Servus::Schema.resolve('endpoints::trades::create', '$defs', 'request')
+  JSON::Validator.fully_validate(schema, params.to_unsafe_h)
+  ```
+
+- **`Servus::Schema.compile_all`** returns every registered fragment with all
+  refs resolved, keyed by name. The registry has no coupling to services or
+  events, so an app can register contracts that have no service behind them —
+  controller request and response shapes, say — and emit the whole thing as one
+  JSON asset for an API description, docs, or client codegen.
+
+  ```ruby
+  File.write('schema.json', JSON.pretty_generate(Servus::Schema.compile_all))
+  ```
+
+- **Schemas are inherited.** A subclass of a schema-bearing service or event now
+  inherits its contract and can override any part of it. Previously a subclass
+  silently validated nothing.
+
+- **`raw_arguments_schema`**, `raw_result_schema`, `raw_failure_schema`, and
+  `raw_payload_schema` return a schema as authored, with refs unresolved. The
+  unprefixed readers return the compiled form.
+
+### Changed
+
+- **`schema` rejects an explicit `nil`.** `schema arguments: nil` now raises
+  `ArgumentError`. Omitting a keyword still leaves any previously declared
+  schema in place. An explicit `nil` is almost always a lookup that failed, and
+  accepting it left the service silently unvalidated.
+
+- **`schema` rejects unknown keywords.** `schema argument: {...}` used to be a
+  no-op; it now raises `ArgumentError` listing the valid kinds.
+
+- **Event payload schemas are compiled and cached.** They were previously read
+  raw on every emission.
+
+- **The schema cache is keyed by class and kind.** It was keyed by a file path
+  derived from the class's namespace, with the final segment dropped — so
+  `A::B::Service` and `A::B::Other` shared a cache entry and could silently
+  share a schema.
+
+- **`have_schema` no longer clears the global schema cache**, which discarded
+  cache state belonging to unrelated examples. Because the matcher now compiles,
+  it also fails on a schema that references an unregistered fragment — broken
+  refs surface in CI rather than in production.
+
+- **`required_ruby_version` is now `>= 3.2.0`**, matching the versions actually
+  tested. It claimed `>= 3.0.0` while CI ran 3.2, 3.3, and 3.4.
+
+### Removed
+
+- **Constant-based schemas.** `ARGUMENTS_SCHEMA`, `RESULT_SCHEMA`, and
+  `FAILURE_SCHEMA` are no longer consulted.
+
+- **File-based schemas.** JSON files under `app/schemas/<namespace>/` are no
+  longer loaded, and the service generator no longer creates them.
+
+- **`config.schemas_dir`, `config.schema_path_for`, and `config.schema_dir_for`**,
+  which existed only to locate those files.
+
+### Upgrading
+
+Both removed tiers fail *silently*: a service whose only schema was a constant
+or a JSON file will now run with no validation at all, and nothing will say so.
+That makes this the one upgrade step worth doing exhaustively rather than
+waiting for something to break.
+
+**1. Find everything still using a removed tier.**
+
+```bash
+grep -rn 'ARGUMENTS_SCHEMA\|RESULT_SCHEMA\|FAILURE_SCHEMA' app/ lib/
+find app/schemas -name '*.json'
+```
+
+**2. Move each one inline.** A constant becomes the DSL argument directly:
+
+```ruby
+# before
+class Treasury::TransferGold::Service < Servus::Base
+  ARGUMENTS_SCHEMA = { type: 'object', required: ['gold_dragons'] }.freeze
+end
+
+# after
+class Treasury::TransferGold::Service < Servus::Base
+  schema arguments: { type: 'object', required: ['gold_dragons'] }
+end
+```
+
+A JSON file's contents become the same thing. Where several services shared a
+file, register it as a fragment instead and `$ref` it from each — that is what
+shared schemas are for.
+
+**3. Make the gap impossible to miss.** Once migrated, turn on enforcement so a
+service without a schema fails loudly instead of quietly validating nothing:
+
+```ruby
+# config/initializers/servus.rb
+Servus.configure do |config|
+  config.require_service_arguments_schema = true
+  config.require_service_result_schema    = true
+  config.require_event_payload_schema     = true
+end
+```
+
+If you would rather not enforce at runtime, the `have_schema` matcher does the
+same job in CI:
+
+```ruby
+it { expect(described_class).to have_schema(:arguments) }
+```
+
+**Two smaller things to check.** If any code passes a possibly-nil value to
+`schema` — for example from a lookup helper — that now raises instead of being
+dropped; fix the lookup rather than restoring the nil. And if you subclass a
+service that declares schemas, the subclass now inherits them, where before it
+had none.
+
 ## [0.7.0] - 2026-08-15
 
 ### Added

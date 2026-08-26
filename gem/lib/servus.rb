@@ -5,6 +5,8 @@ require 'json-schema'
 require 'active_support'
 require 'active_support/core_ext/class/attribute'
 require 'active_support/core_ext/hash/indifferent_access'
+require 'active_support/core_ext/object/deep_dup'
+require 'active_support/core_ext/string/inflections'
 # Servus namespace
 module Servus; end
 
@@ -16,6 +18,15 @@ require_relative 'servus/railtie' if defined?(Rails::Railtie)
 
 # Config
 require_relative 'servus/config'
+
+# Schema
+require_relative 'servus/schema/errors'
+require_relative 'servus/schema/cache'
+require_relative 'servus/schema/path'
+require_relative 'servus/schema/ref'
+require_relative 'servus/schema/declaration'
+require_relative 'servus/schema/compiler'
+require_relative 'servus/schema'
 
 # Support
 require_relative 'servus/support/logger'

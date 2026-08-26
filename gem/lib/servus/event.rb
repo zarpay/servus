@@ -41,6 +41,44 @@ module Servus
   # @see Servus::Events::Router
   # @see Servus::Base
   class Event
+    extend Servus::Schema::Declaration
+
+    # @!method self.schema(payload: nil)
+    #   Declares the JSON schema for this event's payload.
+    #
+    #   The payload is validated on every {Servus::Event.emit}. Schemas may
+    #   reference shared fragments registered with {Servus::Schema.register};
+    #   refs are resolved on first read.
+    #
+    #   Omitting the keyword leaves any schema declared earlier — or by a
+    #   superclass — in place. Passing it explicitly as +nil+ raises.
+    #
+    #   @param payload [Hash] JSON schema for the event payload
+    #   @return [void]
+    #   @raise [ArgumentError] on an unknown keyword or an explicit nil
+    #
+    #   @example
+    #     class UserCreated < Servus::Event
+    #       event_name :user_created
+    #
+    #       schema payload: {
+    #         type: 'object',
+    #         required: ['user_id', 'email'],
+    #         properties: {
+    #           user_id: { type: 'integer' },
+    #           email: { type: 'string', format: 'email' }
+    #         }
+    #       }
+    #     end
+    #
+    #   @see Servus::Schema
+    #
+    # @!method self.payload_schema
+    #   @return [Hash, nil] the compiled payload schema
+    # @!method self.raw_payload_schema
+    #   @return [Hash, nil] the payload schema as authored, refs unresolved
+    declare_schemas :payload
+
     class << self
       # Declares or returns the event name.
       #
@@ -134,34 +172,6 @@ module Servus
       def invocations
         @invocations || []
       end
-
-      # Defines the JSON schema for validating event payloads.
-      #
-      # @param payload [Hash, nil] JSON schema for validating event payloads
-      # @return [void]
-      #
-      # @example
-      #   class UserCreated < Servus::Event
-      #     event_name :user_created
-      #
-      #     schema payload: {
-      #       type: 'object',
-      #       required: ['user_id', 'email'],
-      #       properties: {
-      #         user_id: { type: 'integer' },
-      #         email: { type: 'string', format: 'email' }
-      #       }
-      #     }
-      #   end
-      def schema(payload: nil)
-        @payload_schema = payload.with_indifferent_access if payload
-      end
-
-      # Returns the payload schema.
-      #
-      # @return [Hash, nil] the payload schema or nil if not defined
-      # @api private
-      attr_reader :payload_schema
 
       # Emits this event via the Bus.
       #

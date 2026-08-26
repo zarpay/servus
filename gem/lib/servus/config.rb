@@ -4,24 +4,18 @@
 module Servus
   # Configuration settings for the Servus gem.
   #
-  # Manages global configuration options including schema file locations.
-  # Access the configuration via {Servus.config} or modify via {Servus.configure}.
+  # Manages global configuration options for services, events, guards, and
+  # logging. Access the configuration via {Servus.config} or
+  # modify via {Servus.configure}.
   #
-  # @example Customizing schema location
+  # @example Configuring Servus
   #   Servus.configure do |config|
-  #     config.schema_root = Rails.root.join('lib/schemas')
+  #     config.require_service_arguments_schema = true
   #   end
   #
   # @see Servus.config
   # @see Servus.configure
   class Config
-    # The directory where JSON schema files are located.
-    #
-    # Defaults to `Rails.root/app/schemas/services` in Rails applications.
-    #
-    # @return [String] the schemas directory path
-    attr_accessor :schemas_dir
-
     # The directory where Event classes are located.
     #
     # Defaults to `Rails.root/app/events` in Rails applications.
@@ -171,48 +165,8 @@ module Servus
     def set_default_directories
       @guards_dir   = 'app/guards'
       @events_dir   = 'app/events'
-      @schemas_dir  = 'app/schemas'
       @services_dir = 'app/services'
       @tests_dir    = 'spec'
-    end
-
-    # Returns the full path to a service's schema file.
-    #
-    # @param service_namespace [String] underscored service namespace (e.g., "process_payment")
-    # @param type [String] schema type ("arguments" or "result")
-    # @return [String] full path to the schema JSON file
-    #
-    # @example
-    #   config.schema_path_for("process_payment", "arguments")
-    #   # => "/full/path/app/schemas/process_payment/arguments.json"
-    def schema_path_for(service_namespace, type)
-      File.join(root_path, schemas_dir, service_namespace, "#{type}.json")
-    end
-
-    # Returns the directory containing a service's schema files.
-    #
-    # @param service_namespace [String] underscored service namespace
-    # @return [String] directory path for the service's schemas
-    #
-    # @example
-    #   config.schema_dir_for("process_payment")
-    #   # => "/full/path/app/schemas/process_payment"
-    def schema_dir_for(service_namespace)
-      File.join(root_path, schemas_dir, service_namespace)
-    end
-
-    private
-
-    # Determines the application root path.
-    #
-    # @return [String] Rails.root in Rails apps, or gem's root directory otherwise
-    # @api private
-    def root_path
-      if defined?(Rails) && Rails.respond_to?(:root)
-        Rails.root
-      else
-        File.expand_path('../../..', __dir__)
-      end
     end
   end
 
@@ -221,8 +175,8 @@ module Servus
   # @return [Servus::Config] the global configuration object
   #
   # @example
-  #   Servus.config.schema_root
-  #   # => "/app/app/schemas/services"
+  #   Servus.config.services_dir
+  #   # => "app/services"
   def self.config
     @config ||= Config.new
   end
@@ -234,7 +188,7 @@ module Servus
   #
   # @example
   #   Servus.configure do |config|
-  #     config.schema_root = Rails.root.join('custom/schemas')
+  #     config.require_service_result_schema = true
   #   end
   def self.configure
     yield(config)

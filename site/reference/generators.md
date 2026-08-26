@@ -11,8 +11,6 @@ rails g servus:service treasury/transfer_gold from_account to_account gold_drago
 
 => create  app/services/treasury/transfer_gold/service.rb
 => create  spec/services/treasury/transfer_gold/service_spec.rb
-=> create  app/schemas/services/treasury/transfer_gold/result.json
-=> create  app/schemas/services/treasury/transfer_gold/arguments.json
 ```
 
 | Argument | Required | Description |
@@ -86,44 +84,6 @@ RSpec.describe Treasury::TransferGold::Service do
   end
 end
 ```
-
-### Generated schemas
-
-Arguments schema with the parameters declared as required:
-
-```json
-// app/schemas/services/treasury/transfer_gold/arguments.json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Treasury::TransferGold Arguments",
-  "type": "object",
-  "properties": {
-    "from_account": { "type": "string", "description": "TODO" },
-    "to_account": { "type": "string", "description": "TODO" },
-    "gold_dragons": { "type": "string", "description": "TODO" }
-  },
-  "required": ["from_account", "to_account", "gold_dragons"],
-  "additionalProperties": false
-}
-```
-
-Result schema (empty, ready to fill in):
-
-```json
-// app/schemas/services/treasury/transfer_gold/result.json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Treasury::TransferGold Result",
-  "type": "object",
-  "properties": {},
-  "required": [],
-  "additionalProperties": true
-}
-```
-
-::: tip Inline schemas preferred
-The generator creates JSON schema files for convenience, but the `schema` DSL is the recommended approach. You can delete the JSON files and define schemas inline — see [Schema Validation](/features/schema-validation).
-:::
 
 ### Destroy
 
@@ -287,7 +247,6 @@ All generators respect the directory settings in `Servus.configure`:
 # config/initializers/servus.rb
 Servus.configure do |config|
   config.services_dir = "app/services"  # default: "app/services"
-  config.schemas_dir  = "app/schemas"   # default: "app/schemas"
   config.events_dir   = "app/events"    # default: "app/events"
   config.guards_dir   = "app/guards"    # default: "app/guards"
   config.tests_dir    = "spec"          # default: "spec"
