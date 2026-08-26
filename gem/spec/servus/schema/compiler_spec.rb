@@ -97,6 +97,35 @@ RSpec.describe Servus::Schema::Compiler, :schema_registry do
     end
   end
 
+  # A ref does not have to land on an object. JSON Schema puts arrays in
+  # `required` and `enum`, and draft-06 accepts a bare boolean as a schema.
+  describe 'refs that resolve to something other than a hash' do
+    before do
+      Servus::Schema.register('lists', {
+                                '$defs' => {
+                                  'statuses' => %w[open closed],
+                                  'anything' => true
+                                }
+                              })
+    end
+
+    it 'resolves a ref to an array' do
+      result = described_class.new.compile(
+        { 'type' => 'object', 'required' => { '$ref' => '#/lists/$defs/statuses' } }
+      )
+
+      expect(result['required']).to eq(%w[open closed])
+    end
+
+    it 'resolves a ref to a boolean schema' do
+      result = described_class.new.compile(
+        { 'properties' => { 'extra' => { '$ref' => '#/lists/$defs/anything' } } }
+      )
+
+      expect(result.dig('properties', 'extra')).to be(true)
+    end
+  end
+
   describe 'sibling properties' do
     let(:schema) do
       { '$ref' => '#/core/$defs/amount', 'description' => 'The fee charged' }

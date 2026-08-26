@@ -45,7 +45,7 @@ module Servus
       # @return [String] service file path
       # @api private
       def service_path
-        "app/services/#{file_path}/service.rb"
+        File.join(Servus.config.services_dir, file_path, 'service.rb')
       end
 
       # Returns the path for the service spec file.

@@ -177,6 +177,7 @@ GEM
       yard
     ruby-progressbar (1.13.0)
     securerandom (0.4.1)
+    simplecov (1.1.1)
     sqlite3 (2.9.2)
       mini_portile2 (~> 2.8.0)
     sqlite3 (2.9.2-x86_64-linux-gnu)
@@ -215,6 +216,7 @@ DEPENDENCIES
   rubocop
   rubocop-yard
   servus!
+  simplecov
   sqlite3
   webrick
   yard

@@ -289,6 +289,44 @@ RSpec.describe Servus::Testing::ExampleExtractor do
       end
     end
 
+    context 'with an array of scalars whose items carry an example' do
+      before do
+        ExampleExtractionTest::ArrayService.schema(
+          arguments: {
+            type: 'object',
+            properties: {
+              tags: { type: 'array', items: { type: 'string', example: 'urgent' } }
+            }
+          }
+        )
+      end
+
+      it 'wraps the item example in an array' do
+        result = described_class.extract(ExampleExtractionTest::ArrayService, :arguments)
+
+        expect(result[:tags]).to eq(['urgent'])
+      end
+    end
+
+    context 'with an array whose items carry no example' do
+      before do
+        ExampleExtractionTest::ArrayService.schema(
+          arguments: {
+            type: 'object',
+            properties: {
+              tags: { type: 'array', items: { type: 'string' } }
+            }
+          }
+        )
+      end
+
+      it 'omits the property rather than inventing a value' do
+        result = described_class.extract(ExampleExtractionTest::ArrayService, :arguments)
+
+        expect(result).not_to have_key(:tags)
+      end
+    end
+
     context 'with result schema' do
       before do
         ExampleExtractionTest::SimpleService.schema(

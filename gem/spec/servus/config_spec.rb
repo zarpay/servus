@@ -3,6 +3,50 @@
 require 'spec_helper'
 
 RSpec.describe Servus::Config do
+  describe 'Servus.configure' do
+    after { Servus.config.tests_dir = 'spec' }
+
+    it 'yields the configuration for modification' do
+      Servus.configure { |config| config.tests_dir = 'test' }
+
+      expect(Servus.config.tests_dir).to eq('test')
+    end
+
+    it 'yields the same singleton returned by Servus.config' do
+      expect { |b| Servus.configure(&b) }.to yield_with_args(Servus.config)
+    end
+  end
+
+  describe '#services_dir' do
+    let(:default_dir) { 'app/services' }
+
+    it 'defaults to app/services' do
+      expect(Servus.config.services_dir).to eq(default_dir)
+    end
+
+    it 'can be customized' do
+      Servus.config.services_dir = 'app/domain'
+      expect(Servus.config.services_dir).to eq('app/domain')
+    end
+
+    after { Servus.config.services_dir = default_dir }
+  end
+
+  describe '#events_dir' do
+    let(:default_dir) { 'app/events' }
+
+    it 'defaults to app/events' do
+      expect(Servus.config.events_dir).to eq(default_dir)
+    end
+
+    it 'can be customized' do
+      Servus.config.events_dir = 'app/domain_events'
+      expect(Servus.config.events_dir).to eq('app/domain_events')
+    end
+
+    after { Servus.config.events_dir = default_dir }
+  end
+
   describe '#guards_dir' do
     let(:default_dir) { 'app/guards' }
 

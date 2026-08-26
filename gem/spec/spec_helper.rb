@@ -1,5 +1,14 @@
 # frozen_string_literal: true
 
+if ENV['COVERAGE']
+  require 'simplecov'
+  SimpleCov.start do
+    enable_coverage :branch
+    add_filter %r{^/spec/}
+    track_files 'lib/**/*.rb'
+  end
+end
+
 require 'servus'
 require 'servus/testing'
 require 'spec_support/active_job_loader'

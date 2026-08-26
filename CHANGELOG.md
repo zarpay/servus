@@ -107,6 +107,10 @@ that type explicitly; it just names it once.
   it also fails on a schema that references an unregistered fragment — broken
   refs surface in CI rather than in production.
 
+- **The service generator honours `config.services_dir`.** It hardcoded
+  `app/services/`, so the one directory setting the generator docs listed for it
+  did nothing. The event and guard generators already honoured theirs.
+
 - **`required_ruby_version` is now `>= 3.2.0`**, matching the versions actually
   tested. It claimed `>= 3.0.0` while CI ran 3.2, 3.3, and 3.4.
 

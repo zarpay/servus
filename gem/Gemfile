@@ -18,6 +18,7 @@ group :development, :test do
 
   gem 'rspec', '~> 3.0'
   gem 'rspec-rails' # gives you `have_enqueued_job` matcher
+  gem 'simplecov', require: false
 
   # Yard
   gem 'redcarpet', require: false

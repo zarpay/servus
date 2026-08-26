@@ -52,6 +52,23 @@ RSpec.describe Servus::Schema, :schema_registry do
       expect(described_class.fetch('core')).to be_frozen
     end
 
+    # Arrays are everywhere in JSON Schema — `required`, `enum`, `anyOf` — so
+    # freezing that stops at hashes would leave most fragments mutable.
+    it 'freezes through arrays as well as hashes' do
+      described_class.register('core', {
+                                 '$defs' => {
+                                   'status' => { 'type' => 'string', 'enum' => %w[open closed] }
+                                 },
+                                 'required' => ['status']
+                               })
+
+      fragment = described_class.fetch('core')
+
+      expect(fragment['required']).to be_frozen
+      expect(fragment.dig('$defs', 'status', 'enum')).to be_frozen
+      expect { fragment['required'] << 'other' }.to raise_error(FrozenError)
+    end
+
     it 'accepts a key containing :: namespace separators' do
       described_class.register('models::trade', core_fragment)
 
