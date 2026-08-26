@@ -157,12 +157,6 @@ module Servus
         keys.to_h { |key| [key, compile(fetch(key), context: "schema fragment #{key.inspect}")] }
       end
 
-      # @param key [String, Symbol]
-      # @return [Boolean] whether a fragment is registered under +key+
-      def registered?(key)
-        @registry.key?(key.to_s)
-      end
-
       # @return [Array<String>] registered keys, sorted
       def keys
         @registry.keys.sort
@@ -281,30 +275,6 @@ module Servus
         when Array then value.each { |v| deep_freeze(v) }.freeze
         else value.freeze
         end
-      end
-
-      # @param key [String]
-      # @return [UnknownKeyError]
-      # @api private
-      def unknown_key_error(key)
-        if @registry.empty?
-          UnknownKeyError.new(
-            "unknown schema key #{key.inspect}: no schema fragments are registered. " \
-            'Register one with Servus::Schema.register(key, fragment).'
-          )
-        else
-          UnknownKeyError.new("unknown schema key #{key.inspect}.#{suggestion_for(key)}")
-        end
-      end
-
-      # @param key [String]
-      # @return [String] a " Did you mean: ..." clause, or an empty string
-      # @api private
-      def suggestion_for(key)
-        matches = DidYouMean::SpellChecker.new(dictionary: @registry.keys).correct(key)
-        return '' if matches.empty?
-
-        " Did you mean: #{matches.map(&:inspect).join(', ')}?"
       end
     end
   end

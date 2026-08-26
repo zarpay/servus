@@ -216,7 +216,6 @@ RSpec.describe Servus::Schema::Compiler, :schema_registry do
           expect(error.message).to include('"cor"')
           expect(error.message).to include('Did you mean: "core"')
           expect(error.message).to include(context)
-          expect(error.ref).to eq('#/cor/$defs/amount')
         }
       end
     end

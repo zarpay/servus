@@ -55,7 +55,7 @@ RSpec.describe Servus::Schema, :schema_registry do
     it 'accepts a key containing :: namespace separators' do
       described_class.register('models::trade', core_fragment)
 
-      expect(described_class.registered?('models::trade')).to be(true)
+      expect(described_class.keys).to include('models::trade')
     end
 
     it 'rejects a key containing a / because it collides with the ref path separator' do
@@ -272,15 +272,6 @@ RSpec.describe Servus::Schema, :schema_registry do
 
       expect { described_class.compile_all }
         .to raise_error(Servus::Schema::UnknownKeyError, /broken/)
-    end
-  end
-
-  describe '.registered?' do
-    it 'is true for a registered key and false otherwise' do
-      described_class.register('core', core_fragment)
-
-      expect(described_class.registered?('core')).to be(true)
-      expect(described_class.registered?('other')).to be(false)
     end
   end
 

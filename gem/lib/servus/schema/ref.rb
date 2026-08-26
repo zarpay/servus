@@ -82,9 +82,6 @@ module Servus
         @value = value
         @key, *@segments = value.delete_prefix('#/').split('/')
       end
-
-      # @return [String] the ref string
-      def to_s = value
     end
   end
 end

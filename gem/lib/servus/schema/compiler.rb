@@ -73,7 +73,7 @@ module Servus
       # @return [Object]
       # @api private
       def resolve(node, depth)
-        raise_with_context(depth_error) if depth > MAX_DEPTH
+        raise DepthExceededError, contextualize(depth_message) if depth > MAX_DEPTH
 
         case node
         when Hash  then resolve_hash(node, depth)
@@ -114,7 +114,7 @@ module Servus
       def resolve_ref(value)
         ref = with_context { Ref.parse(value) }
 
-        raise_with_context(circular_error(ref)) if @path.include?(ref.value)
+        raise CircularReferenceError, contextualize(circular_message(ref)) if @path.include?(ref.value)
 
         @path.push(ref.value)
         begin
@@ -130,7 +130,7 @@ module Servus
       # @return [Object]
       # @api private
       def expand(ref)
-        target = with_context(ref) { Schema.fetch(ref.key, *ref.segments) }
+        target = with_context { Schema.fetch(ref.key, *ref.segments) }
 
         strip_metadata(resolve(target, 0))
       end
@@ -150,47 +150,46 @@ module Servus
       # Runs a block, re-raising any schema error with this compile's context.
       #
       # {Ref} and {Servus::Schema} raise where the problem is detected and know
-      # nothing about which service or ref chain led there. This attaches that.
+      # nothing about which schema or ref chain led there. This attaches that.
       #
-      # @param ref [Ref, nil]
+      # Both call sites wrap a single foreign call rather than the recursion
+      # around it, so an error is decorated exactly once on its way out.
+      #
       # @yield the work that might raise
       # @return [Object] the block's value
       # @api private
-      def with_context(ref = nil)
+      def with_context
         yield
       rescue Error => e
-        raise_with_context(e, ref)
+        raise e.class, contextualize(e.message)
       end
 
-      # @param error [Error]
-      # @param ref [Ref, nil]
-      # @raise [Error] always
+      # Appends the schema being compiled and the ref chain that led here.
+      #
+      # @param message [String]
+      # @return [String]
       # @api private
-      def raise_with_context(error, ref = nil)
-        raise error.with_context(
-          ref: ref&.value,
-          resolution_path: @path.dup,
-          context: @context
-        )
+      def contextualize(message)
+        parts = [message]
+        parts << "while compiling #{@context}" if @context
+        parts << "(resolution path: #{@path.join(' -> ')})" if @path.length > 1
+
+        parts.join("
+  ")
       end
 
       # @param ref [Ref]
-      # @return [CircularReferenceError]
+      # @return [String]
       # @api private
-      def circular_error(ref)
-        CircularReferenceError.new(
-          "circular $ref detected: #{(@path + [ref.value]).join(' -> ')}",
-          ref: ref.value
-        )
+      def circular_message(ref)
+        "circular $ref detected: #{(@path + [ref.value]).join(' -> ')}"
       end
 
-      # @return [DepthExceededError]
+      # @return [String]
       # @api private
-      def depth_error
-        DepthExceededError.new(
-          "schema nests more than #{MAX_DEPTH} levels deep. This is a runaway guard — " \
+      def depth_message
+        "schema nests more than #{MAX_DEPTH} levels deep. This is a runaway guard — " \
           'if the schema is legitimately this deep, flatten it into registered fragments.'
-        )
       end
     end
   end

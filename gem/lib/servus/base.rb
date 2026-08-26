@@ -107,12 +107,6 @@ module Servus
     #   @return [Hash, nil] the compiled result schema
     # @!method self.failure_schema
     #   @return [Hash, nil] the compiled failure schema
-    # @!method self.raw_arguments_schema
-    #   @return [Hash, nil] the arguments schema as authored, refs unresolved
-    # @!method self.raw_result_schema
-    #   @return [Hash, nil] the result schema as authored, refs unresolved
-    # @!method self.raw_failure_schema
-    #   @return [Hash, nil] the failure schema as authored, refs unresolved
     declare_schemas :arguments, :result, :failure
 
     # Support class aliases

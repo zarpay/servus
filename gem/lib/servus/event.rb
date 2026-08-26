@@ -75,8 +75,6 @@ module Servus
     #
     # @!method self.payload_schema
     #   @return [Hash, nil] the compiled payload schema
-    # @!method self.raw_payload_schema
-    #   @return [Hash, nil] the payload schema as authored, refs unresolved
     declare_schemas :payload
 
     class << self

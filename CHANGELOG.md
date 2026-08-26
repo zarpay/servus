@@ -84,10 +84,6 @@ that type explicitly; it just names it once.
   inherits its contract and can override any part of it. Previously a subclass
   silently validated nothing.
 
-- **`raw_arguments_schema`**, `raw_result_schema`, `raw_failure_schema`, and
-  `raw_payload_schema` return a schema as authored, with refs unresolved. The
-  unprefixed readers return the compiled form.
-
 ### Changed
 
 - **`schema` rejects an explicit `nil`.** `schema arguments: nil` now raises

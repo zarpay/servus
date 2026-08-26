@@ -9,8 +9,7 @@ module Servus
     # +failure+; {Servus::Event} declares +payload+. Each kind gets:
     #
     # * a keyword on the generated +schema+ class method
-    # * a reader returning the *compiled* schema, e.g. +arguments_schema+
-    # * a reader returning the schema as authored, e.g. +raw_arguments_schema+
+    # * a reader returning the compiled schema, e.g. +arguments_schema+
     #
     # == Compiled on read
     #
@@ -45,7 +44,6 @@ module Servus
 
         types.each do |type|
           define_singleton_method(:"#{type}_schema") { compiled_schema(type) }
-          define_singleton_method(:"raw_#{type}_schema") { raw_schema(type) }
         end
       end
 

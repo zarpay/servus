@@ -92,18 +92,6 @@ RSpec.describe Servus::Schema::Declaration, :schema_registry do
     end
   end
 
-  describe 'raw readers' do
-    before do
-      Servus::Schema.register('core', { '$defs' => { 'amount' => { 'type' => 'integer' } } })
-      service_class.schema arguments: { properties: { fee: { '$ref' => '#/core/$defs/amount' } } }
-    end
-
-    it 'returns the schema as authored, with refs intact' do
-      expect(service_class.raw_arguments_schema.dig('properties', 'fee'))
-        .to eq({ '$ref' => '#/core/$defs/amount' })
-    end
-  end
-
   describe 'inheritance' do
     let(:parent) do
       stub_const('DeclarationTest::Parent', Class.new(Servus::Base)).tap do |klass|
@@ -124,10 +112,6 @@ RSpec.describe Servus::Schema::Declaration, :schema_registry do
 
       expect(child.arguments_schema['required']).to eq(['email'])
       expect(parent.arguments_schema['required']).to eq(['name'])
-    end
-
-    it 'inherits through the raw reader too' do
-      expect(child.raw_arguments_schema['required']).to eq(['name'])
     end
 
     it 'returns nil when no ancestor declares one' do

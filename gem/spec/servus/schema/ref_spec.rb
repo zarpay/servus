@@ -15,7 +15,6 @@ RSpec.describe Servus::Schema::Ref do
 
       it 'keeps the original value' do
         expect(ref.value).to eq('#/core')
-        expect(ref.to_s).to eq('#/core')
       end
     end
 
