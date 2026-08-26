@@ -20,7 +20,7 @@ rails g servus:service treasury/transfer_gold from_account to_account gold_drago
 
 | Option | Description |
 | --- | --- |
-| `--no-docs` | Skip YARD documentation comments and TODO scaffolding |
+| `--no-docs` | Skip YARD documentation comments and TODO scaffolding. The `schema` declaration is still generated — it is code, not documentation. |
 
 ### Generated service
 
@@ -30,6 +30,23 @@ With parameters:
 # app/services/treasury/transfer_gold/service.rb
 module Treasury::TransferGold
   class Service < Servus::Base
+    schema(
+      arguments: {
+        type: 'object',
+        required: %w[from_account to_account gold_dragons],
+        properties: {
+          from_account: {},
+          to_account: {},
+          gold_dragons: {}
+        }
+      },
+      result: {
+        type: 'object',
+        required: [],
+        properties: {}
+      }
+    )
+
     def initialize(from_account:, to_account:, gold_dragons:)
       @from_account = from_account
       @to_account = to_account
@@ -110,7 +127,7 @@ rails g servus:event gold_transferred
 
 | Option | Description |
 | --- | --- |
-| `--no-docs` | Skip YARD documentation comments and TODO scaffolding |
+| `--no-docs` | Skip YARD documentation comments and TODO scaffolding. The `schema` declaration is still generated — it is code, not documentation. |
 
 ### Generated Event class
 
@@ -168,7 +185,7 @@ rails g servus:guard eligible_transfer
 
 | Option | Description |
 | --- | --- |
-| `--no-docs` | Skip YARD documentation comments and TODO scaffolding |
+| `--no-docs` | Skip YARD documentation comments and TODO scaffolding. The `schema` declaration is still generated — it is code, not documentation. |
 
 ### Generated guard
 

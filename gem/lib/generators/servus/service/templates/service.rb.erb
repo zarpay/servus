@@ -41,34 +41,27 @@
 module <%= class_name %>
   class Service < Servus::Base
 <%- unless options[:no_docs] -%>
-    # TODO: Define argument validation schema (optional but recommended)
-    # schema arguments: {
-    #   type: 'object',
-<%- if parameters.any? -%>
-    #   required: [<%= parameters.map { |p| "'#{p}'" }.join(', ') %>],
-<%- else -%>
-    #   required: [],
+    # TODO: give each property a type. An empty property schema accepts anything,
+    # so until these are filled in only presence is enforced.
+    # Shared shapes can be referenced instead: { '$ref' => '#/core/$defs/amount' }
 <%- end -%>
-    #   properties: {
+    schema(
+      arguments: {
+        type: 'object',
+        required: <%= parameters.empty? ? '[]' : "%w[#{parameters.join(' ')}]" %>,
+        properties: {
 <%- parameters.each do |param| -%>
-    #     <%= param %>: { type: 'string' }<%= param == parameters.last ? '' : ',' %>
+          <%= param %>: {}<%= param == parameters.last ? '' : ',' %>
 <%- end -%>
-<%- if parameters.empty? -%>
-    #     # property_name: { type: 'string' }
-<%- end -%>
-    #   }
-    # }
+        }
+      },
+      result: {
+        type: 'object',
+        required: [],
+        properties: {}
+      }
+    )
 
-    # TODO: Define result validation schema (optional)
-    # schema result: {
-    #   type: 'object',
-    #   required: [],
-    #   properties: {
-    #     # result_field: { type: 'string' }
-    #   }
-    # }
-
-<%- end -%>
 <%- unless options[:no_docs] -%>
     # Initializes the service with required parameters.
     #

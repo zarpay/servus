@@ -88,10 +88,10 @@ module Servus
       #
       # @return [String] multi-line instance variable assignments
       # @example
-      #   initialize_params # => "@user = user\n    @amount = amount"
+      #   initialize_params # => "@user = user\n      @amount = amount"
       # @api private
       def initialize_params
-        parameters.map { |param| "@#{param} = #{param}" }.join("\n    ")
+        parameters.map { |param| "@#{param} = #{param}" }.join("\n      ")
       end
 
       # Generates attr_reader declarations for parameters.

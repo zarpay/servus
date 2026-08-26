@@ -93,6 +93,14 @@ had two calling conventions and a jump you had to know about rather than see.
   hidden. It now has a section in
   [Events](https://zarpay.github.io/servus/features/event-bus).
 
+- **The service generator declares a schema by default.** Generated services now
+  carry a real `schema arguments:/result:` declaration instead of a commented-out
+  block. Required arguments are filled in from the generator's parameters, which
+  is knowable; property types are left empty for you to fill in, which is not.
+  An empty property schema accepts anything, so a fresh service enforces argument
+  presence and nothing more until you type it. Unlike the YARD comments, the
+  declaration survives `--no-docs` — it is code, not documentation.
+
 - **Schemas are inherited.** A subclass of a schema-bearing service or event now
   inherits its contract and can override any part of it. Previously a subclass
   silently validated nothing.
