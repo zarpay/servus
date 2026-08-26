@@ -70,7 +70,7 @@ RSpec.describe Servus::Generators::ServiceGenerator do
     end
 
     it 'requires every declared parameter' do
-      expect(contents).to include("required: %w[from_account gold_dragons]")
+      expect(contents).to include('required: %w[from_account gold_dragons]')
     end
 
     it 'lists every parameter as a property' do
