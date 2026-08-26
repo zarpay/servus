@@ -215,46 +215,6 @@ module Servus
       raise type, message
     end
 
-    # Invokes another service from within this service's {#call} and returns its
-    # data on success. On failure, halts the outer service with the sub-service's
-    # failure Response — the outer service's caller receives that Response
-    # unchanged (same error object, message, code, http_status).
-    #
-    # Sugar over:
-    #
-    #   result = SubService.call(**params)
-    #   return result unless result.success?
-    #   data = result.data
-    #
-    # Only call from within a service's `#call` (or helpers reachable from
-    # it); the throw is caught by {Servus::Base.call}.
-    #
-    # @example Composing services
-    #   class SendDigitalCash::Service < Servus::Base
-    #     def call
-    #       data1 = call!(Accounts::Lookup::Service, id: account_id)
-    #       data2 = call!(Ledger::RecordTransfer::Service, account:, amount:)
-    #       success(ref: data2.ref)
-    #     end
-    #   end
-    #
-    # For invoking a service from *outside* a service context (controllers,
-    # rake tasks, jobs, consoles), see
-    # {Servus::Helpers::ControllerHelpers#run_service!}.
-    #
-    # @param service_class [Class<Servus::Base>] the sub-service to invoke
-    # @param params [Hash] keyword arguments to pass to the sub-service
-    # @return [Servus::Support::DataObject, Object] the sub-service's data on success
-    # @throw [:guard_failure, Servus::Support::Response] the failure Response, otherwise
-    #
-    # @see Servus::Helpers::ControllerHelpers#run_service!
-    def call!(service_class, **params)
-      result = service_class.call(**params)
-      return result.data if result.success?
-
-      throw(:guard_failure, result)
-    end
-
     class << self
       # Executes the service with automatic validation, logging, and benchmarking.
       #

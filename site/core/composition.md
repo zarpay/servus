@@ -1,10 +1,8 @@
 # Composition
 
-Most non-trivial actions need to invoke other actions. Servus gives you one helper for composing services — `call!` — and one for driving a service from outside the service layer — `run_service!`. Both eliminate the same boilerplate: checking `success?`, extracting `data`, and early-returning on failure.
-
-## `call!` — inside services
-
-`call!` is the primary composition helper. It is an instance method on `Servus::Base`, so it's available anywhere your `#call` runs.
+Most non-trivial actions need to invoke other actions. In Servus a service
+invokes another service exactly the way anything else does — `.call`, check the
+result, decide what happens next:
 
 ```ruby
 module Treasury
@@ -17,57 +15,42 @@ module Treasury
       end
 
       def call
-        transfer = call!(
-          Treasury::TransferGold::Service,
+        transfer = Treasury::TransferGold::Service.call(
           from_account: @from_account,
           to_account: @to_account,
           gold_dragons: @gold_dragons
         )
+        return transfer unless transfer.success?
 
-        call!(Ravens::DispatchReceipt::Service, transfer_id: transfer.id)
+        receipt = Ravens::DispatchReceipt::Service.call(transfer_id: transfer.data.id)
+        return receipt unless receipt.success?
 
-        success(transfer_id: transfer.id)
+        success(transfer_id: transfer.data.id)
       end
     end
   end
 end
 ```
 
-On success, `call!` returns the sub-service's data — the same `DataObject` the caller would get from `SubService.call(...).data`. On failure, it halts the outer service and passes the sub-service's failure `Response` through unchanged: same error object, same message, same `code`, same `http_status`. The outer service's caller receives the sub-service's failure as if they had invoked it directly.
+There is one way to invoke a service and one way to handle what it returns. The
+whole control flow is on the page: which calls happen, in what order, and what a
+failure does to the rest of the method.
 
-### Why `call!` exists
+## Passing a failure through
 
-The same code without `call!`:
+`return result unless result.success?` returns the sub-service's failure
+`Response` unchanged — same error object, message, `code`, and `http_status`.
+The outer service's caller receives it as though they had invoked the
+sub-service directly, so a `NotFoundError` raised three services deep still
+reaches the controller as a 404.
 
-```ruby
-def call
-  transfer_result = Treasury::TransferGold::Service.call(
-    from_account: @from_account,
-    to_account: @to_account,
-    gold_dragons: @gold_dragons
-  )
-  return transfer_result unless transfer_result.success?
+That's usually what you want. It's worth writing out, because the alternative is
+a reader having to know that some other construct decided it for them.
 
-  dispatch_result = Ravens::DispatchReceipt::Service.call(
-    transfer_id: transfer_result.data.id
-  )
-  return dispatch_result unless dispatch_result.success?
+## Handling a failure instead
 
-  success(transfer_id: transfer_result.data.id)
-end
-```
-
-Every sub-service call grows three lines of plumbing: one to invoke, one to branch, one to early-return. Pull that plumbing out and the business logic is what's left.
-
-### Failure semantics
-
-`call!` uses the same `throw/catch` mechanism as guards. When the sub-service fails, `call!` throws `:guard_failure` with the sub-service's failure `Response`. The `catch` block inside `Servus::Base.call` unwraps it and returns that Response as the outer service's result — see [Call Chain](/core/call-chain#_4-run-your-call-method).
-
-Because the *original* failure flows through, callers don't need to care that the failure came from a sub-service. A `NotFoundError` from `Accounts::Lookup::Service` arrives at the controller as a 404 even when it was raised three services deep.
-
-### When not to use `call!`
-
-Use `call!` when the outer service has no better context to add and any sub-service failure should halt composition. Don't use it when you want to inspect the failure, try a fallback, or translate the error into something more specific to the outer service's domain. In those cases, call the sub-service directly and branch on `result.success?`.
+When the outer service has something to add — a fallback, a retry, an error
+specific to its own domain — branch on the result:
 
 ```ruby
 def call
@@ -75,43 +58,62 @@ def call
   return success(charge_id: result.data.id) if result.success?
   return failure('Card declined', type: PaymentDeclinedError) if card_declined?(result.error)
 
-  # Let other failures pass through
+  # Let other failures pass through untouched
   result
 end
 ```
 
-## `run_service!` — outside services
+Pass-through and handling share a shape, so moving between them is a one-line
+change rather than a switch between two different calling conventions.
 
-`run_service!` is the bang counterpart to `run_service` on `Servus::Helpers::ControllerHelpers`. Like `run_service`, it stores the full `Response` in `@result` so the rest of the action (views, callbacks, after-hooks) can read it the same way. It then returns the service's data on success and raises the failure's error otherwise. Use it wherever raising is preferable to rendering — background callbacks, rake tasks reachable through a controller context, or any path where a failure is a bug, not a render opportunity.
+## Preconditions belong in guards
+
+Composition is for invoking other services. When you're enforcing a
+precondition rather than calling something, reach for a
+[guard](/features/guards) instead — guards halt the service without the caller
+writing any branching at all.
+
+## Driving a service from outside
+
+Controllers, jobs, rake tasks, and consoles aren't services, so they have no
+`#call` to return from. `Servus::Helpers::ControllerHelpers` covers that
+boundary:
 
 ```ruby
-class WebhooksController < ApplicationController
-  def stripe
-    event = Stripe::Webhook.construct_event(request.body.read, signature, secret)
-
-    # Raises on failure — bubbles to the default exception middleware
-    run_service!(Payments::RecordWebhook::Service, event: event)
-
-    head :ok
+class UsersController < ApplicationController
+  def create
+    run_service Services::CreateUser::Service, user_params
   end
 end
 ```
 
-### `run_service!` vs `run_service`
+`run_service` stores the full `Response` in `@result` so views and downstream
+helpers can read it, and renders a JSON error on failure using the error's
+`http_status` and `api_error`. Override
+[`render_service_error`](/rails/controllers) to change that format.
 
-| Helper | Lives on | On success | On failure |
-| --- | --- | --- | --- |
-| `run_service` | `ControllerHelpers` | Sets `@result`, returns `Response` | Renders JSON error, returns `Response` |
-| `run_service!` | `ControllerHelpers` | Sets `@result`, returns the result's `data` | Raises the failure's `ServiceError` |
-| `call!` | `Servus::Base` | Returns the result's `data` | Halts outer service with failure `Response` |
+Anywhere raising suits better than rendering — a webhook handler, a rake task —
+call the service directly and raise:
 
-`run_service` is the default for controller actions — it handles the JSON response for you. Reach for `run_service!` only when raising is what you actually want.
+```ruby
+result = Payments::RecordWebhook::Service.call(event: event)
+raise result.error unless result.success?
+```
 
-## The two public methods
+## One way in
 
-Servus exposes a small surface on purpose. For invocation, there are only two public methods anyone writing a service will ever need:
+A service has a single public entry point: `.call(**args)`. A controller, a job,
+an event router, another service — all invoke it identically and all get back
+the same `Response`.
 
-1. **`.call(**args)`** — the class-level entry point. Every service is invoked through this.
-2. **`call!(SubService, **args)`** — the instance-level composition helper. Every sub-service invocation inside `#call` goes through this.
+Servus previously shipped two helpers that wrapped that call: `call!` for
+composing services and `run_service!` for driving one from a controller
+context. Both returned `data` on success and diverted on failure — `call!` by
+throwing to halt the outer service, `run_service!` by raising. Both are
+**removed in 1.0.0**.
 
-`run_service` / `run_service!` are integration helpers on the controller side, not part of the service's public interface. Keep the service surface to these two and compositions stay uniform across the codebase.
+They read like ordinary method calls while hiding a non-local jump, and they
+meant the same operation had two calling conventions depending on where you
+stood. Writing `.call` and an explicit `return` or `raise` costs a line and
+makes the control flow something you can see rather than something you have to
+know.

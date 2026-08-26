@@ -1,7 +1,8 @@
 ## [1.0.0] - 2026-08-26
 
-Schema declaration is now inline-only, and shared schemas arrive to make that
-practical at scale.
+Servus 1.0 makes a service's behaviour readable from the file that implements
+it: contracts are declared inline, and there are no helpers that hide control
+flow behind something shaped like a method call.
 
 Servus resolved schemas from three places: the `schema` DSL, `ARGUMENTS_SCHEMA`
 / `RESULT_SCHEMA` / `FAILURE_SCHEMA` constants, and mirror-directory JSON files
@@ -14,6 +15,10 @@ The obvious cost of inline-only declaration is duplication, so this release also
 adds a registry of reusable schema fragments that services reference with a
 standard JSON Schema `$ref`. A service referencing a shared type still declares
 that type explicitly; it just names it once.
+
+The same reasoning removes `call!` and `run_service!`. Both wrapped `.call` and
+diverted on failure — one by throwing, one by raising — so the same operation
+had two calling conventions and a jump you had to know about rather than see.
 
 ### Added
 
@@ -125,6 +130,19 @@ that type explicitly; it just names it once.
 - **`config.schemas_dir`, `config.schema_path_for`, and `config.schema_dir_for`**,
   which existed only to locate those files.
 
+- **`Servus::Base#call!`** — the composition helper that returned a
+  sub-service's `data` and halted the outer service on failure.
+
+- **`ControllerHelpers#run_service!`** — the same idea at the controller
+  boundary, returning `data` and raising on failure.
+
+  Both read like ordinary method calls while hiding a non-local jump — `call!`
+  threw to unwind the outer service, `run_service!` raised — and they gave the
+  same operation two calling conventions depending on where you stood. Neither
+  saw much adoption, and both worked against being able to read a service's
+  control flow off the page. `run_service` and `render_service_error` are
+  unaffected.
+
 ### Upgrading
 
 Both removed tiers fail *silently*: a service whose only schema was a constant
@@ -175,6 +193,45 @@ same job in CI:
 ```ruby
 it { expect(described_class).to have_schema(:arguments) }
 ```
+
+**Replacing `call!` and `run_service!`.** Both are mechanical. Find them with:
+
+```bash
+grep -rn 'call!\|run_service!' app/ lib/
+```
+
+`call!` returned the sub-service's data and passed its failure through, so:
+
+```ruby
+# before
+transfer = call!(Treasury::TransferGold::Service, **args)
+use(transfer.id)
+
+# after
+result = Treasury::TransferGold::Service.call(**args)
+return result unless result.success?
+use(result.data.id)
+```
+
+Note the shape change: `call!` handed you `data`, so anywhere you used its
+return value now reads `result.data`. If the outer service wants to *handle* the
+failure rather than pass it on, branch on `result.error` instead of returning.
+
+`run_service!` raised on failure:
+
+```ruby
+# before
+data = run_service!(Payments::RecordWebhook::Service, event: event)
+
+# after
+result = Payments::RecordWebhook::Service.call(event: event)
+raise result.error unless result.success?
+data = result.data
+```
+
+One behavioural difference worth knowing: `run_service!` also assigned
+`@result`. If a view or an after-action hook reads `@result`, assign it
+yourself, or use `run_service`, which still does.
 
 **Two smaller things to check.** If any code passes a possibly-nil value to
 `schema` — for example from a lookup helper — that now raises instead of being
