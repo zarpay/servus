@@ -63,6 +63,43 @@ def transfer_payload(result)
 end
 ```
 
+### Multiple events per trigger
+
+A trigger holds a list, not a single event. Declare `emits` as many times as you
+need on the same trigger — each one fires in declaration order, and each gets
+its own payload:
+
+```ruby
+class Treasury::TransferGold::Service < Servus::Base
+  emits :gold_transferred_event, on: :success
+
+  emits :ledger_entry_recorded_event, on: :success do |result|
+    { amount: result.data.transferred, balance: result.data.from_balance }
+  end
+
+  emits :vault_audited_event, on: :success, with: :audit_payload
+
+  private
+
+  def audit_payload(result)
+    { vault: @from_account.vault_id, moved: result.data.transferred }
+  end
+end
+```
+
+The payloads are independent — the default (`result.data`), a block, and a
+method reference can all appear on the same trigger. One failing schema stops
+the whole emission sequence, since validation happens per event as it fires.
+
+Reach for this when a single outcome genuinely concerns several unrelated
+domains and you want each to receive a payload shaped for it. When several
+reactions want the *same* payload, prefer one event with multiple `invoke`
+declarations on its Event class — that keeps the fan-out in the event layer
+where subscribers can be added without touching the service.
+
+To make same-trigger events mutually exclusive rather than sequential, put a
+condition on each — see below.
+
 ### Conditional emission
 
 Use `if:` or `unless:` to gate whether an event fires at runtime. When the condition is not met, the event is completely skipped — no payload is built, no validation runs, and nothing reaches the bus.
@@ -283,6 +320,31 @@ class GoldTransferredEvent < Servus::Event
   end
 end
 ```
+
+### Requiring a schema on every event
+
+Schemas are optional by default — an event with no schema emits unvalidated. To
+make that impossible, turn on enforcement:
+
+```ruby
+# config/initializers/servus.rb
+Servus.configure do |config|
+  config.require_event_payload_schema = true
+end
+```
+
+With the flag on, emitting an event whose Event class declares no `schema
+payload:` raises `SchemaRequiredError`. So does emitting a name with **no Event
+class registered at all** — that's the case where a payload cannot be validated
+by anything, so it's the one the flag most needs to catch.
+
+::: warning The Event class must be loaded
+Enforcement resolves the event name through the registry, and an Event class
+registers itself when it loads. Rails' railtie loads `app/events/**/*_event.rb`
+at boot, so following that naming convention is enough. An Event class in a
+file that doesn't match — or a non-Rails host that never requires it — will look
+unregistered and trip the raise even though it has a perfectly good schema.
+:::
 
 ## Emitting events without a service
 

@@ -15,6 +15,15 @@ module Servus
     module Emitter
       extend ActiveSupport::Concern
 
+      # Triggers accepted by the +emits+ DSL.
+      #
+      # +:success+ and +:failure+ are selected from the service's result after
+      # +call+ returns. +:error!+ is fired by {Servus::Base#error!} immediately
+      # before it raises, so it never coincides with +:failure+.
+      #
+      # Note the bang on +:error!+ — it mirrors the method that triggers it.
+      EMISSION_TRIGGERS = %i[success failure error!].freeze
+
       # Emits events for a service result.
       #
       # Called automatically after service execution completes. Determines the
@@ -33,7 +42,7 @@ module Servus
         # Declares an event that this service will emit.
         #
         # Events are automatically emitted when the service completes with the specified
-        # trigger condition (:success, :failure, or :error). Use the `with` option or a
+        # trigger condition (:success, :failure, or :error!). Use the `with` option or a
         # block to provide a custom payload builder. Use `if` or `unless` to gate emission
         # on a runtime condition.
         #
@@ -86,34 +95,21 @@ module Servus
         #     end
         #   end
         #
-        # @note Best Practice: Services should typically emit ONE event per trigger
-        #   that represents their core concern. Multiple downstream reactions should
-        #   be coordinated by Event classes, not by emitting multiple events
-        #   from the service. This maintains separation of concerns.
-        #
-        # @example Recommended pattern (one event, multiple reactions)
-        #   # Service emits one event
+        # @example Multiple events on one trigger, each with its own payload
         #   class CreateUser < Servus::Base
         #     emits :user_created, on: :success
-        #   end
-        #
-        #   # Event coordinates multiple reactions
-        #   class UserCreated < Servus::Event
-        #     event_name :user_created
-        #     invoke SendWelcomeEmail::Service, async: true
-        #     invoke TrackAnalytics::Service, async: true
+        #     emits :welcome_queued, on: :success, with: :welcome_payload
         #   end
         #
         # @see Servus::Events::Bus
         # @see Servus::Event
         def emits(event_name, on:, **options, &block)
-          valid_triggers = %i[success failure error!]
-
-          unless valid_triggers.include?(on)
-            raise ArgumentError, "Invalid trigger: #{on}. Must be one of: #{valid_triggers.join(', ')}"
+          unless EMISSION_TRIGGERS.include?(on)
+            raise ArgumentError,
+                  "Invalid trigger: #{on}. Must be one of: #{EMISSION_TRIGGERS.join(', ')}"
           end
 
-          @event_emissions ||= { success: [], failure: [], error!: [] }
+          @event_emissions ||= empty_emissions
           @event_emissions[on] << build_emission(event_name, options, block)
         end
 
@@ -121,19 +117,24 @@ module Servus
         #
         # @return [Hash] hash of event emissions grouped by trigger
         #   { success: [...], failure: [...], error!: [...] }
-        def event_emissions
-          @event_emissions || { success: [], failure: [], error!: [] }
-        end
+        def event_emissions = @event_emissions || empty_emissions
 
         # Returns event emissions for a specific trigger.
         #
         # @param trigger [Symbol] the trigger type (:success, :failure, :error!)
         # @return [Array<Hash>] array of event configurations for this trigger
-        def emissions_for(trigger)
-          event_emissions[trigger] || []
-        end
+        def emissions_for(trigger) = event_emissions[trigger] || []
 
         private
+
+        # An empty emission set, one entry per supported trigger.
+        #
+        # Derived from {Emitter::EMISSION_TRIGGERS} rather than written out, so
+        # the shape cannot drift from the list of triggers actually accepted.
+        #
+        # @return [Hash{Symbol => Array}]
+        # @api private
+        def empty_emissions = EMISSION_TRIGGERS.to_h { |trigger| [trigger, []] }
 
         def build_emission(event_name, options, block)
           {
@@ -201,9 +202,29 @@ module Servus
       # @api private
       def validate_event_payload!(event_name, payload)
         event_class = Servus::Events::Bus.event_for(event_name)
-        return unless event_class
+        return require_event_schema!(event_name) unless event_class
 
         Servus::Support::Validator.validate_event_payload!(event_class, payload)
+      end
+
+      # Enforces {Servus::Config#require_event_payload_schema} for an event that
+      # has no Event class to carry a schema.
+      #
+      # An unregistered event name is the one case where a payload cannot be
+      # validated at all, so it is exactly where the flag matters most. Skipping
+      # it here would mean the setting silently passed over the events furthest
+      # from having a contract.
+      #
+      # @param event_name [Symbol] the event being emitted
+      # @return [void]
+      # @raise [Servus::Support::Errors::SchemaRequiredError] if enforcement is enabled
+      # @api private
+      def require_event_schema!(event_name)
+        return unless Servus.config.require_event_payload_schema
+
+        raise Servus::Support::Errors::SchemaRequiredError,
+              "#{self.class} emits :#{event_name} but no Event class is registered for it — " \
+              'schema missing! require_event_payload_schema is set to true.'
       end
 
       # Builds the event payload using the configured payload builder or defaults.

@@ -85,6 +85,14 @@ had two calling conventions and a jump you had to know about rather than see.
   File.write('schema.json', JSON.pretty_generate(Servus::Schema.compile_all))
   ```
 
+- **Multiple events per trigger are documented.** A service has always been able
+  to declare `emits` several times on the same trigger, each with its own block
+  or `with:` payload builder, and all of them fire in declaration order. Nothing
+  in the code changed — but the guidance did. The DSL's own documentation
+  previously advised against the pattern, so the capability was effectively
+  hidden. It now has a section in
+  [Events](https://zarpay.github.io/servus/features/event-bus).
+
 - **Schemas are inherited.** A subclass of a schema-bearing service or event now
   inherits its contract and can override any part of it. Previously a subclass
   silently validated nothing.
@@ -115,6 +123,14 @@ had two calling conventions and a jump you had to know about rather than see.
 - **The service generator honours `config.services_dir`.** It hardcoded
   `app/services/`, so the one directory setting the generator docs listed for it
   did nothing. The event and guard generators already honoured theirs.
+
+- **Emitting an event with no registered Event class now honours
+  `require_event_payload_schema`.** The `emits` DSL skipped validation entirely
+  when nothing was registered for the event name, so the one flag that exists to
+  make a missing payload schema loud was silently bypassed on exactly the events
+  that had no schema at all. With the flag on this now raises
+  `SchemaRequiredError` naming the service and the event; with the flag off —
+  the default — nothing changes.
 
 - **`required_ruby_version` is now `>= 3.2.0`**, matching the versions actually
   tested. It claimed `>= 3.0.0` while CI ran 3.2, 3.3, and 3.4.
@@ -186,6 +202,13 @@ Servus.configure do |config|
   config.require_event_payload_schema     = true
 end
 ```
+
+One precondition if you enable `require_event_payload_schema`: every emitted
+event name must resolve to a **loaded** Event class, because that's how a class
+registers itself. Rails' railtie loads `app/events/**/*_event.rb` at boot, so
+following that naming convention is enough. An Event class in a file that
+doesn't match will look unregistered at emission time and raise even though it
+has a schema.
 
 If you would rather not enforce at runtime, the `have_schema` matcher does the
 same job in CI:
