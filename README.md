@@ -17,15 +17,52 @@ Full documentation at **[zarpay.github.io/servus](https://zarpay.github.io/servu
 
 ## Repository layout
 
-| Directory | What it is |
-| --- | --- |
-| [`gem/`](gem) | The gem itself |
-| [`site/`](site) | The VitePress documentation published above |
-| [`demo/`](demo) | A Rails app exercising every feature, annotated as a textbook |
+This is a monorepo. The gem, its documentation, and a working application that
+uses it live together and move together.
 
-The demo path-pins the in-tree gem source, so its suite is an integration test
-of `gem/` in a real application — and a good place to read working examples of
-any feature in context.
+```
+servus/
+├── gem/     the library
+├── site/    the documentation
+└── demo/    a Rails app that uses every feature
+```
+
+| Directory | What it is | How to work on it |
+| --- | --- | --- |
+| [`gem/`](gem) | The library. Everything published to RubyGems. | `cd gem && bundle exec rake` (specs + RuboCop) |
+| [`site/`](site) | VitePress source for the docs published above. | `cd site && npm run dev` |
+| [`demo/`](demo) | A Rails app exercising every feature, annotated as a textbook. | `cd demo && bundle exec rspec` |
+
+### Why the demo is in here
+
+`demo/` path-pins the gem source:
+
+```ruby
+gem "servus", path: "../gem"
+```
+
+so it always runs against the working tree rather than a published version.
+That makes it two things at once.
+
+It is **an integration test**. CI runs its suite on every pull request, in a
+real Rails application with a database, background jobs, and controllers. A
+change to `gem/` that regresses documented behaviour fails there even when the
+gem's own unit suite still passes — which has already caught things the unit
+suite could not, because some of the gem's sharpest edges only appear once
+Rails' autoloading and ActiveJob are involved.
+
+It is also **the reference**. Every public feature has a working example with
+commentary explaining why it is written that way and what the alternative
+costs. When the docs describe a feature abstractly, the demo shows it running.
+[`demo/README.md`](demo/README.md) carries a reading order mapping each feature
+to the file that teaches it.
+
+### How the three fit together
+
+A change to a feature usually touches all three: the implementation in `gem/`,
+the explanation in `site/`, and a worked example in `demo/`. Keeping them in one
+repository means they cannot drift — a docs page describing an API the gem no
+longer has is caught by the demo failing to boot, not by a reader.
 
 ## Quick Start
 
@@ -56,6 +93,14 @@ module Treasury
         @to_account = to_account
         @gold_dragons = gold_dragons
       end
+
+      schema arguments: {
+        type: "object",
+        required: %w[from_account to_account gold_dragons],
+        properties: {
+          gold_dragons: { type: "integer", minimum: 1 }
+        }
+      }
 
       def call
         @from_account.withdraw!(@gold_dragons)
@@ -90,6 +135,7 @@ result.data.to_balance   # => 550
 ## Features
 
 - **Schema validation** — JSON Schema for arguments, results, and failure data
+- **Shared schemas** — register reusable fragments once, reference them with `$ref`
 - **Error handling** — HTTP-aligned error hierarchy with `rescue_from`
 - **Guards** — reusable precondition checks with structured errors
 - **Events** — decouple follow-up work from the service that triggered it
@@ -100,9 +146,12 @@ result.data.to_balance   # => 550
 
 ## Requirements
 
-- Ruby >= 3.0
+- Ruby >= 3.2
 - ActiveSupport >= 8.0
-- Rails integration is automatic via Railtie; core works in any Ruby application
+
+Rails integration is automatic via the Railtie. The core — services, schemas,
+guards, and the event bus — works in any Ruby application. Async execution and
+event reactions require ActiveJob; lazy resolvers require ActiveRecord.
 
 ## License
 
