@@ -29,7 +29,7 @@ RSpec.describe Servus::Events::ClassRouter do
       Class.new(Servus::Event) do
         event_name :order_placed
 
-        invoke svc do |payload|
+        enqueue svc do |payload|
           { user_id: payload[:user_id] }
         end
       end
@@ -47,11 +47,11 @@ RSpec.describe Servus::Events::ClassRouter do
       Class.new(Servus::Event) do
         event_name :order_placed
 
-        invoke svc_a do |payload|
+        enqueue svc_a do |payload|
           { user_id: payload[:user_id] }
         end
 
-        invoke svc_b do |payload|
+        enqueue svc_b do |payload|
           { order_id: payload[:order_id] }
         end
       end
@@ -66,7 +66,7 @@ RSpec.describe Servus::Events::ClassRouter do
       Class.new(Servus::Event) do
         event_name :order_placed
 
-        invoke svc, if: ->(p) { p[:premium] } do |payload|
+        enqueue svc, if: ->(p) { p[:premium] } do |payload|
           { user_id: payload[:user_id] }
         end
       end
@@ -81,7 +81,7 @@ RSpec.describe Servus::Events::ClassRouter do
       Class.new(Servus::Event) do
         event_name :order_placed
 
-        invoke svc, if: ->(p) { p[:premium] } do |payload|
+        enqueue svc, if: ->(p) { p[:premium] } do |payload|
           { user_id: payload[:user_id] }
         end
       end

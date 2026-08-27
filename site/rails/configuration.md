@@ -7,12 +7,11 @@ Servus works without any configuration. All settings have sensible defaults. Whe
 Servus.configure do |config|
 
   # ── Directory Settings ──────────────────────────────────────────────
-  # Controls where Servus looks for file-based schemas, Event classes,
-  # guards, and services. These paths are relative to Rails.root.
-  # Generators also use these paths when creating new files.
+  # Controls where Servus looks for Event classes, guards, and services.
+  # These paths are relative to Rails.root. Generators also use these
+  # paths when creating new files.
 
   config.services_dir = "app/services"  # default: "app/services"
-  config.schemas_dir  = "app/schemas"   # default: "app/schemas"
   config.events_dir   = "app/events"    # default: "app/events"
   config.guards_dir   = "app/guards"    # default: "app/guards"
   config.tests_dir    = "spec"          # default: "spec"
@@ -20,7 +19,7 @@ Servus.configure do |config|
   # ── Routers ────────────────────────────────────────────────────────
   # Ordered list of routers that resolve service invocations for events.
   # The Bus iterates in order, deduplicates by key, and executes.
-  # Defaults to [Servus::Events::ClassRouter.new] which reads invoke
+  # Defaults to [Servus::Events::ClassRouter.new] which reads enqueue
   # declarations from Event classes.
 
   config.routers = [

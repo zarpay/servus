@@ -94,6 +94,16 @@ module Servus
         logger.error("#{service_class.name} uncaught exception: #{exception.class} - #{exception.message}")
       end
 
+      # Logs that a registered schema fragment was replaced with a different value.
+      #
+      # Expected during development reloads. Outside of that it usually means
+      # two libraries are claiming the same fragment key.
+      #
+      # @param key [String] The schema fragment key being overridden
+      def self.log_schema_override(key)
+        logger.warn("Schema fragment #{key.inspect} was already registered with a different value; replacing it.")
+      end
+
       # Filters parameters for logging based on the configured filter list.
       #
       # @param params [Hash] The parameters to filter

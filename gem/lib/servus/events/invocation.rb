@@ -12,61 +12,54 @@ module Servus
     # deduplicates by +#key+ (first wins), and calls +#execute+ on each.
     #
     # An Invocation separates *identity* (service + params) from
-    # *execution strategy* (async, queue, priority, etc.). The +#key+
-    # is derived only from the identity — two invocations that call the
-    # same service with the same params are considered duplicates
-    # regardless of their options.
+    # *scheduling* (queue, priority, delay). The +#key+ is derived only
+    # from the identity — two invocations that call the same service with
+    # the same params are considered duplicates regardless of their options.
     #
-    # @example Sync invocation
-    #   Invocation.new(
-    #     service: Rewards::Grant::Service,
-    #     params:  { user_id: "abc-123" },
-    #     options: {}
-    #   )
+    # Invocations are always enqueued, never run inline. A reaction that ran
+    # synchronously would put its latency and its failures back into the
+    # emitting service, which is what events exist to avoid.
     #
-    # @example Async invocation with scheduling options
+    # @example
     #   Invocation.new(
     #     service: Notifications::Send::Service,
     #     params:  { user_id: "abc-123" },
-    #     options: { async: true, queue: :mailers, priority: 5 }
+    #     options: { queue: :mailers, priority: 5 }
     #   )
     #
     # @see Servus::Events::Router
     # @see Servus::Events::Bus
     class Invocation
-      # @return [Class] the service class to call (must respond to +.call+ or +.call_async+)
+      # @return [Class] the service class to enqueue (must respond to +.call_async+)
       attr_reader :service
 
       # @return [Hash] keyword arguments passed to the service
       attr_reader :params
 
-      # @return [Hash] execution options — +async+, +queue+, +wait+,
-      #   +wait_until+, +priority+, +job_options+
+      # @return [Hash] scheduling options — +queue+, +wait+, +wait_until+,
+      #   +priority+, +job_options+
       attr_reader :options
 
       # @param service [Class] the service class
       # @param params [Hash] keyword arguments for the service
-      # @param options [Hash] execution options
+      # @param options [Hash] scheduling options
       def initialize(service:, params:, options: {})
         @service = service
         @params  = params
         @options = options
       end
 
-      # Executes the invocation.
+      # Enqueues the invocation via ActiveJob.
       #
-      # Delegates to +service.call+ for synchronous invocations or
-      # +service.call_async+ for asynchronous ones. Async scheduling
-      # options (queue, wait, priority, etc.) are merged into the
-      # call_async kwargs.
+      # Scheduling options (queue, wait, priority, and so on) are merged into
+      # the +call_async+ keyword arguments.
       #
-      # @return [Servus::Support::Response, void]
-      def execute
-        if options[:async]
-          service.call_async(**params, **async_options)
-        else
-          service.call(**params)
-        end
+      # @return [void]
+      # @raise [Servus::Events::Errors::AsyncBackendMissingError] if ActiveJob is not loaded
+      def enqueue
+        raise Errors::AsyncBackendMissingError.for(service) unless service.respond_to?(:call_async)
+
+        service.call_async(**params, **async_options)
       end
 
       # A deterministic deduplication key derived from the service class
@@ -86,6 +79,7 @@ module Servus
       # Extracts scheduling options for +call_async+.
       #
       # @return [Hash]
+      # @api private
       def async_options
         options.slice(:queue, :wait, :wait_until, :priority, :job_options).compact
       end

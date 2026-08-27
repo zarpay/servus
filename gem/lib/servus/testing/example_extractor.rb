@@ -286,13 +286,11 @@ module Servus
         end
       end
 
-      # Loads schema from service class using Validator.
+      # Loads a schema from a service class using the Validator.
       #
-      # Reuses the existing Validator schema loading logic which handles:
-      # - DSL-defined schemas
-      # - Constant-defined schemas
-      # - File-based schemas
-      # - Schema caching
+      # The schema returned is compiled, so +example+ and +examples+ values
+      # inside +$ref+'d fragments are visible to extraction — a shared fragment
+      # can carry its own examples and every service referencing it gets them.
       #
       # @param service_class [Class] The service class
       # @param schema_type [Symbol] Either :arguments or :result

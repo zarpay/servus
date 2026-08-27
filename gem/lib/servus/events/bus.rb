@@ -83,7 +83,7 @@ module Servus
           ActiveSupport::Notifications.instrument(notification_name(event_name), payload) do
             resolve_invocations(event_name, payload)
               .uniq(&:key)
-              .each(&:execute)
+              .each(&:enqueue)
           end
         end
 

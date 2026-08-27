@@ -289,6 +289,44 @@ RSpec.describe Servus::Testing::ExampleExtractor do
       end
     end
 
+    context 'with an array of scalars whose items carry an example' do
+      before do
+        ExampleExtractionTest::ArrayService.schema(
+          arguments: {
+            type: 'object',
+            properties: {
+              tags: { type: 'array', items: { type: 'string', example: 'urgent' } }
+            }
+          }
+        )
+      end
+
+      it 'wraps the item example in an array' do
+        result = described_class.extract(ExampleExtractionTest::ArrayService, :arguments)
+
+        expect(result[:tags]).to eq(['urgent'])
+      end
+    end
+
+    context 'with an array whose items carry no example' do
+      before do
+        ExampleExtractionTest::ArrayService.schema(
+          arguments: {
+            type: 'object',
+            properties: {
+              tags: { type: 'array', items: { type: 'string' } }
+            }
+          }
+        )
+      end
+
+      it 'omits the property rather than inventing a value' do
+        result = described_class.extract(ExampleExtractionTest::ArrayService, :arguments)
+
+        expect(result).not_to have_key(:tags)
+      end
+    end
+
     context 'with result schema' do
       before do
         ExampleExtractionTest::SimpleService.schema(
@@ -464,6 +502,63 @@ RSpec.describe Servus::Testing::ExampleExtractor do
 
         result = described_class.extract(ExampleExtractionTest::SimpleService, :arguments)
         expect(result).to eq({ optional_text: '' })
+      end
+    end
+
+    # Extraction reads the compiled schema, so a shared fragment can carry its
+    # own examples and every service referencing it inherits them. If schemas
+    # were compiled at validation time instead of on read, these would be
+    # invisible here.
+    context 'with schemas that reference shared fragments', :schema_registry do
+      before do
+        Servus::Schema.register('core', {
+                                  '$defs' => {
+                                    'amount' => { 'type' => 'integer', 'example' => 500 },
+                                    'user' => {
+                                      'type' => 'object',
+                                      'properties' => {
+                                        'id' => { 'type' => 'integer', 'example' => 7 },
+                                        'email' => { 'type' => 'string', 'example' => 'a@b.com' }
+                                      }
+                                    }
+                                  }
+                                })
+      end
+
+      it 'extracts an example from a referenced fragment' do
+        ExampleExtractionTest::SimpleService.schema(
+          arguments: {
+            type: 'object',
+            properties: { fee: { '$ref' => '#/core/$defs/amount' } }
+          }
+        )
+
+        expect(described_class.extract(ExampleExtractionTest::SimpleService, :arguments))
+          .to eq({ fee: 500 })
+      end
+
+      it 'extracts nested examples from a referenced object fragment' do
+        ExampleExtractionTest::SimpleService.schema(
+          arguments: {
+            type: 'object',
+            properties: { user: { '$ref' => '#/core/$defs/user' } }
+          }
+        )
+
+        expect(described_class.extract(ExampleExtractionTest::SimpleService, :arguments))
+          .to eq({ user: { id: 7, email: 'a@b.com' } })
+      end
+
+      it 'prefers an example declared alongside the ref' do
+        ExampleExtractionTest::SimpleService.schema(
+          arguments: {
+            type: 'object',
+            properties: { fee: { '$ref' => '#/core/$defs/amount', 'example' => 99 } }
+          }
+        )
+
+        expect(described_class.extract(ExampleExtractionTest::SimpleService, :arguments))
+          .to eq({ fee: 99 })
       end
     end
   end

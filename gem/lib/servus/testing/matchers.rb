@@ -94,12 +94,7 @@ end
 # Matcher for asserting schema presence on a service or Event class
 RSpec::Matchers.define :have_schema do |schema_type|
   match do |klass|
-    if schema_type.to_s == 'payload'
-      !klass.payload_schema.nil?
-    else
-      Servus::Support::Validator.clear_cache!
-      !Servus::Support::Validator.load_schema(klass, schema_type.to_s).nil?
-    end
+    !Servus::Support::Validator.load_schema(klass, schema_type.to_s).nil?
   end
 
   failure_message do |klass|

@@ -20,103 +20,88 @@ RSpec.describe Servus::Events::Invocation do
     end
   end
 
-  describe '#execute' do
-    it 'calls the service synchronously when async is not set' do
-      invocation = described_class.new(
-        service: service_class,
-        params: { user_id: 123 },
-        options: {}
-      )
+  def invocation(params: { user_id: 123 }, options: {})
+    described_class.new(service: service_class, params: params, options: options)
+  end
 
-      invocation.execute
+  describe '#enqueue' do
+    it 'enqueues the service' do
+      invocation.enqueue
 
-      expect(service_class.called_with).to eq({ user_id: 123 })
+      expect(service_class.async_called_with).to eq({ user_id: 123 })
     end
 
-    it 'calls the service asynchronously when async is true' do
-      invocation = described_class.new(
-        service: service_class,
-        params: { user_id: 456 },
-        options: { async: true }
-      )
+    # Sync invocation is gone entirely — there is no option that brings it back.
+    it 'never calls the service inline' do
+      invocation.enqueue
 
-      invocation.execute
-
-      expect(service_class.async_called_with).to eq({ user_id: 456 })
+      expect(service_class.called_with).to be_nil
     end
 
-    it 'passes queue option to call_async' do
-      invocation = described_class.new(
-        service: service_class,
-        params: { user_id: 789 },
-        options: { async: true, queue: :mailers }
-      )
+    it 'passes the queue option through' do
+      invocation(options: { queue: :mailers }).enqueue
 
-      invocation.execute
-
-      expect(service_class.async_called_with).to eq({ user_id: 789, queue: :mailers })
+      expect(service_class.async_called_with).to eq({ user_id: 123, queue: :mailers })
     end
 
-    it 'passes wait option to call_async' do
-      invocation = described_class.new(
-        service: service_class,
-        params: { user_id: 1 },
-        options: { async: true, wait: 300 }
-      )
+    it 'passes the wait option through' do
+      invocation(options: { wait: 300 }).enqueue
 
-      invocation.execute
-
-      expect(service_class.async_called_with).to eq({ user_id: 1, wait: 300 })
+      expect(service_class.async_called_with).to eq({ user_id: 123, wait: 300 })
     end
 
-    it 'passes priority option to call_async' do
-      invocation = described_class.new(
-        service: service_class,
-        params: { user_id: 1 },
-        options: { async: true, priority: 10 }
-      )
+    it 'passes the priority option through' do
+      invocation(options: { priority: 10 }).enqueue
 
-      invocation.execute
-
-      expect(service_class.async_called_with).to eq({ user_id: 1, priority: 10 })
+      expect(service_class.async_called_with).to eq({ user_id: 123, priority: 10 })
     end
 
-    it 'passes multiple scheduling options to call_async' do
-      invocation = described_class.new(
-        service: service_class,
-        params: { user_id: 1 },
-        options: { async: true, queue: :critical, wait: 600, priority: 5 }
-      )
-
-      invocation.execute
+    it 'passes multiple scheduling options through' do
+      invocation(options: { queue: :critical, wait: 600, priority: 5 }).enqueue
 
       expect(service_class.async_called_with).to eq({
-                                                      user_id: 1,
+                                                      user_id: 123,
                                                       queue: :critical,
                                                       wait: 600,
                                                       priority: 5
                                                     })
     end
+
+    it 'drops options that are not scheduling options' do
+      invocation(options: { nonsense: true }).enqueue
+
+      expect(service_class.async_called_with).to eq({ user_id: 123 })
+    end
+
+    context 'when the service cannot be enqueued' do
+      let(:service_class) { Class.new(Servus::Base) }
+
+      before { allow(service_class).to receive(:respond_to?).with(:call_async).and_return(false) }
+
+      # Without ActiveJob this used to be a bare NoMethodError raised from inside
+      # the emitting service's after_call.
+      it 'raises naming the service and what to do' do
+        expect { invocation.enqueue }
+          .to raise_error(Servus::Events::Errors::AsyncBackendMissingError) { |error|
+            expect(error.message).to include('ActiveJob is not loaded')
+            expect(error.message).to include('Require active_job')
+          }
+      end
+    end
   end
 
   describe '#key' do
     it 'is the same for identical service and params' do
-      a = described_class.new(service: service_class, params: { user_id: 1 }, options: {})
-      b = described_class.new(service: service_class, params: { user_id: 1 }, options: {})
-
-      expect(a.key).to eq(b.key)
+      expect(invocation(params: { user_id: 1 }).key).to eq(invocation(params: { user_id: 1 }).key)
     end
 
     it 'differs when params differ' do
-      a = described_class.new(service: service_class, params: { user_id: 1 }, options: {})
-      b = described_class.new(service: service_class, params: { user_id: 2 }, options: {})
-
-      expect(a.key).not_to eq(b.key)
+      expect(invocation(params: { user_id: 1 }).key).not_to eq(invocation(params: { user_id: 2 }).key)
     end
 
     it 'excludes options from the key' do
-      a = described_class.new(service: service_class, params: { user_id: 1 }, options: {})
-      b = described_class.new(service: service_class, params: { user_id: 1 }, options: { async: true, queue: :low })
+      a = invocation(params: { user_id: 1 }, options: {})
+      b = invocation(params: { user_id: 1 }, options: { queue: :low, priority: 5 })
 
       expect(a.key).to eq(b.key)
     end

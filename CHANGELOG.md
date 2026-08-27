@@ -1,3 +1,342 @@
+## [1.0.0] - 2026-08-26
+
+Servus 1.0 makes a service's behaviour readable from the file that implements
+it: contracts are declared inline, and there are no helpers that hide control
+flow behind something shaped like a method call.
+
+Servus resolved schemas from three places: the `schema` DSL, `ARGUMENTS_SCHEMA`
+/ `RESULT_SCHEMA` / `FAILURE_SCHEMA` constants, and mirror-directory JSON files
+under `app/schemas`. Two of those put a service's contract somewhere other than
+the service — hidden in a sibling file, or resolved reflectively from a constant
+name. Both are gone. A service's inputs and outputs are now stated in the file
+that implements it.
+
+The obvious cost of inline-only declaration is duplication, so this release also
+adds a registry of reusable schema fragments that services reference with a
+standard JSON Schema `$ref`. A service referencing a shared type still declares
+that type explicitly; it just names it once.
+
+The same reasoning removes `call!` and `run_service!`. Both wrapped `.call` and
+diverted on failure — one by throwing, one by raising — so the same operation
+had two calling conventions and a jump you had to know about rather than see.
+
+### Added
+
+- **Shared schemas**: register a reusable fragment with `Servus::Schema.register`
+  and reference it from any service or event schema.
+
+  ```ruby
+  # config/initializers/servus_schemas.rb
+  Servus::Schema.register('core', {
+    '$defs' => { 'amount' => { 'type' => 'integer', 'minimum' => 0 } }
+  })
+  ```
+
+  ```ruby
+  class Treasury::TransferGold::Service < Servus::Base
+    schema arguments: {
+      type: 'object',
+      properties: { gold_dragons: { '$ref' => '#/core/$defs/amount' } }
+    }
+  end
+  ```
+
+  Refs take one of two forms — `#/<key>` for a whole fragment, `#/<key>/<path>`
+  for a path within it. Keys beside a `$ref` override the fragment they resolve
+  to, so a shared shape can be re-described at the site that uses it.
+
+  Compilation is lazy and memoized: a schema is compiled the first time it is
+  read — by validation, by the test example builders, or by your own code — and
+  a fragment referenced by two hundred services is expanded once. Registering a
+  changed fragment invalidates every schema that depends on it.
+
+  Lookups never return nil. An unregistered key raises
+  `Servus::Schema::UnknownKeyError` naming the key, the schema being compiled,
+  the chain of refs that led there, and the nearest registered key. Cycles raise
+  `CircularReferenceError` naming every hop, and are detected on first
+  recurrence rather than by exhausting a depth budget.
+
+  See [Shared Schemas](https://zarpay.github.io/servus/features/shared-schemas).
+
+- **`Servus::Schema.ref`** builds ref hashes without hand-writing the prefix and
+  separator: `Servus::Schema.ref('core', '$defs', 'amount')`.
+
+- **`Servus::Schema.fetch` reads a path within a fragment**, using the same
+  addressing a `$ref` uses — `fetch('models::trade', '$defs', 'representation')`.
+  A missing path raises `RefNotFoundError` listing what was available, rather
+  than returning nil the way `dig` would.
+
+- **`Servus::Schema.resolve(key, *path)`** returns a fragment or definition with
+  all refs resolved — the compiled counterpart to `fetch`, and usually what
+  application code outside a service wants:
+
+  ```ruby
+  schema = Servus::Schema.resolve('endpoints::trades::create', '$defs', 'request')
+  JSON::Validator.fully_validate(schema, params.to_unsafe_h)
+  ```
+
+- **`Servus::Schema.compile_all`** returns every registered fragment with all
+  refs resolved, keyed by name. The registry has no coupling to services or
+  events, so an app can register contracts that have no service behind them —
+  controller request and response shapes, say — and emit the whole thing as one
+  JSON asset for an API description, docs, or client codegen.
+
+  ```ruby
+  File.write('schema.json', JSON.pretty_generate(Servus::Schema.compile_all))
+  ```
+
+- **Multiple events per trigger are documented.** A service has always been able
+  to declare `emits` several times on the same trigger, each with its own block
+  or `with:` payload builder, and all of them fire in declaration order. Nothing
+  in the code changed — but the guidance did. The DSL's own documentation
+  previously advised against the pattern, so the capability was effectively
+  hidden. It now has a section in
+  [Events](https://zarpay.github.io/servus/features/event-bus).
+
+- **The service generator declares a schema by default.** Generated services now
+  carry a real `schema arguments:/result:` declaration instead of a commented-out
+  block. Required arguments are filled in from the generator's parameters, which
+  is knowable; property types are left empty for you to fill in, which is not.
+  An empty property schema accepts anything, so a fresh service enforces argument
+  presence and nothing more until you type it. Unlike the YARD comments, the
+  declaration survives `--no-docs` — it is code, not documentation.
+
+- **Schemas are inherited.** A subclass of a schema-bearing service or event now
+  inherits its contract and can override any part of it. Previously a subclass
+  silently validated nothing.
+
+### Changed
+
+- **`schema` rejects an explicit `nil`.** `schema arguments: nil` now raises
+  `ArgumentError`. Omitting a keyword still leaves any previously declared
+  schema in place. An explicit `nil` is almost always a lookup that failed, and
+  accepting it left the service silently unvalidated.
+
+- **`schema` rejects unknown keywords.** `schema argument: {...}` used to be a
+  no-op; it now raises `ArgumentError` listing the valid kinds.
+
+- **Event payload schemas are compiled and cached.** They were previously read
+  raw on every emission.
+
+- **The schema cache is keyed by class and kind.** It was keyed by a file path
+  derived from the class's namespace, with the final segment dropped — so
+  `A::B::Service` and `A::B::Other` shared a cache entry and could silently
+  share a schema.
+
+- **`have_schema` no longer clears the global schema cache**, which discarded
+  cache state belonging to unrelated examples. Because the matcher now compiles,
+  it also fails on a schema that references an unregistered fragment — broken
+  refs surface in CI rather than in production.
+
+- **The service generator honours `config.services_dir`.** It hardcoded
+  `app/services/`, so the one directory setting the generator docs listed for it
+  did nothing. The event and guard generators already honoured theirs.
+
+- **Event invocation is always asynchronous.** Services declared on an Event
+  class are enqueued through ActiveJob; there is no inline option and no way to
+  ask for one. Running a reaction inline put its latency and its failures back
+  into the emitting service — an exception in a follow-up propagated through a
+  service that had already succeeded, and its caller never received the result.
+  That is the coupling events exist to remove, so the choice is gone rather than
+  discouraged. The docs already carried a "prefer async invocation" warning;
+  this makes it the behaviour.
+
+  Consequently **events now require ActiveJob**, which makes them a Rails-only
+  feature for the moment. Emitting an event whose Event class declares `enqueue`
+  without ActiveJob loaded raises `Servus::Events::Errors::AsyncBackendMissingError`
+  rather than the bare `NoMethodError` it used to. Servus's core — services,
+  schemas, guards, and the bus itself — still works without Rails. A job adapter
+  for non-Rails hosts is planned.
+
+- **Enqueueing an anonymous service raises a named error.** ActiveJob resolves a
+  job on the worker by its serialized class name, so a `Class.new(Servus::Base)`
+  has nothing to serialize. This previously surfaced as
+  `NoMethodError: undefined method 'demodulize' for nil`.
+
+- **`JobEnqueueError` no longer swallows Servus's own errors.** `call_async`
+  wrapped every exception, and under the `:inline` and `:test` adapters
+  `perform_later` runs the service — so a service's own `ValidationError`
+  surfaced as a misleading "Failed to enqueue". Servus errors now propagate
+  unwrapped.
+
+- **Emitting an event with no registered Event class now honours
+  `require_event_payload_schema`.** The `emits` DSL skipped validation entirely
+  when nothing was registered for the event name, so the one flag that exists to
+  make a missing payload schema loud was silently bypassed on exactly the events
+  that had no schema at all. With the flag on this now raises
+  `SchemaRequiredError` naming the service and the event; with the flag off —
+  the default — nothing changes.
+
+- **`required_ruby_version` is now `>= 3.2.0`**, matching the versions actually
+  tested. It claimed `>= 3.0.0` while CI ran 3.2, 3.3, and 3.4.
+
+### Removed
+
+- **Constant-based schemas.** `ARGUMENTS_SCHEMA`, `RESULT_SCHEMA`, and
+  `FAILURE_SCHEMA` are no longer consulted.
+
+- **File-based schemas.** JSON files under `app/schemas/<namespace>/` are no
+  longer loaded, and the service generator no longer creates them.
+
+- **`config.schemas_dir`, `config.schema_path_for`, and `config.schema_dir_for`**,
+  which existed only to locate those files.
+
+- **`Servus::Event.invoke`** — renamed to `enqueue`, which is what it now does.
+  The old name survives only as a stub that raises pointing at the new one, since
+  Event classes load at boot and a bare `NoMethodError` would read as a typo
+  rather than a rename.
+
+- **The `async:` option on event declarations.** Invocation is always
+  asynchronous, so the option no longer means anything. Both `async: true` and
+  `async: false` raise `ArgumentError` at declaration time — `async: false` in
+  particular asked for behaviour that no longer exists, and silently giving it
+  the opposite would be worse than refusing.
+
+- **`Servus::Base#call!`** — the composition helper that returned a
+  sub-service's `data` and halted the outer service on failure.
+
+- **`ControllerHelpers#run_service!`** — the same idea at the controller
+  boundary, returning `data` and raising on failure.
+
+  Both read like ordinary method calls while hiding a non-local jump — `call!`
+  threw to unwind the outer service, `run_service!` raised — and they gave the
+  same operation two calling conventions depending on where you stood. Neither
+  saw much adoption, and both worked against being able to read a service's
+  control flow off the page. `run_service` and `render_service_error` are
+  unaffected.
+
+### Upgrading
+
+Both removed tiers fail *silently*: a service whose only schema was a constant
+or a JSON file will now run with no validation at all, and nothing will say so.
+That makes this the one upgrade step worth doing exhaustively rather than
+waiting for something to break.
+
+**1. Find everything still using a removed tier.**
+
+```bash
+grep -rn 'ARGUMENTS_SCHEMA\|RESULT_SCHEMA\|FAILURE_SCHEMA' app/ lib/
+find app/schemas -name '*.json'
+```
+
+**2. Move each one inline.** A constant becomes the DSL argument directly:
+
+```ruby
+# before
+class Treasury::TransferGold::Service < Servus::Base
+  ARGUMENTS_SCHEMA = { type: 'object', required: ['gold_dragons'] }.freeze
+end
+
+# after
+class Treasury::TransferGold::Service < Servus::Base
+  schema arguments: { type: 'object', required: ['gold_dragons'] }
+end
+```
+
+A JSON file's contents become the same thing. Where several services shared a
+file, register it as a fragment instead and `$ref` it from each — that is what
+shared schemas are for.
+
+**3. Make the gap impossible to miss.** Once migrated, turn on enforcement so a
+service without a schema fails loudly instead of quietly validating nothing:
+
+```ruby
+# config/initializers/servus.rb
+Servus.configure do |config|
+  config.require_service_arguments_schema = true
+  config.require_service_result_schema    = true
+  config.require_event_payload_schema     = true
+end
+```
+
+One precondition if you enable `require_event_payload_schema`: every emitted
+event name must resolve to a **loaded** Event class, because that's how a class
+registers itself. Rails' railtie loads `app/events/**/*_event.rb` at boot, so
+following that naming convention is enough. An Event class in a file that
+doesn't match will look unregistered at emission time and raise even though it
+has a schema.
+
+If you would rather not enforce at runtime, the `have_schema` matcher does the
+same job in CI:
+
+```ruby
+it { expect(described_class).to have_schema(:arguments) }
+```
+
+**Replacing `call!` and `run_service!`.** Both are mechanical. Find them with:
+
+```bash
+grep -rn 'call!\|run_service!' app/ lib/
+```
+
+`call!` returned the sub-service's data and passed its failure through, so:
+
+```ruby
+# before
+transfer = call!(Treasury::TransferGold::Service, **args)
+use(transfer.id)
+
+# after
+result = Treasury::TransferGold::Service.call(**args)
+return result unless result.success?
+use(result.data.id)
+```
+
+Note the shape change: `call!` handed you `data`, so anywhere you used its
+return value now reads `result.data`. If the outer service wants to *handle* the
+failure rather than pass it on, branch on `result.error` instead of returning.
+
+`run_service!` raised on failure:
+
+```ruby
+# before
+data = run_service!(Payments::RecordWebhook::Service, event: event)
+
+# after
+result = Payments::RecordWebhook::Service.call(event: event)
+raise result.error unless result.success?
+data = result.data
+```
+
+One behavioural difference worth knowing: `run_service!` also assigned
+`@result`. If a view or an after-action hook reads `@result`, assign it
+yourself, or use `run_service`, which still does.
+
+**Migrating Event classes.** Every Event class with a declaration is affected.
+The two errors chain, so following them is the whole migration:
+
+```bash
+grep -rn 'invoke ' app/events/ engines/*/app/events/
+```
+
+```ruby
+# before
+invoke Ledger::RecordEntry::Service, async: true do |payload|
+  { amount: payload[:transferred] }
+end
+
+# after
+enqueue Ledger::RecordEntry::Service do |payload|
+  { amount: payload[:transferred] }
+end
+```
+
+Any declaration that was *not* async now runs in a job instead of inline. That is
+the point of the change, but it is a real behaviour difference: the emitting
+service no longer waits for the reaction, and no longer fails when the reaction
+fails. If something downstream depended on that ordering, it needs to move into
+the emitting service, where it was really a step rather than a reaction.
+
+Tests that assert on an Event class's effects need updating too — `call_service`
+asserts a synchronous `.call` by default, and an Event class never makes one.
+Add `.async`, or run jobs inline.
+
+**Two smaller things to check.** If any code passes a possibly-nil value to
+`schema` — for example from a lookup helper — that now raises instead of being
+dropped; fix the lookup rather than restoring the nil. And if you subclass a
+service that declares schemas, the subclass now inherits them, where before it
+had none.
+
 ## [0.7.0] - 2026-08-15
 
 ### Added

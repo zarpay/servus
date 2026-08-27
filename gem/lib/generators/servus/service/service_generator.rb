@@ -7,7 +7,6 @@ module Servus
     # Generates a complete service structure including:
     # - Service class file
     # - RSpec test file
-    # - JSON schema files for arguments and results
     #
     # @example Generate a service
     #   rails g servus:service namespace/do_something_helpful user amount
@@ -15,8 +14,6 @@ module Servus
     # @example Generated files
     #   app/services/namespace/do_something_helpful/service.rb
     #   spec/services/namespace/do_something_helpful/service_spec.rb
-    #   app/schemas/services/namespace/do_something_helpful/arguments.json
-    #   app/schemas/services/namespace/do_something_helpful/result.json
     #
     # @see https://guides.rubyonrails.org/generators.html
     class ServiceGenerator < Rails::Generators::NamedBase
@@ -30,16 +27,15 @@ module Servus
 
       # Creates all service-related files.
       #
-      # Generates the service class, spec file, and schema files from templates.
+      # Generates the service class and spec file from templates.
+      #
+      # Schemas are declared inline with the +schema+ DSL, so there are no
+      # schema files to generate — the service template scaffolds them in place.
       #
       # @return [void]
       def create_service_file
         template 'service.rb.erb', service_path
         template 'service_spec.rb.erb', service_path_spec
-
-        # Template json schemas
-        template 'result.json.erb', service_result_schema_path
-        template 'arguments.json.erb', service_arguments_shecma_path
       end
 
       private
@@ -49,7 +45,7 @@ module Servus
       # @return [String] service file path
       # @api private
       def service_path
-        "app/services/#{file_path}/service.rb"
+        File.join(Servus.config.services_dir, file_path, 'service.rb')
       end
 
       # Returns the path for the service spec file.
@@ -58,22 +54,6 @@ module Servus
       # @api private
       def service_path_spec
         "#{Servus.config.tests_dir}/services/#{file_path}/service_spec.rb"
-      end
-
-      # Returns the path for the result schema file.
-      #
-      # @return [String] result schema path
-      # @api private
-      def service_result_schema_path
-        "app/schemas/services/#{file_path}/result.json"
-      end
-
-      # Returns the path for the arguments schema file.
-      #
-      # @return [String] arguments schema path
-      # @api private
-      def service_arguments_shecma_path
-        "app/schemas/services/#{file_path}/arguments.json"
       end
 
       # Returns the service class name with ::Service appended.
@@ -108,10 +88,10 @@ module Servus
       #
       # @return [String] multi-line instance variable assignments
       # @example
-      #   initialize_params # => "@user = user\n    @amount = amount"
+      #   initialize_params # => "@user = user\n      @amount = amount"
       # @api private
       def initialize_params
-        parameters.map { |param| "@#{param} = #{param}" }.join("\n    ")
+        parameters.map { |param| "@#{param} = #{param}" }.join("\n      ")
       end
 
       # Generates attr_reader declarations for parameters.

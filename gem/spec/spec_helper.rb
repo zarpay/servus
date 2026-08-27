@@ -1,8 +1,18 @@
 # frozen_string_literal: true
 
+if ENV['COVERAGE']
+  require 'simplecov'
+  SimpleCov.start do
+    enable_coverage :branch
+    add_filter %r{^/spec/}
+    track_files 'lib/**/*.rb'
+  end
+end
+
 require 'servus'
 require 'servus/testing'
 require 'spec_support/active_job_loader'
+require 'spec_support/schema_registry'
 require 'spec_support/test_services'
 
 # Internal tests sometimes instantiate anonymous Servus::Base subclasses to
@@ -23,7 +33,10 @@ RSpec.configure do |config|
     c.syntax = :expect
   end
 
-  config.before(:each) do
-    ActiveJob::Base.queue_adapter = :test
+  # Event invocation always enqueues, so a spec asserting that a service
+  # actually ran needs the job to execute. Tag it `:inline_jobs` to swap the
+  # adapter; everything else keeps `:test` and asserts on enqueued jobs.
+  config.before(:each) do |example|
+    ActiveJob::Base.queue_adapter = example.metadata[:inline_jobs] ? :inline : :test
   end
 end

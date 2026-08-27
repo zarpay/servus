@@ -41,6 +41,9 @@ module Servus
 
       Servus::Events::Bus.clear if Rails.env.development?
 
+      # Schemas are cached per class, and reloading replaces those classes.
+      Servus::Support::Validator.clear_cache!
+
       # Eager load all event classes
       events_path = Rails.root.join(Servus.config.events_dir)
       Dir[File.join(events_path, '**/*_event.rb')].each do |file|

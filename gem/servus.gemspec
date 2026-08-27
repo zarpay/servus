@@ -13,7 +13,7 @@ Gem::Specification.new do |spec|
   spec.summary     = 'A gem for managing service objects.'
   spec.description = 'Servus is a Ruby gem that provides a structured way to create and manage service objects, promoting clean code architecture and separation of concerns in your applications.'
 
-  spec.required_ruby_version = '>= 3.0.0'
+  spec.required_ruby_version = '>= 3.2.0'
 
   spec.metadata['allowed_push_host'] = 'https://rubygems.org'
   spec.metadata['source_code_uri']   = 'https://github.com/zarpay/servus'

@@ -124,6 +124,27 @@ RSpec.describe 'Servus Testing Matchers' do
 
       expect(handler_class).not_to have_schema(:payload)
     end
+
+    # The matcher used to clear the global schema cache on every invocation,
+    # which discarded cache state belonging to every other example.
+    it 'leaves the schema cache alone' do
+      service_class = stub_const('CachePreservedService', Class.new(Servus::Base) do
+        schema arguments: { type: 'object' }
+      end)
+      Servus::Support::Validator.load_schema(service_class, 'arguments')
+
+      expect { expect(service_class).to have_schema(:arguments) }
+        .not_to(change { Servus::Support::Validator.cache.size })
+    end
+
+    it 'fails loudly when a schema references an unregistered fragment' do
+      service_class = stub_const('BrokenRefService', Class.new(Servus::Base) do
+        schema arguments: { '$ref' => '#/nope/$defs/thing' }
+      end)
+
+      expect { expect(service_class).to have_schema(:arguments) }
+        .to raise_error(Servus::Schema::UnknownKeyError)
+    end
   end
 
   describe 'be_service_success matcher' do

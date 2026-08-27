@@ -2,6 +2,10 @@
 
 require 'active_job'
 require 'active_job/base'
-# Trigger ActiveJob load hook manually — Rails normally does this.
-ActiveSupport.run_load_hooks(:active_job, ActiveJob::Base)
-require 'servus/railtie'
+
+# Rails wires this up through the railtie's `on_load(:active_job)` hook, which
+# only fires during a Rails::Application boot. The suite never boots one, so
+# without this the whole suite runs with `call_async` undefined — which since
+# 1.0.0 means no event invocation works at all.
+require 'servus/extensions/async/ext'
+Servus::Base.extend(Servus::Extensions::Async::Call)

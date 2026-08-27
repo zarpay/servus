@@ -20,7 +20,7 @@ module Servus
   #
   #     schema payload: { type: 'object', required: ['user_id'] }
   #
-  #     invoke SendWelcomeEmail::Service, async: true do |payload|
+  #     enqueue SendWelcomeEmail::Service do |payload|
   #       { user_id: payload[:user_id] }
   #     end
   #   end
@@ -34,13 +34,49 @@ module Servus
   #   class AuditLogCreated < Servus::Event
   #     event_name :audit_log_created
   #
-  #     invoke AuditLogger::Service, async: true
+  #     enqueue AuditLogger::Service
   #   end
   #
   # @see Servus::Events::Bus
   # @see Servus::Events::Router
   # @see Servus::Base
   class Event
+    extend Servus::Schema::Declaration
+
+    # @!method self.schema(payload: nil)
+    #   Declares the JSON schema for this event's payload.
+    #
+    #   The payload is validated on every {Servus::Event.emit}. Schemas may
+    #   reference shared fragments registered with {Servus::Schema.register};
+    #   refs are resolved on first read.
+    #
+    #   Omitting the keyword leaves any schema declared earlier — or by a
+    #   superclass — in place. Passing it explicitly as +nil+ raises.
+    #
+    #   @param payload [Hash] JSON schema for the event payload
+    #   @return [void]
+    #   @raise [ArgumentError] on an unknown keyword or an explicit nil
+    #
+    #   @example
+    #     class UserCreated < Servus::Event
+    #       event_name :user_created
+    #
+    #       schema payload: {
+    #         type: 'object',
+    #         required: ['user_id', 'email'],
+    #         properties: {
+    #           user_id: { type: 'integer' },
+    #           email: { type: 'string', format: 'email' }
+    #         }
+    #       }
+    #     end
+    #
+    #   @see Servus::Schema
+    #
+    # @!method self.payload_schema
+    #   @return [Hash, nil] the compiled payload schema
+    declare_schemas :payload
+
     class << self
       # Declares or returns the event name.
       #
@@ -89,37 +125,50 @@ module Servus
         event_name(name.demodulize.underscore.to_sym)
       end
 
-      # Declares a service invocation in response to the event.
+      # Declares a service to enqueue in response to the event.
       #
-      # Multiple invocations can be declared for a single event. Each invocation
-      # requires a block that maps the event payload to the service's arguments.
+      # An event can declare as many services as it needs; each is enqueued
+      # independently when the event fires. The block maps the event payload to
+      # the service's keyword arguments — without one, the full payload is passed
+      # through.
       #
-      # @param service_class [Class] the service class to invoke (must inherit from Servus::Base)
+      # Invocation is always asynchronous. A reaction that ran inline would put
+      # its latency and its failures back into the emitting service, which is
+      # what events exist to avoid. This requires ActiveJob; see
+      # {Servus::Events::Errors::AsyncBackendMissingError}.
+      #
+      # @param service_class [Class] the service to enqueue (must inherit from Servus::Base)
       # @param options [Hash] invocation options
-      # @option options [Boolean] :async invoke the service asynchronously via call_async
-      # @option options [Symbol] :queue the queue name for async jobs
-      # @option options [Proc] :if condition that must return true for invocation
-      # @option options [Proc] :unless condition that must return false for invocation
+      # @option options [Symbol] :queue the queue to route the job to
+      # @option options [ActiveSupport::Duration] :wait delay before the job runs
+      # @option options [Time] :wait_until absolute time to run the job
+      # @option options [Integer] :priority job priority (adapter-dependent)
+      # @option options [Hash] :job_options additional ActiveJob options
+      # @option options [Proc] :if condition that must return true to enqueue
+      # @option options [Proc] :unless condition that must return false to enqueue
       # @yield [payload] block that maps event payload to service arguments
       # @yieldparam payload [Hash] the event payload
       # @yieldreturn [Hash] keyword arguments for the service's initialize method
       # @return [void]
+      # @raise [ArgumentError] if the removed +async:+ option is passed
       #
-      # @example Basic invocation
-      #   invoke SendEmail::Service do |payload|
+      # @example Enqueue a service
+      #   enqueue SendEmail::Service do |payload|
       #     { user_id: payload[:user_id], email: payload[:email] }
       #   end
       #
-      # @example Async invocation with queue
-      #   invoke SendEmail::Service, async: true, queue: :mailers do |payload|
+      # @example Route to a queue
+      #   enqueue SendEmail::Service, queue: :mailers do |payload|
       #     { user_id: payload[:user_id] }
       #   end
       #
-      # @example Conditional invocation
-      #   invoke GrantRewards::Service, if: ->(p) { p[:premium] } do |payload|
+      # @example Conditional
+      #   enqueue GrantRewards::Service, if: ->(p) { p[:premium] } do |payload|
       #     { user_id: payload[:user_id] }
       #   end
-      def invoke(service_class, options = {}, &block)
+      def enqueue(service_class, options = {}, &block)
+        reject_async_option!(options)
+
         @invocations ||= []
         @invocations << {
           service_class: service_class,
@@ -128,40 +177,26 @@ module Servus
         }
       end
 
+      # Explains that +invoke+ was renamed, rather than failing as a typo.
+      #
+      # Event classes load at boot, so a bare NoMethodError here would read like
+      # a misspelling instead of a rename. This covers both changes at once,
+      # since the overwhelmingly common declaration was +invoke Foo, async: true+.
+      #
+      # @raise [NoMethodError] always
+      # @deprecated Use {#enqueue}.
+      def invoke(*_args, **_options, &)
+        raise NoMethodError,
+              '`invoke` was renamed to `enqueue` in 1.0.0 — event invocation is always ' \
+              'asynchronous. Replace `invoke` with `enqueue`, and drop `async:` if present.'
+      end
+
       # Returns all service invocations declared for this event.
       #
       # @return [Array<Hash>] array of invocation configurations
       def invocations
         @invocations || []
       end
-
-      # Defines the JSON schema for validating event payloads.
-      #
-      # @param payload [Hash, nil] JSON schema for validating event payloads
-      # @return [void]
-      #
-      # @example
-      #   class UserCreated < Servus::Event
-      #     event_name :user_created
-      #
-      #     schema payload: {
-      #       type: 'object',
-      #       required: ['user_id', 'email'],
-      #       properties: {
-      #         user_id: { type: 'integer' },
-      #         email: { type: 'string', format: 'email' }
-      #       }
-      #     }
-      #   end
-      def schema(payload: nil)
-        @payload_schema = payload.with_indifferent_access if payload
-      end
-
-      # Returns the payload schema.
-      #
-      # @return [Hash, nil] the payload schema or nil if not defined
-      # @api private
-      attr_reader :payload_schema
 
       # Emits this event via the Bus.
       #
@@ -218,10 +253,30 @@ module Servus
       # @param payload [Hash] the event payload
       # @return [Array] results from all invoked services
       def handle(payload)
-        invocations_for(payload).map(&:execute)
+        invocations_for(payload).map(&:enqueue)
       end
 
       private
+
+      # Rejects the removed +async:+ option at declaration time.
+      #
+      # Declaration time matters here: an Event class loads at boot, so this
+      # fails on deploy rather than on the first emit in production. Rejecting
+      # +async: false+ is the point — that declaration asks for synchronous
+      # invocation, which no longer exists, and quietly giving it the opposite
+      # would be worse than refusing.
+      #
+      # @param options [Hash]
+      # @return [void]
+      # @raise [ArgumentError] if +:async+ is present, whatever its value
+      # @api private
+      def reject_async_option!(options)
+        return unless options.key?(:async)
+
+        raise ArgumentError,
+              '`async:` is no longer a valid option — event invocation is always ' \
+              'asynchronous. Remove it from the declaration.'
+      end
 
       # @api private
       def should_invoke?(payload, options)

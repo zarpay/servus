@@ -31,7 +31,7 @@ class ServiceB < TrackingService; end
 class UserCreatedEvent < Servus::Event
   event_name :user_created
 
-  invoke ServiceA
+  enqueue ServiceA
 end
 
 # --- Async extension fixtures ------------------------------------------------

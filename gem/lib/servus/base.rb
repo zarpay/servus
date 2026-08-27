@@ -52,6 +52,63 @@ module Servus
     include Servus::Events::Emitter
     include Servus::Guards
 
+    extend Servus::Schema::Declaration
+
+    # @!method self.schema(arguments: nil, result: nil, failure: nil)
+    #   Declares the JSON schemas used to validate this service.
+    #
+    #   Arguments are validated before +call+ runs, so the body can trust the
+    #   shape of its inputs. Result data is validated after it returns, so a
+    #   service that stops honouring its own contract fails loudly rather than
+    #   shipping the wrong shape to its callers.
+    #
+    #   Schemas may reference shared fragments registered with
+    #   {Servus::Schema.register}; refs are resolved on first read.
+    #
+    #   Omitting a keyword leaves any schema declared earlier — or by a
+    #   superclass — in place. Passing one explicitly as +nil+ raises.
+    #
+    #   @param arguments [Hash] JSON schema for the service's arguments
+    #   @param result [Hash] JSON schema for successful result data
+    #   @param failure [Hash] JSON schema for failure response data
+    #   @return [void]
+    #   @raise [ArgumentError] on an unknown keyword or an explicit nil
+    #
+    #   @example Declaring arguments and result schemas
+    #     class ProcessPayment::Service < Servus::Base
+    #       schema(
+    #         arguments: {
+    #           type: 'object',
+    #           required: ['user_id', 'amount'],
+    #           properties: {
+    #             user_id: { type: 'integer' },
+    #             amount: { type: 'number', minimum: 0.01 }
+    #           }
+    #         },
+    #         result: {
+    #           type: 'object',
+    #           required: ['transaction_id'],
+    #           properties: { transaction_id: { type: 'string' } }
+    #         }
+    #       )
+    #     end
+    #
+    #   @example Referencing a shared fragment
+    #     schema arguments: {
+    #       type: 'object',
+    #       properties: { amount: { '$ref' => '#/core/$defs/amount' } }
+    #     }
+    #
+    #   @see Servus::Schema
+    #
+    # @!method self.arguments_schema
+    #   @return [Hash, nil] the compiled arguments schema
+    # @!method self.result_schema
+    #   @return [Hash, nil] the compiled result schema
+    # @!method self.failure_schema
+    #   @return [Hash, nil] the compiled failure schema
+    declare_schemas :arguments, :result, :failure
+
     # Support class aliases
     Logger = Servus::Support::Logger
     Emitter = Servus::Events::Emitter
@@ -158,46 +215,6 @@ module Servus
       raise type, message
     end
 
-    # Invokes another service from within this service's {#call} and returns its
-    # data on success. On failure, halts the outer service with the sub-service's
-    # failure Response — the outer service's caller receives that Response
-    # unchanged (same error object, message, code, http_status).
-    #
-    # Sugar over:
-    #
-    #   result = SubService.call(**params)
-    #   return result unless result.success?
-    #   data = result.data
-    #
-    # Only call from within a service's `#call` (or helpers reachable from
-    # it); the throw is caught by {Servus::Base.call}.
-    #
-    # @example Composing services
-    #   class SendDigitalCash::Service < Servus::Base
-    #     def call
-    #       data1 = call!(Accounts::Lookup::Service, id: account_id)
-    #       data2 = call!(Ledger::RecordTransfer::Service, account:, amount:)
-    #       success(ref: data2.ref)
-    #     end
-    #   end
-    #
-    # For invoking a service from *outside* a service context (controllers,
-    # rake tasks, jobs, consoles), see
-    # {Servus::Helpers::ControllerHelpers#run_service!}.
-    #
-    # @param service_class [Class<Servus::Base>] the sub-service to invoke
-    # @param params [Hash] keyword arguments to pass to the sub-service
-    # @return [Servus::Support::DataObject, Object] the sub-service's data on success
-    # @throw [:guard_failure, Servus::Support::Response] the failure Response, otherwise
-    #
-    # @see Servus::Helpers::ControllerHelpers#run_service!
-    def call!(service_class, **params)
-      result = service_class.call(**params)
-      return result.data if result.success?
-
-      throw(:guard_failure, result)
-    end
-
     class << self
       # Executes the service with automatic validation, logging, and benchmarking.
       #
@@ -256,69 +273,6 @@ module Servus
         raise e
       end
       # rubocop:enable Metrics/MethodLength
-
-      # Defines schema validation rules for the service's arguments, result, and/or failure data.
-      #
-      # This method provides a clean DSL for specifying JSON schemas that will be used
-      # to validate service inputs and outputs. Schemas defined via this method take
-      # precedence over ARGUMENTS_SCHEMA, RESULT_SCHEMA, and FAILURE_SCHEMA constants.
-      # The next major version will deprecate those constants in favor of this DSL.
-      #
-      # @param arguments [Hash, nil] JSON schema for validating service arguments
-      # @param result [Hash, nil] JSON schema for validating service result data
-      # @param failure [Hash, nil] JSON schema for validating failure response data
-      # @return [void]
-      #
-      # @example Defining both arguments and result schemas
-      #   class ProcessPayment::Service < Servus::Base
-      #     schema(
-      #       arguments: {
-      #         type: 'object',
-      #         required: ['user_id', 'amount'],
-      #         properties: {
-      #           user_id: { type: 'integer' },
-      #           amount: { type: 'number', minimum: 0.01 }
-      #         }
-      #       },
-      #       result: {
-      #         type: 'object',
-      #         required: ['transaction_id'],
-      #         properties: {
-      #           transaction_id: { type: 'string' }
-      #         }
-      #       }
-      #     )
-      #   end
-      #
-      # @example Defining only arguments schema
-      #   class SendEmail::Service < Servus::Base
-      #     schema arguments: { type: 'object', required: ['email', 'subject'] }
-      #   end
-      #
-      # @see Servus::Support::Validator
-      def schema(arguments: nil, result: nil, failure: nil)
-        @arguments_schema = arguments.with_indifferent_access if arguments
-        @result_schema    = result.with_indifferent_access    if result
-        @failure_schema   = failure.with_indifferent_access   if failure
-      end
-
-      # Returns the arguments schema defined via the schema DSL method.
-      #
-      # @return [Hash, nil] the arguments schema or nil if not defined
-      # @api private
-      attr_reader :arguments_schema
-
-      # Returns the result schema defined via the schema DSL method.
-      #
-      # @return [Hash, nil] the result schema or nil if not defined
-      # @api private
-      attr_reader :result_schema
-
-      # Returns the failure schema defined via the schema DSL method.
-      #
-      # @return [Hash, nil] the failure schema or nil if not defined
-      # @api private
-      attr_reader :failure_schema
 
       # Executes pre-call hooks including logging and argument validation.
       #

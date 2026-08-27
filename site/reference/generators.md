@@ -11,8 +11,6 @@ rails g servus:service treasury/transfer_gold from_account to_account gold_drago
 
 => create  app/services/treasury/transfer_gold/service.rb
 => create  spec/services/treasury/transfer_gold/service_spec.rb
-=> create  app/schemas/services/treasury/transfer_gold/result.json
-=> create  app/schemas/services/treasury/transfer_gold/arguments.json
 ```
 
 | Argument | Required | Description |
@@ -22,7 +20,7 @@ rails g servus:service treasury/transfer_gold from_account to_account gold_drago
 
 | Option | Description |
 | --- | --- |
-| `--no-docs` | Skip YARD documentation comments and TODO scaffolding |
+| `--no-docs` | Skip YARD documentation comments and TODO scaffolding. The `schema` declaration is still generated — it is code, not documentation. |
 
 ### Generated service
 
@@ -32,6 +30,23 @@ With parameters:
 # app/services/treasury/transfer_gold/service.rb
 module Treasury::TransferGold
   class Service < Servus::Base
+    schema(
+      arguments: {
+        type: 'object',
+        required: %w[from_account to_account gold_dragons],
+        properties: {
+          from_account: {},
+          to_account: {},
+          gold_dragons: {}
+        }
+      },
+      result: {
+        type: 'object',
+        required: [],
+        properties: {}
+      }
+    )
+
     def initialize(from_account:, to_account:, gold_dragons:)
       @from_account = from_account
       @to_account = to_account
@@ -87,44 +102,6 @@ RSpec.describe Treasury::TransferGold::Service do
 end
 ```
 
-### Generated schemas
-
-Arguments schema with the parameters declared as required:
-
-```json
-// app/schemas/services/treasury/transfer_gold/arguments.json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Treasury::TransferGold Arguments",
-  "type": "object",
-  "properties": {
-    "from_account": { "type": "string", "description": "TODO" },
-    "to_account": { "type": "string", "description": "TODO" },
-    "gold_dragons": { "type": "string", "description": "TODO" }
-  },
-  "required": ["from_account", "to_account", "gold_dragons"],
-  "additionalProperties": false
-}
-```
-
-Result schema (empty, ready to fill in):
-
-```json
-// app/schemas/services/treasury/transfer_gold/result.json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Treasury::TransferGold Result",
-  "type": "object",
-  "properties": {},
-  "required": [],
-  "additionalProperties": true
-}
-```
-
-::: tip Inline schemas preferred
-The generator creates JSON schema files for convenience, but the `schema` DSL is the recommended approach. You can delete the JSON files and define schemas inline — see [Schema Validation](/features/schema-validation).
-:::
-
 ### Destroy
 
 ```bash
@@ -150,7 +127,7 @@ rails g servus:event gold_transferred
 
 | Option | Description |
 | --- | --- |
-| `--no-docs` | Skip YARD documentation comments and TODO scaffolding |
+| `--no-docs` | Skip YARD documentation comments and TODO scaffolding. The `schema` declaration is still generated — it is code, not documentation. |
 
 ### Generated Event class
 
@@ -162,7 +139,7 @@ class GoldTransferredEvent < Servus::Event
     description: 'GoldTransferredEvent event payload',
   }
 
-  # invoke ExampleService, async: true do |payload|
+  # enqueue ExampleService do |payload|
   #   { example_arg: payload[:example_field] }
   # end
 end
@@ -208,7 +185,7 @@ rails g servus:guard eligible_transfer
 
 | Option | Description |
 | --- | --- |
-| `--no-docs` | Skip YARD documentation comments and TODO scaffolding |
+| `--no-docs` | Skip YARD documentation comments and TODO scaffolding. The `schema` declaration is still generated — it is code, not documentation. |
 
 ### Generated guard
 
@@ -287,7 +264,6 @@ All generators respect the directory settings in `Servus.configure`:
 # config/initializers/servus.rb
 Servus.configure do |config|
   config.services_dir = "app/services"  # default: "app/services"
-  config.schemas_dir  = "app/schemas"   # default: "app/schemas"
   config.events_dir   = "app/events"    # default: "app/events"
   config.guards_dir   = "app/guards"    # default: "app/guards"
   config.tests_dir    = "spec"          # default: "spec"
