@@ -2,7 +2,7 @@
 [![Gem Version](https://badge.fury.io/rb/servus.svg)](https://badge.fury.io/rb/servus)
 [![CI](https://github.com/zarpay/servus/actions/workflows/main.yml/badge.svg)](https://github.com/zarpay/servus/actions/workflows/main.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Ruby](https://img.shields.io/badge/ruby-%3E%3D%203.0-red.svg)](https://www.ruby-lang.org)
+[![Ruby](https://img.shields.io/badge/ruby-%3E%3D%203.2-red.svg)](https://www.ruby-lang.org)
 [![Rails](https://img.shields.io/badge/activesupport-%3E%3D%208.0-red.svg)](https://rubyonrails.org)
 
 # Servus
@@ -14,6 +14,18 @@ Most mature Rails apps grow a `services/` directory. Servus gives each service t
 ## Documentation
 
 Full documentation at **[zarpay.github.io/servus](https://zarpay.github.io/servus)**
+
+## Repository layout
+
+| Directory | What it is |
+| --- | --- |
+| [`gem/`](gem) | The gem itself |
+| [`site/`](site) | The VitePress documentation published above |
+| [`demo/`](demo) | A Rails app exercising every feature, annotated as a textbook |
+
+The demo path-pins the in-tree gem source, so its suite is an integration test
+of `gem/` in a real application — and a good place to read working examples of
+any feature in context.
 
 ## Quick Start
 
