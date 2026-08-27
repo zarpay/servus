@@ -40,9 +40,20 @@ jobs:
   demo:
     name: Demo app
     runs-on: ubuntu-latest
-    # The demo path-pins ../gem, so this job is an integration test of the gem
-    # in a real Rails app. If a gem change regresses documented behaviour, this
-    # is what catches it.
+    # An integration test of the gem in a real Rails application.
+    #
+    # demo/ path-pins ../gem, so this runs against the working tree rather than
+    # a published version. It catches regressions the gem's own unit suite
+    # cannot, because several of Servus's sharpest edges only appear once
+    # Rails' autoloading, ActiveJob, and a real controller stack are involved.
+    #
+    # Single Ruby version on purpose: this job exists to prove the integration,
+    # not Ruby compatibility. The rspec job above already covers the supported
+    # matrix, and running this one three times over would mostly re-prove that.
+    #
+    # The version comes from demo/.ruby-version so there is one source of truth
+    # — pinning a version here that nobody develops against is how you get CI
+    # failures that have nothing to do with the change under review.
     defaults:
       run:
         working-directory: demo
@@ -50,8 +61,12 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.4'
+          ruby-version-file: demo/.ruby-version
           working-directory: demo
           bundler-cache: true
-      - run: bin/rails db:migrate RAILS_ENV=test
+
+      # schema.rb is committed, so this loads it rather than replaying
+      # migrations. It also creates storage/test.sqlite3, which is gitignored.
+      - run: bin/rails db:test:prepare
+
       - run: bundle exec rspec
