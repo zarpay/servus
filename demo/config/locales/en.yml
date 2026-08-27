@@ -1,0 +1,23 @@
+# =============================================================================
+# Locale file
+# =============================================================================
+#
+# The `guards:` scope is where Servus's MessageResolver looks when a guard
+# declares its message as a Symbol rather than a String:
+#
+#   class LoyalHouseGuard < Servus::Guard
+#     message :disloyal_house do
+#       { name: house.name, standing: house.standing }
+#     end
+#   end
+#
+# The symbol is looked up as `guards.disloyal_house` — the scope is added
+# automatically unless the symbol already contains a dot. Interpolation
+# variables come from the guard's data block.
+#
+# A missing key does not raise: the resolver falls back to a humanized form of
+# the symbol, so an untranslated guard degrades to "Disloyal house" rather than
+# breaking the request.
+en:
+  guards:
+    disloyal_house: "House %{name} is %{standing}; only loyal houses may move gold"

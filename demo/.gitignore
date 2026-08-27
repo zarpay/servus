@@ -1,0 +1,4 @@
+
+# SimpleCov output
+/coverage/
+/spec/examples.txt
