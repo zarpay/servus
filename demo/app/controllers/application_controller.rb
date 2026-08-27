@@ -1,7 +1,14 @@
+# =============================================================================
+# ApplicationController
+# =============================================================================
+#
+# Servus's `run_service` and `render_service_error` are mixed into every
+# controller automatically by the railtie's `on_load(:action_controller)` hook.
+# Nothing needs including here.
+#
+# This app is an API harness, so the controllers below it inherit from
+# ActionController::API rather than this class. See
+# app/controllers/treasury/transfers_controller.rb.
 class ApplicationController < ActionController::Base
-  # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
-
-  # Changes to the importmap will invalidate the etag for HTML responses
-  stale_when_importmap_changes
 end

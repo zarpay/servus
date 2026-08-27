@@ -24,6 +24,27 @@
 # required — e.g. in `config/application.rb` before `Bundler.require`. This demo
 # leaves them on, which is the default and what almost every app wants.
 
+# ---------------------------------------------------------------------------
+# Load ActiveJob before any service class is defined
+# ---------------------------------------------------------------------------
+#
+# Servus adds `.call_async` and the `async` DSL to services through the
+# railtie's `ActiveSupport.on_load(:active_job)` hook. That hook fires when
+# `ActiveJob::Base` is first loaded — and Rails autoloads it lazily.
+#
+# In production that happens for free: eager loading loads
+# `app/jobs/application_job.rb`, which subclasses `ActiveJob::Base`. In
+# development, eager loading is off and nothing touches it, so the hook never
+# fires and a service whose class body calls `async queue: :treasury` dies with
+#
+#     undefined method 'async' for class Treasury::TransferGold::Service
+#
+# The asymmetry is nasty because it works in production and under RSpec (which
+# loads ActiveJob for its own test helpers) and fails only in `bin/rails
+# console` and `bin/rails runner`. Requiring it here makes the behaviour the
+# same everywhere.
+require "active_job/base"
+
 require Rails.root.join("config/schemas/westeros")
 
 Servus.configure do |config|
