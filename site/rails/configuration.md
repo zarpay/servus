@@ -19,7 +19,7 @@ Servus.configure do |config|
   # ── Routers ────────────────────────────────────────────────────────
   # Ordered list of routers that resolve service invocations for events.
   # The Bus iterates in order, deduplicates by key, and executes.
-  # Defaults to [Servus::Events::ClassRouter.new] which reads invoke
+  # Defaults to [Servus::Events::ClassRouter.new] which reads enqueue
   # declarations from Event classes.
 
   config.routers = [

@@ -93,7 +93,7 @@ the whole emission sequence, since validation happens per event as it fires.
 
 Reach for this when a single outcome genuinely concerns several unrelated
 domains and you want each to receive a payload shaped for it. When several
-reactions want the *same* payload, prefer one event with multiple `invoke`
+reactions want the *same* payload, prefer one event with multiple `enqueue`
 declarations on its Event class — that keeps the fan-out in the event layer
 where subscribers can be added without touching the service.
 
@@ -207,14 +207,14 @@ end
 ::: tip Emission vs invocation conditions
 `if:`/`unless:` on `emits` gate the **event itself** — when the condition fails, the event never enters the bus and no handlers run.
 
-The `if:`/`unless:` on `invoke` (inside an Event class) gate a **specific handler** — the event fires and reaches the bus, but only matching handlers are invoked. Use emission conditions when the entire event is irrelevant; use invocation conditions when only some handlers should react.
+The `if:`/`unless:` on `enqueue` (inside an Event class) gate a **specific handler** — the event fires and reaches the bus, but only matching handlers are invoked. Use emission conditions when the entire event is irrelevant; use invocation conditions when only some handlers should react.
 :::
 
 ## Handling events
 
 A service can emit events without knowing or caring whether anything is listening. The service's job ends when the event fires — it has no dependency on what happens next.
 
-When you want to react to an event, you create an Event class. An Event class subscribes to a single event name and declares which services to invoke when that event fires. It inherits from `Servus::Event`, uses `event_name` to set (or override) the name, and uses `invoke` to wire up each response. The Event class's job is purely coordination — it maps the event payload to service arguments and decides whether to run sync or async. No business logic belongs here.
+When you want to react to an event, you create an Event class. An Event class subscribes to a single event name and declares which services to invoke when that event fires. It inherits from `Servus::Event`, uses `event_name` to set (or override) the name, and uses `enqueue` to wire up each response. The Event class's job is purely coordination — it maps the event payload to service arguments and routes the resulting jobs. No business logic belongs here.
 
 Generate one with the Rails generator:
 
@@ -232,41 +232,44 @@ Then declare what services should react to the event:
 class GoldTransferredEvent < Servus::Event
   # event name inferred as :gold_transferred_event from class name
 
-  invoke Ledger::RecordEntry::Service, async: true do |payload|
+  enqueue Ledger::RecordEntry::Service do |payload|
     { transfer: payload[:transfer] }
   end
 
-  invoke Ravens::SendReceipt::Service, async: true do |payload|
+  enqueue Ravens::SendReceipt::Service do |payload|
     { amount: payload[:transferred], from: payload[:from_balance] }
   end
 end
 ```
 
-Each `invoke` block maps the event payload to the service's keyword arguments. A single Event class can invoke multiple services — they all react to the same event. If no block is given, the full payload is passed through as params.
+Each `enqueue` block maps the event payload to the service's keyword arguments. A single Event class can enqueue multiple services — they all react to the same event. If no block is given, the full payload is passed through as params.
 
-### Sync vs async invocation
+### Everything is enqueued
 
-Event classes can invoke services synchronously (inline) or asynchronously (enqueued via ActiveJob):
+Services declared with `enqueue` are always enqueued through ActiveJob. There is no inline option.
 
 ```ruby
-# Synchronous (default) — runs inline
-invoke IronBank::NotifyMasterOfCoin::Service do |payload|
-  { message: "Transfer of #{payload[:transferred]} gold dragons completed" }
-end
-
-# Asynchronous — enqueued via ActiveJob
-invoke Ravens::SendReceipt::Service, async: true do |payload|
+enqueue Ravens::SendReceipt::Service do |payload|
   { amount: payload[:transferred] }
 end
 
-# Async with a specific queue
-invoke Ravens::SendReceipt::Service, async: true, queue: :mailers do |payload|
+# Route to a queue
+enqueue Ravens::SendReceipt::Service, queue: :mailers do |payload|
+  { amount: payload[:transferred] }
+end
+
+# Delay it
+enqueue Ravens::SendReceipt::Service, wait: 5.minutes do |payload|
   { amount: payload[:transferred] }
 end
 ```
 
-::: warning Prefer async invocation
-Synchronous invocations run inline during the emitting service's `after_call` phase — before the result is returned to the caller. If a sync invocation raises an exception, it propagates through the emitting service and the caller never receives the result. Async invocation avoids this entirely — the work is enqueued and runs independently. Use sync only when the follow-up must complete before the caller gets a response.
+`queue:`, `wait:`, `wait_until:`, `priority:`, and `job_options:` are passed through to ActiveJob.
+
+Running a reaction inline would put its latency and its failures back into the emitting service — an exception in a follow-up would propagate through a service that already succeeded, and its caller would never receive the result. That is the coupling events exist to remove, which is why the choice is gone rather than merely discouraged.
+
+::: warning Events require ActiveJob
+Because invocation always enqueues, an Event class that declares `enqueue` needs ActiveJob loaded. In Rails that is automatic. Elsewhere, emitting an event with a declaration raises `Servus::Events::Errors::AsyncBackendMissingError`. Servus's core — services, schemas, guards, and the bus itself — works without it. A job adapter for non-Rails hosts is planned.
 :::
 
 ### Conditional invocation
@@ -275,7 +278,7 @@ Invocations can be gated with `if:` or `unless:` lambdas that receive the event 
 
 ```ruby
 # Only when the transfer exceeds 100 gold dragons
-invoke Ravens::DispatchMessage::Service, async: true, if: ->(p) { p[:transferred] > 100 } do |payload|
+enqueue Ravens::DispatchMessage::Service, if: ->(p) { p[:transferred] > 100 } do |payload|
   {
     message: "Large transfer of #{payload[:transferred]} gold dragons completed",
     destination: :iron_bank
@@ -283,15 +286,15 @@ invoke Ravens::DispatchMessage::Service, async: true, if: ->(p) { p[:transferred
 end
 
 # Only when the transfer does NOT exceed 100 gold dragons
-invoke Ravens::DispatchMessage::Service, async: true, unless: ->(p) { p[:transferred] > 100 } do |payload|
+enqueue Ravens::DispatchMessage::Service, unless: ->(p) { p[:transferred] > 100 } do |payload|
   {
     message: "Transfer of #{payload[:transferred]} gold dragons completed",
     destination: :iron_bank
   }
 end
 
-# Both conditions can be combined with sync or async
-invoke Ravens::DispatchMessage::Service, if: ->(p) { p[:transferred] > 100 } do |payload|
+# Conditions work the same on every declaration
+enqueue Ravens::DispatchMessage::Service, if: ->(p) { p[:transferred] > 100 } do |payload|
   {
     message: "Large transfer of #{payload[:transferred]} gold dragons completed",
     destination: :iron_bank
@@ -315,7 +318,7 @@ class GoldTransferredEvent < Servus::Event
     }
   }
 
-  invoke Ledger::RecordEntry::Service, async: true do |payload|
+  enqueue Ledger::RecordEntry::Service do |payload|
     { amount: payload[:transferred] }
   end
 end
@@ -389,7 +392,7 @@ Each event name maps to exactly one Event class. Attempting to register a second
 
 When `Bus.emit` fires, it delegates to configured routers to resolve which services to invoke. Each router returns a list of `Invocation` objects; the Bus deduplicates by key (first wins) and executes.
 
-Servus ships with `ClassRouter` as the default — it reads `invoke` declarations from Event classes. Applications can add additional routers (e.g. a data-driven router backed by a database) via configuration:
+Servus ships with `ClassRouter` as the default — it reads `enqueue` declarations from Event classes. Applications can add additional routers (e.g. a data-driven router backed by a database) via configuration:
 
 ```ruby
 Servus.configure do |config|

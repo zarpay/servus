@@ -47,7 +47,7 @@ expect {
 
 ## Testing Event classes
 
-Event classes are tested by calling their `handle` class method with a payload. Use the `call_service` matcher to assert which services are invoked:
+Event classes are tested by calling their `handle` class method with a payload. Services declared with `enqueue` are always enqueued, so assert with the `.async` chain — `call_service` without it asserts a synchronous `.call`, which an Event class never makes:
 
 ```ruby
 RSpec.describe GoldTransferredEvent do
@@ -59,22 +59,16 @@ RSpec.describe GoldTransferredEvent do
     }
   end
 
-  it "invokes Ledger::RecordEntry" do
-    expect {
-      described_class.handle(payload)
-    }.to call_service(Ledger::RecordEntry::Service)
-  end
-
-  it "invokes it asynchronously" do
+  it "enqueues Ledger::RecordEntry" do
     expect {
       described_class.handle(payload)
     }.to call_service(Ledger::RecordEntry::Service).async
   end
 
-  it "invokes it with the expected arguments" do
+  it "enqueues it with the expected arguments" do
     expect {
       described_class.handle(payload)
-    }.to call_service(Ledger::RecordEntry::Service).with(
+    }.to call_service(Ledger::RecordEntry::Service).async.with(
       transferred: payload[:transferred]
     )
   end
@@ -88,7 +82,7 @@ end
 ```ruby
 expect {
   described_class.handle(payload)
-}.to call_service(Ravens::SendReceipt::Service)
+}.to call_service(Ravens::SendReceipt::Service).async
   .with(amount: 50)
   .async
 ```
@@ -115,7 +109,7 @@ RSpec.describe GoldTransferredEvent do
     it "does not dispatch a raven" do
       expect {
         described_class.handle(payload)
-      }.not_to call_service(Ravens::DispatchMessage::Service)
+      }.not_to call_service(Ravens::DispatchMessage::Service).async
     end
   end
 end

@@ -33,7 +33,10 @@ RSpec.configure do |config|
     c.syntax = :expect
   end
 
-  config.before(:each) do
-    ActiveJob::Base.queue_adapter = :test
+  # Event invocation always enqueues, so a spec asserting that a service
+  # actually ran needs the job to execute. Tag it `:inline_jobs` to swap the
+  # adapter; everything else keeps `:test` and asserts on enqueued jobs.
+  config.before(:each) do |example|
+    ActiveJob::Base.queue_adapter = example.metadata[:inline_jobs] ? :inline : :test
   end
 end

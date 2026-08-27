@@ -2,7 +2,7 @@
 
 require 'spec_helper'
 
-RSpec.describe Servus::Events::Bus do
+RSpec.describe Servus::Events::Bus, :inline_jobs do
   after do
     described_class.clear
     Servus.config.routers = nil
@@ -37,7 +37,7 @@ RSpec.describe Servus::Events::Bus do
       Class.new(Servus::Event) do
         event_name :test_event
 
-        invoke ServiceA do |payload|
+        enqueue ServiceA do |payload|
           { user_id: payload[:user_id] }
         end
       end

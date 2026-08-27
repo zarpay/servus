@@ -92,4 +92,34 @@ RSpec.describe '.call_async extension', type: :job do
       AsyncEmailService.call_async(test: 'data')
     end.to raise_error(Servus::Extensions::Async::Errors::JobEnqueueError, /Failed to enqueue async job/)
   end
+
+  # With the :inline and :test adapters, perform_later runs the service — so a
+  # service's own failure surfaces here. Wrapping it as an enqueue failure would
+  # blame the wrong layer and hide the real cause.
+  it 'lets a service error through rather than reporting an enqueue failure' do
+    allow(job_class).to receive(:perform_later)
+      .and_raise(Servus::Support::Errors::ValidationError, 'Invalid arguments')
+
+    expect do
+      AsyncEmailService.call_async(test: 'data')
+    end.to raise_error(Servus::Support::Errors::ValidationError, /Invalid arguments/)
+  end
+
+  it 'lets an event error through as well' do
+    allow(job_class).to receive(:perform_later)
+      .and_raise(Servus::Events::Errors::AnonymousServiceError, 'anonymous')
+
+    expect do
+      AsyncEmailService.call_async(test: 'data')
+    end.to raise_error(Servus::Events::Errors::AnonymousServiceError)
+  end
+
+  describe 'anonymous services' do
+    # ActiveJob resolves a job on the worker by its serialized class name, so
+    # there is nothing to serialize for a class with no name.
+    it 'raises a named error rather than NoMethodError on nil' do
+      expect { Class.new(Servus::Base).call_async(test: 'data') }
+        .to raise_error(Servus::Events::Errors::AnonymousServiceError, /anonymous/)
+    end
+  end
 end

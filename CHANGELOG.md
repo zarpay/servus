@@ -132,6 +132,33 @@ had two calling conventions and a jump you had to know about rather than see.
   `app/services/`, so the one directory setting the generator docs listed for it
   did nothing. The event and guard generators already honoured theirs.
 
+- **Event invocation is always asynchronous.** Services declared on an Event
+  class are enqueued through ActiveJob; there is no inline option and no way to
+  ask for one. Running a reaction inline put its latency and its failures back
+  into the emitting service — an exception in a follow-up propagated through a
+  service that had already succeeded, and its caller never received the result.
+  That is the coupling events exist to remove, so the choice is gone rather than
+  discouraged. The docs already carried a "prefer async invocation" warning;
+  this makes it the behaviour.
+
+  Consequently **events now require ActiveJob**, which makes them a Rails-only
+  feature for the moment. Emitting an event whose Event class declares `enqueue`
+  without ActiveJob loaded raises `Servus::Events::Errors::AsyncBackendMissingError`
+  rather than the bare `NoMethodError` it used to. Servus's core — services,
+  schemas, guards, and the bus itself — still works without Rails. A job adapter
+  for non-Rails hosts is planned.
+
+- **Enqueueing an anonymous service raises a named error.** ActiveJob resolves a
+  job on the worker by its serialized class name, so a `Class.new(Servus::Base)`
+  has nothing to serialize. This previously surfaced as
+  `NoMethodError: undefined method 'demodulize' for nil`.
+
+- **`JobEnqueueError` no longer swallows Servus's own errors.** `call_async`
+  wrapped every exception, and under the `:inline` and `:test` adapters
+  `perform_later` runs the service — so a service's own `ValidationError`
+  surfaced as a misleading "Failed to enqueue". Servus errors now propagate
+  unwrapped.
+
 - **Emitting an event with no registered Event class now honours
   `require_event_payload_schema`.** The `emits` DSL skipped validation entirely
   when nothing was registered for the event name, so the one flag that exists to
@@ -153,6 +180,17 @@ had two calling conventions and a jump you had to know about rather than see.
 
 - **`config.schemas_dir`, `config.schema_path_for`, and `config.schema_dir_for`**,
   which existed only to locate those files.
+
+- **`Servus::Event.invoke`** — renamed to `enqueue`, which is what it now does.
+  The old name survives only as a stub that raises pointing at the new one, since
+  Event classes load at boot and a bare `NoMethodError` would read as a typo
+  rather than a rename.
+
+- **The `async:` option on event declarations.** Invocation is always
+  asynchronous, so the option no longer means anything. Both `async: true` and
+  `async: false` raise `ArgumentError` at declaration time — `async: false` in
+  particular asked for behaviour that no longer exists, and silently giving it
+  the opposite would be worse than refusing.
 
 - **`Servus::Base#call!`** — the composition helper that returned a
   sub-service's `data` and halted the outer service on failure.
@@ -263,6 +301,35 @@ data = result.data
 One behavioural difference worth knowing: `run_service!` also assigned
 `@result`. If a view or an after-action hook reads `@result`, assign it
 yourself, or use `run_service`, which still does.
+
+**Migrating Event classes.** Every Event class with a declaration is affected.
+The two errors chain, so following them is the whole migration:
+
+```bash
+grep -rn 'invoke ' app/events/ engines/*/app/events/
+```
+
+```ruby
+# before
+invoke Ledger::RecordEntry::Service, async: true do |payload|
+  { amount: payload[:transferred] }
+end
+
+# after
+enqueue Ledger::RecordEntry::Service do |payload|
+  { amount: payload[:transferred] }
+end
+```
+
+Any declaration that was *not* async now runs in a job instead of inline. That is
+the point of the change, but it is a real behaviour difference: the emitting
+service no longer waits for the reaction, and no longer fails when the reaction
+fails. If something downstream depended on that ordering, it needs to move into
+the emitting service, where it was really a step rather than a reaction.
+
+Tests that assert on an Event class's effects need updating too — `call_service`
+asserts a synchronous `.call` by default, and an Event class never makes one.
+Add `.async`, or run jobs inline.
 
 **Two smaller things to check.** If any code passes a possibly-nil value to
 `schema` — for example from a lookup helper — that now raises instead of being

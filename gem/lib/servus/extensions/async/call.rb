@@ -81,6 +81,11 @@ module Servus
           # The named job class identifies the service — only args are serialized.
           job = job_options.any? ? servus_job_class.set(**job_options) : servus_job_class
           job.perform_later(**args)
+        rescue Servus::Support::Errors::ServiceError, Servus::Events::Errors::Error
+          # With the :inline and :test adapters perform_later runs the service,
+          # so Servus's own errors surface here. Wrapping them as an enqueue
+          # failure would blame the wrong layer.
+          raise
         rescue StandardError => e
           raise Errors::JobEnqueueError, "Failed to enqueue async job for #{self}: #{e.message}"
         end
@@ -164,6 +169,8 @@ module Servus
         # @return [Class<Servus::Extensions::Async::Job>] the generated job class
         # @api private
         def build_servus_job_class
+          raise Servus::Events::Errors::AnonymousServiceError.for(self) if name.nil?
+
           klass = Class.new(Servus::Extensions::Async::Job)
           klass.servus_service = self
 

@@ -2,7 +2,14 @@
 
 require 'spec_helper'
 
-RSpec.describe Servus::Event do
+RSpec.describe Servus::Event, :inline_jobs do
+  # Event invocation enqueues through ActiveJob, which resolves a job by its
+  # class name — so an anonymous service has nothing to serialise. Give each
+  # fixture a real constant.
+  def named_service(name = 'DummyService', &body)
+    stub_const(name, Class.new(Servus::Base, &body))
+  end
+
   after do
     Servus::Events::Bus.clear
   end
@@ -59,12 +66,12 @@ RSpec.describe Servus::Event do
 
   describe '.invoke' do
     it 'declares a service invocation with payload mapping' do
-      dummy_service = Class.new(Servus::Base)
+      dummy_service = named_service
 
       event_class = Class.new(described_class) do
         event_name :user_created
 
-        invoke dummy_service do |payload|
+        enqueue dummy_service do |payload|
           { user_id: payload[:user_id] }
         end
       end
@@ -76,7 +83,7 @@ RSpec.describe Servus::Event do
     end
 
     it 'passes the full payload when no block is given' do
-      dummy_service = Class.new(Servus::Base) do
+      dummy_service = named_service do
         def self.call(**args)
           @called_with = args
           Servus::Support::Response.new(true, args, nil)
@@ -90,7 +97,7 @@ RSpec.describe Servus::Event do
       event_class = Class.new(described_class) do
         event_name :user_created
 
-        invoke dummy_service
+        enqueue dummy_service
       end
 
       event_class.handle({ user_id: 123, email: 'test@example.com' })
@@ -98,28 +105,40 @@ RSpec.describe Servus::Event do
       expect(dummy_service.called_with).to eq({ user_id: 123, email: 'test@example.com' })
     end
 
-    it 'supports async option' do
-      dummy_service = Class.new(Servus::Base)
+    # `async: false` asked for synchronous invocation, which no longer exists.
+    # Silently giving it the opposite would be worse than refusing.
+    it 'rejects the removed async: option, whatever its value' do
+      dummy_service = named_service
 
-      event_class = Class.new(described_class) do
-        event_name :user_created
-
-        invoke dummy_service, async: true do |payload|
-          { user_id: payload[:user_id] }
-        end
+      [true, false].each do |value|
+        expect do
+          Class.new(described_class) do
+            enqueue dummy_service, async: value
+          end
+        end.to raise_error(ArgumentError, /`async:` is no longer a valid option/)
       end
+    end
 
-      invocations = event_class.invocations
-      expect(invocations.first[:options][:async]).to be true
+    it 'points at enqueue when a class still uses invoke' do
+      dummy_service = named_service
+
+      expect do
+        Class.new(described_class) do
+          invoke dummy_service, async: true
+        end
+      end.to raise_error(NoMethodError) { |error|
+        expect(error.message).to include('renamed to `enqueue`')
+        expect(error.message).to include('drop `async:`')
+      }
     end
 
     it 'supports conditional execution with :if option' do
-      dummy_service = Class.new(Servus::Base)
+      dummy_service = named_service
 
       event_class = Class.new(described_class) do
         event_name :user_created
 
-        invoke dummy_service, if: ->(payload) { payload[:premium] } do |payload|
+        enqueue dummy_service, if: ->(payload) { payload[:premium] } do |payload|
           { user_id: payload[:user_id] }
         end
       end
@@ -131,7 +150,7 @@ RSpec.describe Servus::Event do
 
   describe '.handle' do
     it 'dispatches to the configured service' do
-      dummy_service = Class.new(Servus::Base) do
+      dummy_service = named_service do
         def self.call(**args)
           @called_with = args
           Servus::Support::Response.new(true, { result: 'success' }, nil)
@@ -145,7 +164,7 @@ RSpec.describe Servus::Event do
       event_class = Class.new(described_class) do
         event_name :user_created
 
-        invoke dummy_service do |payload|
+        enqueue dummy_service do |payload|
           { user_id: payload[:user_id] }
         end
       end
@@ -156,7 +175,7 @@ RSpec.describe Servus::Event do
     end
 
     it 'respects :if condition - invokes when true' do
-      dummy_service = Class.new(Servus::Base) do
+      dummy_service = named_service do
         def self.call(**_args)
           @call_count = 1
           Servus::Support::Response.new(true, nil, nil)
@@ -170,7 +189,7 @@ RSpec.describe Servus::Event do
       event_class = Class.new(described_class) do
         event_name :user_created
 
-        invoke dummy_service, if: ->(payload) { payload[:premium] } do |payload|
+        enqueue dummy_service, if: ->(payload) { payload[:premium] } do |payload|
           { user_id: payload[:user_id] }
         end
       end
@@ -181,7 +200,7 @@ RSpec.describe Servus::Event do
     end
 
     it 'respects :if condition - skips when false' do
-      dummy_service = Class.new(Servus::Base) do
+      dummy_service = named_service do
         def self.call(**_args)
           @call_count = 1
           Servus::Support::Response.new(true, nil, nil)
@@ -195,7 +214,7 @@ RSpec.describe Servus::Event do
       event_class = Class.new(described_class) do
         event_name :user_created
 
-        invoke dummy_service, if: ->(payload) { payload[:premium] } do |payload|
+        enqueue dummy_service, if: ->(payload) { payload[:premium] } do |payload|
           { user_id: payload[:user_id] }
         end
       end
@@ -206,7 +225,7 @@ RSpec.describe Servus::Event do
     end
 
     it 'respects :unless condition - invokes when false' do
-      dummy_service = Class.new(Servus::Base) do
+      dummy_service = named_service do
         def self.call(**_args)
           @call_count = 1
           Servus::Support::Response.new(true, nil, nil)
@@ -220,7 +239,7 @@ RSpec.describe Servus::Event do
       event_class = Class.new(described_class) do
         event_name :user_created
 
-        invoke dummy_service, unless: ->(payload) { payload[:spam] } do |payload|
+        enqueue dummy_service, unless: ->(payload) { payload[:spam] } do |payload|
           { user_id: payload[:user_id] }
         end
       end
@@ -231,7 +250,7 @@ RSpec.describe Servus::Event do
     end
 
     it 'respects :unless condition - skips when true' do
-      dummy_service = Class.new(Servus::Base) do
+      dummy_service = named_service do
         def self.call(**_args)
           @call_count = 1
           Servus::Support::Response.new(true, nil, nil)
@@ -245,7 +264,7 @@ RSpec.describe Servus::Event do
       event_class = Class.new(described_class) do
         event_name :user_created
 
-        invoke dummy_service, unless: ->(payload) { payload[:spam] } do |payload|
+        enqueue dummy_service, unless: ->(payload) { payload[:spam] } do |payload|
           { user_id: payload[:user_id] }
         end
       end
@@ -258,14 +277,14 @@ RSpec.describe Servus::Event do
     it 'invokes multiple services in order' do
       calls = []
 
-      service1 = Class.new(Servus::Base) do
+      service1 = named_service('ServiceOne') do
         define_singleton_method(:call) do |**args|
           calls << [:service1, args]
           Servus::Support::Response.new(true, nil, nil)
         end
       end
 
-      service2 = Class.new(Servus::Base) do
+      service2 = named_service('ServiceTwo') do
         define_singleton_method(:call) do |**args|
           calls << [:service2, args]
           Servus::Support::Response.new(true, nil, nil)
@@ -275,11 +294,11 @@ RSpec.describe Servus::Event do
       event_class = Class.new(described_class) do
         event_name :user_created
 
-        invoke service1 do |payload|
+        enqueue service1 do |payload|
           { id: payload[:user_id] }
         end
 
-        invoke service2 do |payload|
+        enqueue service2 do |payload|
           { user: payload[:user_id] }
         end
       end
@@ -293,7 +312,7 @@ RSpec.describe Servus::Event do
     end
 
     it 'invokes service asynchronously when async: true' do
-      dummy_service = Class.new(Servus::Base) do
+      dummy_service = named_service do
         def self.call_async(**args)
           @async_called_with = args
         end
@@ -306,7 +325,7 @@ RSpec.describe Servus::Event do
       event_class = Class.new(described_class) do
         event_name :user_created
 
-        invoke dummy_service, async: true do |payload|
+        enqueue dummy_service do |payload|
           { user_id: payload[:user_id] }
         end
       end
@@ -317,7 +336,7 @@ RSpec.describe Servus::Event do
     end
 
     it 'passes queue option to call_async' do
-      dummy_service = Class.new(Servus::Base) do
+      dummy_service = named_service do
         def self.call_async(**args)
           @async_called_with = args
         end
@@ -330,7 +349,7 @@ RSpec.describe Servus::Event do
       event_class = Class.new(described_class) do
         event_name :user_created
 
-        invoke dummy_service, async: true, queue: :mailers do |payload|
+        enqueue dummy_service, queue: :mailers do |payload|
           { user_id: payload[:user_id] }
         end
       end
@@ -341,7 +360,7 @@ RSpec.describe Servus::Event do
     end
 
     it 'passes multiple scheduling options to call_async' do
-      dummy_service = Class.new(Servus::Base) do
+      dummy_service = named_service do
         def self.call_async(**args)
           @async_called_with = args
         end
@@ -354,7 +373,7 @@ RSpec.describe Servus::Event do
       event_class = Class.new(described_class) do
         event_name :user_created
 
-        invoke dummy_service, async: true, queue: :critical, wait: 10.minutes, priority: 5 do |payload|
+        enqueue dummy_service, queue: :critical, wait: 10.minutes, priority: 5 do |payload|
           { user_id: payload[:user_id] }
         end
       end
@@ -372,12 +391,12 @@ RSpec.describe Servus::Event do
 
   describe '.invocations_for' do
     it 'returns Invocation objects for the given payload' do
-      dummy_service = Class.new(Servus::Base)
+      dummy_service = named_service
 
       event_class = Class.new(described_class) do
         event_name :user_created
 
-        invoke dummy_service do |payload|
+        enqueue dummy_service do |payload|
           { user_id: payload[:user_id] }
         end
       end
@@ -391,12 +410,12 @@ RSpec.describe Servus::Event do
     end
 
     it 'filters out invocations that fail the if condition' do
-      dummy_service = Class.new(Servus::Base)
+      dummy_service = named_service
 
       event_class = Class.new(described_class) do
         event_name :user_created
 
-        invoke dummy_service, if: ->(p) { p[:premium] } do |payload|
+        enqueue dummy_service, if: ->(p) { p[:premium] } do |payload|
           { user_id: payload[:user_id] }
         end
       end
@@ -405,29 +424,28 @@ RSpec.describe Servus::Event do
       expect(event_class.invocations_for({ user_id: 1, premium: true }).length).to eq(1)
     end
 
-    it 'passes async options through to the Invocation' do
-      dummy_service = Class.new(Servus::Base)
+    it 'passes scheduling options through to the Invocation' do
+      dummy_service = named_service
 
       event_class = Class.new(described_class) do
         event_name :user_created
 
-        invoke dummy_service, async: true, queue: :mailers do |payload|
+        enqueue dummy_service, queue: :mailers do |payload|
           { user_id: payload[:user_id] }
         end
       end
 
       invocation = event_class.invocations_for({ user_id: 1 }).first
-      expect(invocation.options[:async]).to be true
       expect(invocation.options[:queue]).to eq(:mailers)
     end
 
     it 'excludes if/unless from the Invocation options' do
-      dummy_service = Class.new(Servus::Base)
+      dummy_service = named_service
 
       event_class = Class.new(described_class) do
         event_name :user_created
 
-        invoke dummy_service, async: true, if: ->(_p) { true } do |payload|
+        enqueue dummy_service, if: ->(_p) { true } do |payload|
           { user_id: payload[:user_id] }
         end
       end

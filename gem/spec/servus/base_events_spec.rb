@@ -123,7 +123,7 @@ RSpec.describe Servus::Base, 'event emission' do
           }
         }
 
-        invoke EventTestHelpers::NoopService do |_payload|
+        enqueue EventTestHelpers::NoopService do |_payload|
           {}
         end
       end)
@@ -153,7 +153,7 @@ RSpec.describe Servus::Base, 'event emission' do
           }
         }
 
-        invoke EventTestHelpers::NoopService do |_payload|
+        enqueue EventTestHelpers::NoopService do |_payload|
           {}
         end
       end)
@@ -174,7 +174,7 @@ RSpec.describe Servus::Base, 'event emission' do
       stub_const('NoSchemaHandler', Class.new(Servus::Event) do
         event_name :unvalidated_event
 
-        invoke EventTestHelpers::NoopService do |_payload|
+        enqueue EventTestHelpers::NoopService do |_payload|
           {}
         end
       end)

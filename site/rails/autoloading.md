@@ -44,7 +44,11 @@ The Railtie also wires up additional features when their dependencies are availa
 | Extension | Loads when | What it adds |
 | --- | --- | --- |
 | Controller helpers | `ActionController` loads | `run_service` and `render_service_error` on all controllers |
-| Async execution | `ActiveJob` loads | `.call_async` on all services |
+| Async execution | `ActiveJob` loads | `.call_async` on all services, and event `enqueue` declarations |
 | Lazy resolvers | `ActiveRecord` loads | `lazily` DSL on all services |
 
 These are loaded via `ActiveSupport.on_load`, so they only activate when the corresponding Rails component is present.
+
+::: warning Events depend on ActiveJob
+Since 1.0.0, event invocation always enqueues, so an Event class that declares `enqueue` needs ActiveJob. Without it, emitting the event raises `Servus::Events::Errors::AsyncBackendMissingError`. Servus's core — services, schemas, guards, and the bus itself — works without ActiveJob; only `enqueue` declarations require it.
+:::

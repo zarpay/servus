@@ -139,7 +139,7 @@ class GoldTransferredEvent < Servus::Event
     description: 'GoldTransferredEvent event payload',
   }
 
-  # invoke ExampleService, async: true do |payload|
+  # enqueue ExampleService do |payload|
   #   { example_arg: payload[:example_field] }
   # end
 end

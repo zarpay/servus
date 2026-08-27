@@ -39,6 +39,7 @@ require_relative 'servus/support/lockdown'
 require_relative 'servus/support/message_resolver'
 
 # Events
+require_relative 'servus/events/errors'
 require_relative 'servus/events/bus'
 require_relative 'servus/events/emitter'
 require_relative 'servus/event'
