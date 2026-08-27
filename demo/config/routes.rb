@@ -1,14 +1,18 @@
+# =============================================================================
+# Routes
+# =============================================================================
+#
+# Two endpoints, both thin. Everything they do is delegated to a service via
+# `run_service`, which is the point — the controller is a transport layer, not
+# a place where behaviour lives.
 Rails.application.routes.draw do
-  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
+  # Servus's run_service in its default form: renders the framework's standard
+  # error envelope on failure.
+  post "treasury/transfers", to: "treasury/transfers#create"
 
-  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
-  # Can be used by load balancers and uptime monitors to verify that the app is live.
+  # The same helper in a controller that overrides render_service_error, to
+  # show the envelope is yours to shape.
+  get "citadel/records/:house_id", to: "citadel/records#show"
+
   get "up" => "rails/health#show", as: :rails_health_check
-
-  # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
-  # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
-  # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
-
-  # Defines the root path route ("/")
-  # root "posts#index"
 end

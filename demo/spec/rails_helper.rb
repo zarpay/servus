@@ -49,4 +49,9 @@ RSpec.configure do |config|
   # `wait:` on an enqueue declaration becomes an ActiveJob delay, and asserting
   # on a delay means controlling the clock.
   config.include ActiveSupport::Testing::TimeHelpers
+
+  # `perform_enqueued_jobs` and `enqueued_jobs`. Needed because the :inline
+  # adapter cannot schedule a job for the future — a reaction declared with
+  # `wait:` raises NotImplementedError under it. See spec/support/active_job.rb.
+  config.include ActiveJob::TestHelper
 end

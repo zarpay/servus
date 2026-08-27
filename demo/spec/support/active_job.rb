@@ -17,6 +17,21 @@
 #                       side effect of an event reaction would always fail.
 #
 # The gem's own suite uses the same tag, for the same reason.
+#
+# ---------------------------------------------------------------------------
+# When :inline is NOT enough
+# ---------------------------------------------------------------------------
+#
+# The inline adapter runs a job the moment it is enqueued, which means it
+# cannot schedule one for the future. A reaction declared with `wait:` — as
+# GoldTransferredEvent's raven is — raises under it:
+#
+#   NotImplementedError: Use a queueing backend to enqueue jobs in the future
+#
+# So a spec that needs delayed reactions to actually run has to stay on the
+# :test adapter and wrap the action in `perform_enqueued_jobs`, which executes
+# scheduled jobs immediately regardless of their delay. See
+# spec/integration/treasury_transfer_spec.rb.
 RSpec.configure do |config|
   config.before do |example|
     ActiveJob::Base.queue_adapter = example.metadata[:inline_jobs] ? :inline : :test
