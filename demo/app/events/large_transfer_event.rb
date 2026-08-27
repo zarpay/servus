@@ -5,30 +5,41 @@
 # =============================================================================
 #
 # Features exercised:
-#   - A reaction with NO mapper block (the full payload is passed through)
+#   - A conditionally-emitted event
+#   - A mapper block translating an event payload into service arguments
 #
 # -----------------------------------------------------------------------------
-# The pass-through form
+# The payload describes the EVENT, not the reaction
 # -----------------------------------------------------------------------------
 #
-# `enqueue Service` without a block passes the entire event payload as the
-# service's keyword arguments. It is the right form only when the payload
-# already matches the service's signature exactly — which is a real coupling,
-# and the reason a mapper block is usually better.
+# This event is emitted with the transfer's result data, so that is what its
+# schema describes. It is tempting to shape an event's payload around whatever
+# service happens to react to it — and it is a mistake, because the event is a
+# published contract that outlives any one subscriber. Add a second reaction
+# tomorrow and a payload shaped for the first one will not fit.
 #
-# Here the payload is shaped to match, so it reads cleanly. Change either side
-# and it breaks loudly at the argument schema rather than silently.
+# The mapper block is where the translation belongs. It turns "what happened"
+# into "what this particular service needs", and each reaction gets its own.
+#
+# See RavenRequestedEvent for the case where a payload genuinely does match a
+# service's arguments, and the block can be dropped.
 class LargeTransferEvent < Servus::Event
   schema payload: {
     type: "object",
-    required: %w[house_id message],
+    required: %w[transferred from_balance to_balance],
     properties: {
-      house_id: Servus::Schema.ref("core", "$defs", "record_id"),
-      message: { "type" => "string", "example" => "A large transfer has cleared" },
-      destination: { "type" => "string", "example" => "iron_bank" }
+      transferred: Servus::Schema.ref("core", "$defs", "gold_dragons"),
+      from_balance: Servus::Schema.ref("core", "$defs", "gold_dragons"),
+      to_balance: Servus::Schema.ref("core", "$defs", "gold_dragons")
     }
   }
 
-  # No block: the payload IS the arguments.
-  enqueue Ravens::DispatchMessage::Service, queue: :ravens
+  # The block maps the event's vocabulary onto the service's.
+  enqueue Ravens::DispatchMessage::Service, queue: :ravens do |payload|
+    {
+      house_id: House.first&.id,
+      message: "The Iron Bank notes a transfer of #{payload[:transferred]} dragons",
+      destination: "iron_bank"
+    }
+  end
 end

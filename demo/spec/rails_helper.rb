@@ -45,4 +45,8 @@ RSpec.configure do |config|
 
   config.include FactoryBot::Syntax::Methods
   config.include Servus::Testing::ExampleBuilders
+
+  # `wait:` on an enqueue declaration becomes an ActiveJob delay, and asserting
+  # on a delay means controlling the clock.
+  config.include ActiveSupport::Testing::TimeHelpers
 end
