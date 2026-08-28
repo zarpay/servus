@@ -29,11 +29,14 @@ updates:
         patterns:
           - "*"
 
-  # The dummy Rails app that hosts the specs. Its lockfile is tracked
-  # deliberately (FIZZY-3597), so it needs its own block — otherwise security
-  # updates scan it while version updates never keep it current.
+  # The dummy Rails app that hosts the specs. Nothing runs it — not CI, the
+  # Rakefile, the gem's Gemfile, or the specs — so routine version drift here
+  # exercises nothing, and a bump to its Rails pin drags the published gemspec
+  # along with it. Limit 0 disables *version* updates; security updates are
+  # exempt from the limit, so advisories against this lockfile still get PRs.
   - package-ecosystem: bundler
     directory: /gem/spec/dummy
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
     cooldown:
