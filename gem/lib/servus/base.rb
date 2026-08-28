@@ -246,7 +246,7 @@ module Servus
       # @see #initialize
       # @see #call
       #
-      # rubocop:disable Metrics/MethodLength
+      # rubocop:disable-next Metrics/MethodLength
       def call(**args)
         before_call(args)
 
@@ -272,7 +272,6 @@ module Servus
         Logger.log_exception(self, e)
         raise e
       end
-      # rubocop:enable Metrics/MethodLength
 
       # Executes pre-call hooks including logging and argument validation.
       #
