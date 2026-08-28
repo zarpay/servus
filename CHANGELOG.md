@@ -1,4 +1,4 @@
-## [1.1.0] - 2026-08-28
+## [1.0.1] - 2026-08-28
 
 Servus now accepts `json-schema` 6 as well as 5. The dependency was `~> 5`;
 it is now `>= 5, < 7`.

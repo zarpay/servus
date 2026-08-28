@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    servus (1.1.0)
+    servus (1.0.1)
       activesupport (>= 8.0)
       json-schema (>= 5, < 7)
 
