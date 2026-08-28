@@ -175,7 +175,7 @@ module Servus
       #   Servus::Schema.ref('core', '$defs', 'amount')
       #   # => { "$ref" => "#/core/$defs/amount" }
       def ref(key, *path)
-        { '$ref' => "#/#{[key, *path].map(&:to_s).join('/')}" }
+        { '$ref' => "#/#{[key, *path].join('/')}" }
       end
 
       # Compiles a schema, replacing every +$ref+ with the fragment it names.
