@@ -1,3 +1,22 @@
+## [1.0.1] - 2026-08-28
+
+Servus now accepts `json-schema` 6 as well as 5. The dependency was `~> 5`;
+it is now `>= 5, < 7`.
+
+Nothing about Servus changes. The gem touches exactly one method of the
+library — `JSON::Validator.fully_validate` — and that method is unaffected by
+the 6.0 release, whose breaking changes were a Ruby 3.2 floor, the removal of
+an internal `data` ivar, and a URI caching fix. Servus already required Ruby
+3.2, and never used the other two.
+
+Both majors default to `JSON::Schema::Draft6` and handle `$ref` siblings
+identically, so the schema semantics described in the shared-fragments guide
+hold on either.
+
+The range is deliberately wide rather than a move to `~> 6`. Applications that
+pin `json-schema` 5 for their own reasons can upgrade Servus without being
+forced to move both at once.
+
 ## [1.0.0] - 2026-08-26
 
 Servus 1.0 makes a service's behaviour readable from the file that implements
