@@ -1,14 +1,85 @@
+# Shape follows machina/.github/dependabot.yml. One all-patterns group per job
+# type per block — version updates and security updates — so a week with
+# several advisories yields ~1 PR per ecosystem rather than one per gem.
+#
+# Cooldown (3/7/30) lets a release sit before we pull it, so a compromised
+# publish has time to be yanked. Version updates only; security updates ignore
+# cooldown by design.
+#
+# Note: Dependabot security updates only touch *direct* dependencies
+# (`update-subdependencies: false`). Most of this repo's advisories are on
+# indirect gems, so they surface as alerts that no PR will ever fix — they
+# need a periodic `bundle lock --update=<gem>` by hand. See FIZZY-3597.
 version: 2
 updates:
   - package-ecosystem: bundler
     directory: /gem
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 3
+      semver-minor-days: 7
+      semver-major-days: 30
+    groups:
+      gem-dependencies:
+        patterns:
+          - "*"
+      gem-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  # The dummy Rails app that hosts the specs. Its lockfile is tracked
+  # deliberately (FIZZY-3597), so it needs its own block — otherwise security
+  # updates scan it while version updates never keep it current.
+  - package-ecosystem: bundler
+    directory: /gem/spec/dummy
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+      semver-minor-days: 7
+      semver-major-days: 30
+    groups:
+      dummy-dependencies:
+        patterns:
+          - "*"
+      dummy-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
   - package-ecosystem: npm
     directory: /site
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 3
+      semver-minor-days: 7
+      semver-major-days: 30
+    groups:
+      site-dependencies:
+        patterns:
+          - "*"
+      site-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  # Actions run with repo secrets, so the cooldown matters most here.
+  # Flat window only — github-actions rejects the semver tiers used above,
+  # and one unsupported key invalidates the entire file.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions-dependencies:
+        patterns:
+          - "*"
+      actions-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
