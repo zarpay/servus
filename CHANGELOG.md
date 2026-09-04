@@ -1,3 +1,44 @@
+## [1.0.2] - 2026-09-04
+
+Two bugs in the generated per-service job classes. Both are silent, and both
+surface somewhere other than where they were caused.
+
+### Fixed
+
+- **Services loaded before ActiveJob never published a job class.** The
+  `inherited` hook that creates `Foo::ServiceJob` lives in the async extension,
+  which is installed from `on_load(:active_job)`. Servus's own railtie
+  force-loads `app/events/*_event.rb` in `to_prepare`, and every service named
+  by an `enqueue` there loads with it — typically before anything has touched
+  `ActiveJob::Base`. Those services got no job constant at all.
+
+  A web process did not notice: `call_async` builds the class lazily on first
+  use. A worker did — it resolves a job by its serialized name and never calls
+  `call_async` — so every event-invoked async service failed deserialization
+  with `ActiveJob::UnknownJobClassError`, and only once the event actually
+  fired.
+
+  Installing the extension now backfills job classes for services that are
+  already defined, so every process has them after boot regardless of load
+  order.
+
+- **The generated job class overwrote an application class of the same name.**
+  The `const_set` publishing `FooJob` was unconditional, so an app with a
+  service `Foo` and its own `FooJob` had its job silently replaced. The
+  constant survived and answered to `perform_later`, but lost its own constants
+  and class methods — so the symptom was an `uninitialized constant
+  FooJob::SOME_SETTING` in code with no apparent connection to Servus, and
+  under production eager-load a `FooJob.perform_later` that ran the wrong thing
+  entirely.
+
+  A name the application already owns is now left alone, and the skip is logged
+  naming both the service and the constant. The service keeps working; only its
+  job goes unnamed, which means `call_async` on that one service is
+  unavailable until the service or the job is renamed. A pending Zeitwerk
+  autoload counts as the application's without being resolved, and a constant
+  holding a job Servus generated earlier is still reclaimed, so development
+  reloads are unaffected.
+
 ## [1.0.1] - 2026-08-28
 
 Servus now accepts `json-schema` 6 as well as 5. The dependency was `~> 5`;

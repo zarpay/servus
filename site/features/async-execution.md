@@ -83,6 +83,12 @@ Servus generates a dedicated ActiveJob class for each service, named after it. F
 
 You never write or reference these classes yourself — they're created for you when the service is defined.
 
+### When the name is already taken
+
+`Foo` alongside a hand-written `FooJob` is ordinary Rails, so Servus does not overwrite a job constant the application already owns. Your class stays exactly as you wrote it, and Servus logs a warning naming the service and the constant it skipped.
+
+The service still works — it just has no *named* job, so `call_async` on it has nothing ActiveJob can serialize. If you want that service in the background, rename either the service or your job so the two stop colliding.
+
 ## Per-service job configuration
 
 Use the `async` class method to configure a service's job — queue, priority, retries, and anything else ActiveJob supports:
@@ -128,7 +134,7 @@ Treasury::TransferGold::Service.call_async(**args)
 ```
 
 ::: warning Workers must eager-load
-Because a job is serialized by its class name, the worker process has to be able to resolve that name. Servus defines each service's job when the service class loads, so under Rails' production eager-loading (the default) every job exists at boot. If you run workers with eager-loading off, make sure the service gets referenced before its jobs run.
+Because a job is serialized by its class name, the worker process has to be able to resolve that name. Servus defines each service's job when the service class loads, and backfills any service that loaded before ActiveJob did, so under Rails' production eager-loading (the default) every job exists at boot. If you run workers with eager-loading off, make sure the service gets referenced before its jobs run.
 :::
 
 ## Error behavior
