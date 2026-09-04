@@ -1,3 +1,30 @@
+## [1.1.0] - 2026-09-04
+
+A service class now carries its own logger. `Servus::Base.logger` is a
+class-level accessor, inherited down the service tree, so a gem or a Rails
+engine logs all of its services under its own name by assigning one to their
+common base class:
+
+```ruby
+class ZarBankTransfer::ApplicationService < Servus::Base
+  self.logger = SemanticLogger[ZarBankTransfer]
+end
+```
+
+Until now every line Servus wrote — "Calling X with args", "X succeeded in",
+"X failed in" — went to `Rails.logger`, so an engine's service logs landed
+under the host application's name with no way to separate them.
+
+Event emission lines stay on Servus's default logger. The bus is
+application-wide and its logging subscriber runs after the emitting service
+has returned, so there is no service to attribute the line to.
+
+Nothing changes for applications that assign no logger. `logger` inside a
+service body now returns its class's logger.
+
+See [Logging](https://zarpay.github.io/servus/features/logging) for the
+inheritance rules and what each line is written through.
+
 ## [1.0.2] - 2026-09-07
 
 Two bugs in the generated per-service job classes. Both are silent, and both
@@ -41,6 +68,7 @@ surface somewhere other than where they were caused.
   error. A pending Zeitwerk autoload counts as the application's without being
   resolved, and a constant holding a job Servus generated earlier is still
   reclaimed, so development reloads are unaffected.
+
 
 ## [1.0.1] - 2026-08-28
 

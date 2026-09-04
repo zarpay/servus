@@ -115,6 +115,37 @@ module Servus
     Response = Servus::Support::Response
     Validator = Servus::Support::Validator
 
+    class << self
+      # Assigns the logger Servus writes this service's call, outcome, and
+      # error lines through. It covers this class and every service below it.
+      #
+      # Assigning +nil+ returns the class to the logger it inherits.
+      #
+      # @param logger [::Logger, nil]
+      #
+      # @example Logging an engine's services under the engine's own name
+      #   class ZarBankTransfer::ApplicationService < Servus::Base
+      #     self.logger = SemanticLogger[ZarBankTransfer]
+      #   end
+      attr_writer :logger
+
+      # The logger for this service class: its own, else the one it inherits,
+      # else {Servus::Support::Logger.logger}.
+      #
+      # @return [::Logger]
+      def logger
+        return @logger if @logger
+
+        superclass <= Servus::Base ? superclass.logger : Servus::Support::Logger.logger
+      end
+    end
+
+    # @return [::Logger] the logger of this service's class
+    # @see .logger
+    def logger
+      self.class.logger
+    end
+
     # Creates a successful response with the provided data.
     #
     # Use this method to return successful results from your service's call method.

@@ -65,13 +65,34 @@ Servus uses `Rails.logger` when available, otherwise `Logger.new($stdout)`. Cont
 config.log_level = :warn  # Hides info-level call and success logs
 ```
 
+## Per-service loggers
+
+`Servus::Base.logger` holds the logger Servus writes the call, outcome, and error lines through. Assign one to a service class and it covers that class and every service below it:
+
+```ruby
+class Treasury::ApplicationService < Servus::Base
+  self.logger = SemanticLogger[Treasury]
+end
+
+class Treasury::TransferGold::Service < Treasury::ApplicationService
+end
+
+Treasury::TransferGold::Service.logger # => SemanticLogger[Treasury]
+```
+
+This is how a gem or a Rails engine keeps its service logs under its own name. A host service calling an engine service logs under the host, and the engine service under the engine, in the same call chain — including when the host calls it from a thread it spawned itself.
+
+Anything left unassigned inherits from the class above it.
+
+Event emission lines always go to Servus's default logger. The event bus is application-wide and its subscriber runs after the emitting service has returned, so there is no service to attribute the line to.
+
 ## Custom logging inside services
 
-The automatic logging covers the lifecycle — call, outcome, duration. If you need to log something specific inside your `call` method, use `Rails.logger` (or whatever logger your app uses) as you normally would. Servus doesn't replace or wrap your application's logger.
+The automatic logging covers the lifecycle — call, outcome, duration. Inside `call`, `logger` is the service class's logger:
 
 ```ruby
 def call
-  Rails.logger.info("Transferring #{@gold_dragons} gold dragons from #{from_account.id} to #{to_account.id}")
+  logger.info("Transferring #{@gold_dragons} gold dragons from #{from_account.id} to #{to_account.id}")
 
   from_account.withdraw!(@gold_dragons)
   to_account.deposit!(@gold_dragons)

@@ -17,6 +17,17 @@ module Servus
         end
       end
 
+      # Returns the logger a service class carries.
+      #
+      # @param service_class [Class] The service class
+      # @return [::Logger] the service's own logger, or Servus's default
+      #
+      # @api private
+      # @see Servus::Base.logger
+      def self.logger_for(service_class)
+        service_class.respond_to?(:logger) ? service_class.logger : logger
+      end
+
       # Logs a call to a service.
       #
       # When {Servus::Config#log_filter_parameters} is configured, matching
@@ -27,7 +38,7 @@ module Servus
       # @param args [Hash] The arguments passed to the service
       def self.log_call(service_class, args)
         rendered = log_parameters(args)
-        logger.info("Calling #{service_class.name} with args: #{rendered.inspect}")
+        logger_for(service_class).info("Calling #{service_class.name} with args: #{rendered.inspect}")
       end
 
       # Logs a result from a service
@@ -48,7 +59,7 @@ module Servus
       # @param service_class [Class] The service class
       # @param duration [Float] The duration of the service call
       def self.log_success(service_class, duration)
-        logger.info("#{service_class.name} succeeded in #{duration.round(3)}s")
+        logger_for(service_class).info("#{service_class.name} succeeded in #{duration.round(3)}s")
       end
 
       # Logs a failed result from a service
@@ -57,7 +68,7 @@ module Servus
       # @param error [Servus::Support::Errors::ServiceError] The error from the service
       # @param duration [Float] The duration of the service call
       def self.log_failure(service_class, error, duration)
-        logger.warn("#{service_class.name} failed in #{duration.round(3)}s with error: #{error}")
+        logger_for(service_class).warn("#{service_class.name} failed in #{duration.round(3)}s with error: #{error}")
       end
 
       # Logs a guard failure from a service
@@ -65,7 +76,7 @@ module Servus
       # @param service_class [Class] The service class
       # @param error [Servus::Support::Errors::GuardError] The guard error
       def self.log_guard_failure(service_class, error)
-        logger.warn("#{service_class.name} guard failed: #{error.message}")
+        logger_for(service_class).warn("#{service_class.name} guard failed: #{error.message}")
       end
 
       # Logs an event emission with correlation ID and duration.
@@ -83,7 +94,7 @@ module Servus
       # @param service_class [Class] The service class
       # @param error [Servus::Support::Errors::ValidationError] The validation error
       def self.log_validation_error(service_class, error)
-        logger.error("#{service_class.name} validation error: #{error.message}")
+        logger_for(service_class).error("#{service_class.name} validation error: #{error.message}")
       end
 
       # Logs an uncaught exception from a service
@@ -91,7 +102,9 @@ module Servus
       # @param service_class [Class] The service class
       # @param exception [Exception] The uncaught exception
       def self.log_exception(service_class, exception)
-        logger.error("#{service_class.name} uncaught exception: #{exception.class} - #{exception.message}")
+        logger_for(service_class).error(
+          "#{service_class.name} uncaught exception: #{exception.class} - #{exception.message}"
+        )
       end
 
       # Logs that a registered schema fragment was replaced with a different value.
