@@ -166,6 +166,12 @@ module Servus
         # {#inherited}) means Rails' production eager-load defines every service's job
         # at boot, so worker processes can constantize the serialized job name.
         #
+        # An app that already owns that constant keeps it: +Foo+ alongside a
+        # hand-written +FooJob+ is ordinary Rails, and overwriting it replaced a real
+        # job class with this one silently. The generated class is still returned so
+        # the service keeps working, but it is unnamed and therefore not enqueueable —
+        # hence the warning.
+        #
         # @return [Class<Servus::Extensions::Async::Job>] the generated job class
         # @api private
         def build_servus_job_class
@@ -174,9 +180,56 @@ module Servus
           klass = Class.new(Servus::Extensions::Async::Job)
           klass.servus_service = self
 
-          module_parent.const_set("#{name.demodulize}Job", klass)
+          publish_job_const("#{name.demodulize}Job", klass)
 
           klass
+        end
+
+        # Installs the generated job as a sibling constant, unless the application
+        # owns that name — in which case its class is left alone and the skip is
+        # logged.
+        #
+        # @param const_name [String]
+        # @param klass [Class<Servus::Extensions::Async::Job>]
+        # @return [void]
+        # @api private
+        def publish_job_const(const_name, klass)
+          unless job_const_available?(const_name)
+            return Servus::Support::Logger.log_job_class_conflict(self, qualified_const_name(const_name))
+          end
+
+          # Reclaiming a stale generated job: drop it first so Ruby does not warn
+          # about an already-initialized constant on every reload.
+          module_parent.send(:remove_const, const_name) if module_parent.const_defined?(const_name, false)
+          module_parent.const_set(const_name, klass)
+        end
+
+        # Whether this service may publish its job class as +const_name+.
+        #
+        # Free names are available, and so is a name already holding a generated job —
+        # that is our own constant from a previous definition, which survives a
+        # development reload when the parent namespace is +Object+ and therefore
+        # unmanaged by Zeitwerk.
+        #
+        # A pending autoload is treated as the app's without resolving it: forcing the
+        # load here would run app code in the middle of defining a service.
+        #
+        # @param const_name [String]
+        # @return [Boolean]
+        # @api private
+        def job_const_available?(const_name)
+          return true unless module_parent.const_defined?(const_name, false)
+          return false if module_parent.autoload?(const_name)
+
+          existing = module_parent.const_get(const_name, false)
+          existing.is_a?(Class) && existing <= Servus::Extensions::Async::Job
+        end
+
+        # @param const_name [String]
+        # @return [String] the constant's fully qualified name
+        # @api private
+        def qualified_const_name(const_name)
+          module_parent.equal?(Object) ? const_name : "#{module_parent.name}::#{const_name}"
         end
       end
     end
