@@ -70,21 +70,18 @@ module Servus
         # @see Servus::Base.call
         # @see #servus_job_class
         def call_async(**args)
-          # Extract ActiveJob configuration options
-          job_options = args.slice(:wait, :wait_until, :queue, :priority)
-          job_options.merge!(args.delete(:job_options) || {}) # merge custom job options
-          job_options.compact!
+          refuse_nameless_job!
 
-          # Remove special keys that shouldn't be passed to the service
-          args.except!(:wait, :wait_until, :queue, :priority, :job_options)
+          job_options = extract_job_options!(args)
 
           # The named job class identifies the service — only args are serialized.
           job = job_options.any? ? servus_job_class.set(**job_options) : servus_job_class
           job.perform_later(**args)
-        rescue Servus::Support::Errors::ServiceError, Servus::Events::Errors::Error
+        rescue Servus::Support::Errors::ServiceError, Servus::Events::Errors::Error, Errors::AsyncError
           # With the :inline and :test adapters perform_later runs the service,
-          # so Servus's own errors surface here. Wrapping them as an enqueue
-          # failure would blame the wrong layer.
+          # so Servus's own errors surface here — as do this extension's own,
+          # like the name-conflict refusal above. Wrapping any of them as an
+          # enqueue failure would blame the wrong layer.
           raise
         rescue StandardError => e
           raise Errors::JobEnqueueError, "Failed to enqueue async job for #{self}: #{e.message}"
@@ -158,6 +155,23 @@ module Servus
 
         private
 
+        # Splits ActiveJob configuration out of the combined argument hash, mutating
+        # +args+ so only the service's own arguments remain.
+        #
+        # @param args [Hash] combined service arguments and job configuration options
+        # @return [Hash] the ActiveJob options (+wait+, +queue+, …) for +set+
+        # @api private
+        def extract_job_options!(args)
+          job_options = args.slice(:wait, :wait_until, :queue, :priority)
+          job_options.merge!(args.delete(:job_options) || {}) # merge custom job options
+          job_options.compact!
+
+          # Remove special keys that shouldn't be passed to the service
+          args.except!(:wait, :wait_until, :queue, :priority, :job_options)
+
+          job_options
+        end
+
         # Generates a named job subclass for this service and installs it as a sibling
         # constant in the service's parent namespace.
         #
@@ -165,6 +179,12 @@ module Servus
         # yields +Treasury::TransferGold::ServiceJob+. Defining it eagerly (see
         # {#inherited}) means Rails' production eager-load defines every service's job
         # at boot, so worker processes can constantize the serialized job name.
+        #
+        # An app that already owns that constant keeps it: +Foo+ alongside a
+        # hand-written +FooJob+ is ordinary Rails, and overwriting it replaced a real
+        # job class with this one silently. The generated class is still returned so
+        # the service keeps working, but it is unnamed — {#call_async} refuses it with
+        # {Errors::JobNameConflictError} rather than enqueue an unresolvable job.
         #
         # @return [Class<Servus::Extensions::Async::Job>] the generated job class
         # @api private
@@ -174,9 +194,76 @@ module Servus
           klass = Class.new(Servus::Extensions::Async::Job)
           klass.servus_service = self
 
-          module_parent.const_set("#{name.demodulize}Job", klass)
+          publish_job_const(servus_job_const_name, klass)
 
           klass
+        end
+
+        # @return [String] the sibling constant the service's job is published under
+        # @api private
+        def servus_job_const_name
+          "#{name.demodulize}Job"
+        end
+
+        # A job with no name lost its constant to the application (see
+        # {#publish_job_const}). ActiveJob serializes a job by its class name, so
+        # enqueueing it would succeed and then fail on the worker at
+        # deserialization — refuse at the call site instead.
+        #
+        # @raise [Errors::JobNameConflictError] when the service's job is unnamed
+        # @return [void]
+        # @api private
+        def refuse_nameless_job!
+          return unless servus_job_class.name.nil?
+
+          raise Errors::JobNameConflictError.for(self, qualified_const_name(servus_job_const_name))
+        end
+
+        # Installs the generated job as a sibling constant, unless the application
+        # owns that name — in which case its class is left alone and the skip is
+        # logged.
+        #
+        # @param const_name [String]
+        # @param klass [Class<Servus::Extensions::Async::Job>]
+        # @return [void]
+        # @api private
+        def publish_job_const(const_name, klass)
+          unless job_const_available?(const_name)
+            return Servus::Support::Logger.log_job_class_conflict(self, qualified_const_name(const_name))
+          end
+
+          # Reclaiming a stale generated job: drop it first so Ruby does not warn
+          # about an already-initialized constant on every reload.
+          module_parent.send(:remove_const, const_name) if module_parent.const_defined?(const_name, false)
+          module_parent.const_set(const_name, klass)
+        end
+
+        # Whether this service may publish its job class as +const_name+.
+        #
+        # Free names are available, and so is a name already holding a generated job —
+        # that is our own constant from a previous definition, which survives a
+        # development reload when the parent namespace is +Object+ and therefore
+        # unmanaged by Zeitwerk.
+        #
+        # A pending autoload is treated as the app's without resolving it: forcing the
+        # load here would run app code in the middle of defining a service.
+        #
+        # @param const_name [String]
+        # @return [Boolean]
+        # @api private
+        def job_const_available?(const_name)
+          return true unless module_parent.const_defined?(const_name, false)
+          return false if module_parent.autoload?(const_name)
+
+          existing = module_parent.const_get(const_name, false)
+          existing.is_a?(Class) && existing <= Servus::Extensions::Async::Job
+        end
+
+        # @param const_name [String]
+        # @return [String] the constant's fully qualified name
+        # @api private
+        def qualified_const_name(const_name)
+          module_parent.equal?(Object) ? const_name : "#{module_parent.name}::#{const_name}"
         end
       end
     end

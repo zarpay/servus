@@ -14,7 +14,7 @@ module Servus
     initializer 'servus.job_async' do
       ActiveSupport.on_load(:active_job) do
         require 'servus/extensions/async/ext'
-        Servus::Base.extend Servus::Extensions::Async::Call
+        Servus::Extensions::Async.install!
       end
     end
 

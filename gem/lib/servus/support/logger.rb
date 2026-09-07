@@ -104,6 +104,22 @@ module Servus
         logger.warn("Schema fragment #{key.inspect} was already registered with a different value; replacing it.")
       end
 
+      # Logs that a service could not publish its generated job class because the
+      # constant is already taken by the application.
+      #
+      # The application's class is left alone. The service still runs, but its
+      # generated job has no name, so +call_async+ on it cannot be serialized.
+      #
+      # @param service_class [Class<Servus::Base>] The service whose job was not published
+      # @param const_name [String] The constant the application already owns
+      def self.log_job_class_conflict(service_class, const_name)
+        logger.warn(
+          "#{service_class.name} did not publish its generated job as #{const_name} — that constant " \
+          'is already defined by the application. The application class is unchanged; ' \
+          "#{service_class.name}.call_async cannot be enqueued until the service or the job is renamed."
+        )
+      end
+
       # Filters parameters for logging based on the configured filter list.
       #
       # @param params [Hash] The parameters to filter

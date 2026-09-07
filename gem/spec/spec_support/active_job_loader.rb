@@ -8,4 +8,4 @@ require 'active_job/base'
 # without this the whole suite runs with `call_async` undefined — which since
 # 1.0.0 means no event invocation works at all.
 require 'servus/extensions/async/ext'
-Servus::Base.extend(Servus::Extensions::Async::Call)
+Servus::Extensions::Async.install!
