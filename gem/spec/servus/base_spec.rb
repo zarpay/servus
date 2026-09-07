@@ -56,47 +56,6 @@ RSpec.describe Servus::Base do
 
       TestServiceV2.call(should_succeed: true, data: custom_data)
     end
-
-    context 'with logging' do
-      let(:logger) { instance_spy(Logger) }
-
-      before { TestServiceV2.logger = logger }
-      after  { TestServiceV2.logger = nil }
-
-      it 'logs the call with its arguments' do
-        TestServiceV2.call(should_succeed: true, data: custom_data)
-
-        expect(logger).to have_received(:info)
-          .with('Calling TestServiceV2 with args: {should_succeed: true, data: {key: "value"}}')
-          .exactly(1).times
-      end
-
-      it 'logs a success with its duration' do
-        TestServiceV2.call(should_succeed: true, data: custom_data)
-
-        expect(logger).to have_received(:info)
-          .with(a_string_matching(/\ATestServiceV2 succeeded in \d+\.\d+s\z/))
-          .exactly(1).times
-      end
-
-      it 'logs a failure with its error and duration' do
-        TestServiceV2.call(should_succeed: false)
-
-        expect(logger).to have_received(:warn)
-          .with(a_string_matching(/\ATestServiceV2 failed in \d+\.\d+s with error: .*error message\z/))
-          .exactly(1).times
-      end
-
-      it 'logs an uncaught exception' do
-        allow(Time).to receive(:now).and_raise(StandardError, 'boom')
-
-        expect { TestServiceV2.call(should_succeed: true, data: custom_data) }.to raise_error(StandardError)
-
-        expect(logger).to have_received(:error)
-          .with('TestServiceV2 uncaught exception: StandardError - boom')
-          .exactly(1).times
-      end
-    end
   end
 
   describe '#success' do

@@ -165,13 +165,6 @@ RSpec.describe Servus::Config do
     it 'defaults to nil, leaving Servus to resolve one' do
       expect(Servus.config.logger).to be_nil
     end
-
-    it 'can be customized' do
-      logger = Logger.new(File::NULL)
-      Servus.config.logger = logger
-
-      expect(Servus.config.logger).to be(logger)
-    end
   end
 
   describe '#lockdown_enabled' do

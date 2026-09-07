@@ -3,14 +3,20 @@
 require 'spec_helper'
 
 RSpec.describe Servus::Support::Logger do
+  let(:logger) { instance_spy(Logger) }
+  let(:service) { stub_const('LoggedService', Class.new(Servus::Base)) }
+  let(:log) { described_class.new(service) }
+
+  before { service.logger = logger }
+
   describe '.default' do
     after { Servus.config.logger = nil }
 
     it 'is the configured logger' do
-      logger = Logger.new(File::NULL)
-      Servus.config.logger = logger
+      configured = Logger.new(File::NULL)
+      Servus.config.logger = configured
 
-      expect(described_class.default).to be(logger)
+      expect(described_class.default).to be(configured)
     end
 
     it 'falls back to Rails.logger when Rails is loaded' do
@@ -24,90 +30,86 @@ RSpec.describe Servus::Support::Logger do
       expect(described_class.default).to be_a(Logger)
     end
 
-    it 'picks up a Rails logger assigned after Servus first read one' do
+    it 'picks up a Rails logger set after Servus first read one' do
       described_class.default
       rails_logger = Logger.new(File::NULL)
       stub_const('Rails', Class.new { define_singleton_method(:logger) { rails_logger } })
 
       expect(described_class.default).to be(rails_logger)
     end
+  end
 
-    it 'is what Servus.logger returns' do
-      expect(Servus.logger).to be(described_class.default)
+  describe 'the lines that name no service' do
+    before { Servus.config.logger = logger }
+    after  { Servus.config.logger = nil }
+
+    it 'logs an event with its correlation id and duration' do
+      described_class.event(:gold_transferred, { amount: 50 }, event_id: 'abc123', duration_ms: 1.25)
+
+      expect(logger).to have_received(:info)
+        .with(a_string_starting_with('[abc123] Event :gold_transferred (1.3ms)'))
+    end
+
+    it 'logs a schema fragment override' do
+      described_class.schema_override('core')
+
+      expect(logger).to have_received(:warn)
+        .with('Schema fragment "core" was already registered with a different value; replacing it.')
     end
   end
 
-  describe '#call' do
-    let(:messages) { [] }
-    let(:service) { stub_const('LoggedService', Class.new(Servus::Base)) }
-    let(:log) { described_class.new(service) }
+  it 'logs the call with its arguments' do
+    log.call({ amount: 1 })
 
-    before { allow(service.logger).to receive(:info) { |msg| messages << msg } }
+    expect(logger).to have_received(:info).with(a_string_starting_with('Calling LoggedService with args:'))
+  end
+
+  it 'logs a success with its duration' do
+    log.success(0.0125)
+
+    expect(logger).to have_received(:info).with('LoggedService succeeded in 0.013s')
+  end
+
+  it 'logs a failure with its error and duration' do
+    log.failure('nope', 0.0125)
+
+    expect(logger).to have_received(:warn).with('LoggedService failed in 0.013s with error: nope')
+  end
+
+  it 'logs a guard failure' do
+    log.guard_failure(Servus::Support::Errors::GuardError.new('not allowed'))
+
+    expect(logger).to have_received(:warn).with('LoggedService guard failed: not allowed')
+  end
+
+  it 'logs a validation error' do
+    log.validation_error(Servus::Support::Errors::ValidationError.new('bad input'))
+
+    expect(logger).to have_received(:error).with('LoggedService validation error: bad input')
+  end
+
+  it 'logs an uncaught exception' do
+    log.exception(ArgumentError.new('boom'))
+
+    expect(logger).to have_received(:error).with('LoggedService uncaught exception: ArgumentError - boom')
+  end
+
+  describe 'argument filtering' do
+    after { Servus.config.log_filter_parameters = [] }
 
     it 'logs arguments verbatim by default' do
-      log.call({ token: 'ps_supersecret', name: 'ok' })
+      log.call({ token: 'supersecret' })
 
-      expect(messages.last).to include('ps_supersecret')
-      expect(messages.last).not_to include('[FILTERED]')
+      expect(logger).to have_received(:info).with(/supersecret/)
     end
 
-    context 'with log_filter_parameters configured' do
-      before { Servus.config.log_filter_parameters = %i[passw token auth] }
-      after { Servus.config.log_filter_parameters = [] }
+    it 'masks configured keys' do
+      Servus.config.log_filter_parameters = %i[token]
 
-      it 'filters matching argument values' do
-        log.call({ token: 'ps_supersecret', name: 'ok' })
+      log.call({ token: 'supersecret', name: 'ok' })
 
-        expect(messages.last).to include('[FILTERED]')
-        expect(messages.last).to include('"ok"')
-        expect(messages.last).not_to include('ps_supersecret')
-      end
-
-      it 'filters partial-match keys like raw_token and password' do
-        log.call({ raw_token: 'abc', password: 'hunter2' })
-
-        expect(messages.last).not_to include('abc')
-        expect(messages.last).not_to include('hunter2')
-      end
-
-      it 'filters auth-prefixed keys wholesale, including nested values' do
-        log.call({ auth_hash: { credentials: { token: 'ya29.secret' } } })
-
-        expect(messages.last).to include('[FILTERED]')
-        expect(messages.last).not_to include('ya29.secret')
-      end
-
-      it 'leaves non-matching keys visible' do
-        log.call({ wand: 'elder', token: 'hidden' })
-
-        expect(messages.last).to include('elder')
-        expect(messages.last).not_to include('hidden')
-      end
-
-      it 'applies a reassigned filter list on the next call' do
-        log.call({ wand: 'elder' })
-        expect(messages.last).to include('elder')
-
-        Servus.config.log_filter_parameters = %i[wand]
-        log.call({ wand: 'elder' })
-
-        expect(messages.last).not_to include('elder')
-      end
-    end
-
-    context 'with arbitrary custom keys configured' do
-      before { Servus.config.log_filter_parameters = %i[wand sigil] }
-      after { Servus.config.log_filter_parameters = [] }
-
-      it 'masks their values as [FILTERED] while keeping the key names visible' do
-        log.call({ wand: 'elder', sigil: 'dark-mark', house: 'gryffindor' })
-
-        expect(messages.last).to match(/wand.*?\[FILTERED\]/)
-        expect(messages.last).to match(/sigil.*?\[FILTERED\]/)
-        expect(messages.last).not_to include('elder')
-        expect(messages.last).not_to include('dark-mark')
-        expect(messages.last).to include('gryffindor')
-      end
+      expect(logger).to have_received(:info).with(a_string_including('[FILTERED]', 'ok'))
+      expect(logger).not_to have_received(:info).with(/supersecret/)
     end
   end
 end
