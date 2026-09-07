@@ -1,9 +1,20 @@
-## [1.1.0] - 2026-09-04
+## [1.1.0] - 2026-09-07
 
-A service class now carries its own logger. `Servus::Base.logger` is a
-class-level accessor, inherited down the service tree, so a gem or a Rails
-engine logs all of its services under its own name by assigning one to their
-common base class:
+Servus's logger is now configurable, and a service class can carry its own.
+
+Every line Servus wrote went to `Rails.logger`, so an engine's service logs
+landed under the host application's name with no way to separate them.
+
+Set the logger for the whole application:
+
+```ruby
+Servus.configure do |config|
+  config.logger = SemanticLogger[Servus]
+end
+```
+
+Or give a service tree its own. `Servus::Base.logger` is inherited down the
+tree, so assigning one to a common base class covers every service below it:
 
 ```ruby
 class ZarBankTransfer::ApplicationService < Servus::Base
@@ -11,19 +22,11 @@ class ZarBankTransfer::ApplicationService < Servus::Base
 end
 ```
 
-Until now every line Servus wrote — "Calling X with args", "X succeeded in",
-"X failed in" — went to `Rails.logger`, so an engine's service logs landed
-under the host application's name with no way to separate them.
-
-Event emission lines stay on Servus's default logger. The bus is
-application-wide and its logging subscriber runs after the emitting service
-has returned, so there is no service to attribute the line to.
-
-Nothing changes for applications that assign no logger. `logger` inside a
-service body now returns its class's logger.
+Configure nothing and nothing changes. Servus still uses `Rails.logger`, or
+`Logger.new($stdout)` outside Rails.
 
 See [Logging](https://zarpay.github.io/servus/features/logging) for the
-inheritance rules and what each line is written through.
+inheritance rules and how to add tags to the configured logger.
 
 ## [1.0.2] - 2026-09-07
 
