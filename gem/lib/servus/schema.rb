@@ -229,24 +229,11 @@ module Servus
           existing = @registry[key]
           return false if existing == normalized
 
-          log_override(key) if existing
+          Support::Logger.schema_override(key) if existing
           @registry = @registry.merge(key => normalized).freeze
         end
 
         true
-      end
-
-      # Logs that a registered schema fragment was replaced with a different
-      # value. Expected during development reloads. Outside of that it usually
-      # means two libraries are claiming the same fragment key.
-      #
-      # @param key [String] the schema fragment key being overridden
-      # @return [void]
-      # @api private
-      def log_override(key)
-        Servus.logger.warn(
-          "Schema fragment #{key.inspect} was already registered with a different value; replacing it."
-        )
       end
 
       # @param key [String, Symbol]

@@ -10,10 +10,58 @@ module Servus
     # class can set for itself.
     #
     # Lines that belong to no service — event emission, schema fragment
-    # overrides — are written at their call sites through {Servus.logger}.
+    # overrides — are class methods, written through {.default}.
     #
     # @api private
     class Logger
+      class << self
+        # The logger Servus writes through: the one set in
+        # {Servus::Config#logger}, else `Rails.logger`, else a `$stdout`
+        # logger. Resolved on every read, so Servus follows Rails if the
+        # application swaps its logger after boot.
+        #
+        # @return [::Logger]
+        # @see Servus.logger
+        def default
+          Servus.config.logger || rails_logger || stdout_logger
+        end
+
+        # Logs an event emission with its correlation ID and duration.
+        #
+        # @param event_name [Symbol] the event name
+        # @param payload [Hash] the event payload
+        # @param event_id [String] the unique event correlation ID
+        # @param duration_ms [Float] the dispatch duration in milliseconds
+        # @return [void]
+        def event(event_name, payload, event_id:, duration_ms:)
+          default.info("[#{event_id}] Event :#{event_name} (#{duration_ms.round(1)}ms) #{payload.inspect}")
+        end
+
+        # Logs that a registered schema fragment was replaced with a
+        # different value.
+        #
+        # Expected during development reloads. Outside of that it usually
+        # means two libraries are claiming the same fragment key.
+        #
+        # @param key [String] the schema fragment key being overridden
+        # @return [void]
+        def schema_override(key)
+          default.warn("Schema fragment #{key.inspect} was already registered with a different value; replacing it.")
+        end
+
+        private
+
+        # @return [::Logger, nil] Rails' logger, when Rails is loaded and has one
+        def rails_logger
+          Rails.logger if defined?(Rails) && Rails.respond_to?(:logger)
+        end
+
+        # @return [::Logger] the fallback logger, built once
+        def stdout_logger
+          @stdout_logger ||= ::Logger.new($stdout)
+        end
+      end
+
       # @param service_class [Class] the service the lines are about
       def initialize(service_class)
         @service_class = service_class

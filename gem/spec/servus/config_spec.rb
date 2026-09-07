@@ -162,34 +162,15 @@ RSpec.describe Servus::Config do
   describe '#logger' do
     after { Servus.config.logger = nil }
 
-    it 'is the assigned logger' do
+    it 'defaults to nil, leaving Servus to resolve one' do
+      expect(Servus.config.logger).to be_nil
+    end
+
+    it 'can be customized' do
       logger = Logger.new(File::NULL)
       Servus.config.logger = logger
 
       expect(Servus.config.logger).to be(logger)
-    end
-
-    it 'falls back to Rails.logger when Rails is loaded' do
-      rails_logger = Logger.new(File::NULL)
-      stub_const('Rails', Class.new { define_singleton_method(:logger) { rails_logger } })
-
-      expect(Servus.config.logger).to be(rails_logger)
-    end
-
-    it 'falls back to a $stdout logger outside Rails' do
-      expect(Servus.config.logger).to be_a(Logger)
-    end
-
-    it 'picks up a Rails logger assigned after Servus first read one' do
-      Servus.config.logger
-      rails_logger = Logger.new(File::NULL)
-      stub_const('Rails', Class.new { define_singleton_method(:logger) { rails_logger } })
-
-      expect(Servus.config.logger).to be(rails_logger)
-    end
-
-    it 'is what Servus.logger returns' do
-      expect(Servus.logger).to be(Servus.config.logger)
     end
   end
 

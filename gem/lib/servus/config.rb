@@ -76,26 +76,19 @@ module Servus
     # @return [Boolean] true to require payload schemas, false to allow schema-less events
     attr_accessor :require_event_payload_schema
 
-    # Sets the logger Servus writes through.
+    # The logger Servus writes through.
     #
-    # Assigning +nil+ returns Servus to the default: `Rails.logger` when
-    # Rails is loaded, otherwise a `$stdout` logger.
+    # Left +nil+ (the default), Servus resolves one itself: `Rails.logger`
+    # when Rails is loaded, otherwise a `$stdout` logger. Read the resolved
+    # logger through {Servus.logger}.
     #
-    # @param logger [::Logger, nil]
+    # @return [::Logger, nil] the configured logger, or nil when none is set
     #
     # @example
     #   Servus.configure do |config|
     #     config.logger = SemanticLogger[Servus]
     #   end
-    attr_writer :logger
-
-    # The logger Servus writes through: the one configured here, else
-    # `Rails.logger`, else a `$stdout` logger.
-    #
-    # @return [::Logger]
-    def logger
-      @logger || rails_logger || stdout_logger
-    end
+    attr_accessor :logger
 
     # The ordered list of routers that resolve invocations for events.
     #
@@ -183,16 +176,6 @@ module Servus
       @log_filter_parameters            = [].freeze
     end
 
-    # @return [::Logger, nil] Rails' logger, when Rails is loaded and has one
-    def rails_logger
-      Rails.logger if defined?(Rails) && Rails.respond_to?(:logger)
-    end
-
-    # @return [::Logger] the fallback logger, built once
-    def stdout_logger
-      @stdout_logger ||= ::Logger.new($stdout)
-    end
-
     def set_default_directories
       @guards_dir   = 'app/guards'
       @events_dir   = 'app/events'
@@ -224,7 +207,7 @@ module Servus
   #     self.logger = Servus.logger.tagged(engine: 'treasury')
   #   end
   def self.logger
-    config.logger
+    Servus::Support::Logger.default
   end
 
   # Yields the configuration for modification.

@@ -58,8 +58,6 @@ ERROR Treasury::TransferGold::Service uncaught exception: ActiveRecord::RecordNo
 
 ## Logger configuration
 
-Set the logger in your initializer:
-
 ```ruby
 # config/initializers/servus.rb
 Servus.configure do |config|
@@ -67,9 +65,9 @@ Servus.configure do |config|
 end
 ```
 
-Left unset, Servus uses `Rails.logger` when Rails is loaded, otherwise `Logger.new($stdout)`. Rails' logger is read on every call, so Servus follows it if the app swaps it later.
+Left unset, Servus uses `Rails.logger` when Rails is loaded, otherwise `Logger.new($stdout)`. `Servus.logger` returns whichever applies.
 
-`Servus.logger` returns whichever of the three applies. Control the log level through Rails configuration:
+Control the log level through Rails configuration:
 
 ```ruby
 # config/environments/production.rb
@@ -78,28 +76,29 @@ config.log_level = :warn  # Hides info-level call and success logs
 
 ## Per-service loggers
 
-`Servus::Base.logger` holds the logger Servus writes the call, outcome, and error lines through. It defaults to `Servus.logger`. Assign one to a service class and it covers that class and every service below it:
+`Servus::Base.logger` is inherited down the service tree. Assign one to a base class and it covers every service below it:
 
 ```ruby
 class Treasury::ApplicationService < Servus::Base
-  self.logger = Servus.logger.tagged(engine: 'treasury')
-end
-
-class Treasury::TransferGold::Service < Treasury::ApplicationService
+  self.logger = SemanticLogger[Treasury]
 end
 ```
 
-Build the service logger from `Servus.logger` rather than replacing it. `SemanticLogger::Logger#tagged` without a block returns a child logger that carries the tags on every line it writes — the appenders, level, and formatting stay the ones the app configured, and the thread's own tags are untouched. Requires semantic_logger 5.1 or newer.
+Unassigned classes inherit from the class above them, up to `Servus.logger`. Assigning `nil` returns a class to what it inherits.
+
+A host service calling an engine service logs under the host, and the engine service under the engine, in the same call chain — including from a thread the host spawned.
+
+To add to the configured logger rather than replace it, build from `Servus.logger`. `SemanticLogger::Logger#tagged` without a block returns a child logger carrying the tags on every line, keeping the app's appenders, level, and format:
+
+```ruby
+self.logger = Servus.logger.tagged(engine: 'treasury')
+```
 
 ```
 INFO [engine: treasury] Treasury::TransferGold::Service succeeded in 0.013s
 ```
 
-This is how a gem or a Rails engine keeps its service logs under its own name. A host service calling an engine service logs under the host, and the engine service under the engine, in the same call chain — including when the host calls it from a thread it spawned itself.
-
-Anything left unassigned inherits from the class above it. Assigning `nil` returns a class to the logger it inherits.
-
-Event emission lines always go to `Servus.logger`. The event bus is application-wide and its subscriber runs after the emitting service has returned, so there is no service to attribute the line to.
+Event emission and schema override lines go to `Servus.logger`. Neither belongs to a service.
 
 ## Custom logging inside services
 

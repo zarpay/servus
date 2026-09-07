@@ -2,23 +2,17 @@
 
 Servus's logger is now configurable, and a service class can carry its own.
 
-Every line Servus wrote went to `Rails.logger`, so an engine's service logs
-landed under the host application's name with no way to separate them.
-
-Set the logger for the whole application:
-
 ```ruby
 Servus.configure do |config|
   config.logger = SemanticLogger[Servus]
 end
 ```
 
-Or give a service tree its own. `Servus::Base.logger` is inherited down the
-tree, so assigning one to a common base class covers every service below it:
+Or give a service tree its own. 
 
 ```ruby
-class ZarBankTransfer::ApplicationService < Servus::Base
-  self.logger = SemanticLogger[ZarBankTransfer]
+class CustomBaseService::ApplicationService < Servus::Base
+  self.logger = SemanticLogger[CustomBaseService]
 end
 ```
 

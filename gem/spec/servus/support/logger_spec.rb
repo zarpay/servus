@@ -3,6 +3,40 @@
 require 'spec_helper'
 
 RSpec.describe Servus::Support::Logger do
+  describe '.default' do
+    after { Servus.config.logger = nil }
+
+    it 'is the configured logger' do
+      logger = Logger.new(File::NULL)
+      Servus.config.logger = logger
+
+      expect(described_class.default).to be(logger)
+    end
+
+    it 'falls back to Rails.logger when Rails is loaded' do
+      rails_logger = Logger.new(File::NULL)
+      stub_const('Rails', Class.new { define_singleton_method(:logger) { rails_logger } })
+
+      expect(described_class.default).to be(rails_logger)
+    end
+
+    it 'falls back to a $stdout logger outside Rails' do
+      expect(described_class.default).to be_a(Logger)
+    end
+
+    it 'picks up a Rails logger assigned after Servus first read one' do
+      described_class.default
+      rails_logger = Logger.new(File::NULL)
+      stub_const('Rails', Class.new { define_singleton_method(:logger) { rails_logger } })
+
+      expect(described_class.default).to be(rails_logger)
+    end
+
+    it 'is what Servus.logger returns' do
+      expect(Servus.logger).to be(described_class.default)
+    end
+  end
+
   describe '#call' do
     let(:messages) { [] }
     let(:service) { stub_const('LoggedService', Class.new(Servus::Base)) }
