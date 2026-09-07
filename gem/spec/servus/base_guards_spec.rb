@@ -316,12 +316,12 @@ RSpec.describe Servus::Base, 'Guards Integration' do
         end
       end)
 
-      allow(Servus::Support::Logger).to receive(:log_guard_failure)
+      logger = instance_spy(Logger)
+      service_class.logger = logger
 
       service_class.call(user: test_class.new(active: false))
 
-      expect(Servus::Support::Logger).to have_received(:log_guard_failure)
-        .with(GuardLogTestService, an_instance_of(Servus::Support::Errors::GuardError))
+      expect(logger).to have_received(:warn).with(a_string_matching(/\AGuardLogTestService guard failed: /))
     end
 
     it 'does not log when guard passes' do
@@ -335,11 +335,12 @@ RSpec.describe Servus::Base, 'Guards Integration' do
         end
       end)
 
-      allow(Servus::Support::Logger).to receive(:log_guard_failure)
+      logger = instance_spy(Logger)
+      service_class.logger = logger
 
       service_class.call(user: test_class.new(active: true))
 
-      expect(Servus::Support::Logger).not_to have_received(:log_guard_failure)
+      expect(logger).not_to have_received(:warn)
     end
   end
 

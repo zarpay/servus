@@ -204,12 +204,15 @@ RSpec.describe Servus::Base, 'event emission' do
         end
       end)
 
-      allow(Servus::Support::Logger).to receive(:log_event)
+      logger = instance_spy(Logger)
+      Servus.config.logger = logger
 
       service_class.call
 
-      expect(Servus::Support::Logger).to have_received(:log_event)
-        .with(:logged_event, hash_including(:user_id), event_id: a_kind_of(String), duration_ms: a_kind_of(Float))
+      expect(logger).to have_received(:info)
+        .with(a_string_matching(/\A\[.+\] Event :logged_event \(\d+\.\d+ms\) .*user_id/))
+    ensure
+      Servus.config.logger = nil
     end
   end
 

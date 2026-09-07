@@ -57,54 +57,45 @@ RSpec.describe Servus::Base do
       TestServiceV2.call(should_succeed: true, data: custom_data)
     end
 
-    it 'calls log_call on Logger with correct arguments' do
-      data = { should_succeed: true, data: custom_data }
+    context 'with logging' do
+      let(:logger) { instance_spy(Logger) }
 
-      allow(Servus::Support::Logger).to receive(:log_call)
-        .with(TestServiceV2, data).exactly(1).times
+      before { TestServiceV2.logger = logger }
+      after  { TestServiceV2.logger = nil }
 
-      TestServiceV2.call(should_succeed: true, data: custom_data)
+      it 'logs the call with its arguments' do
+        TestServiceV2.call(should_succeed: true, data: custom_data)
 
-      expect(Servus::Support::Logger).to have_received(:log_call)
-        .with(TestServiceV2, data).exactly(1).times
-    end
+        expect(logger).to have_received(:info)
+          .with('Calling TestServiceV2 with args: {should_succeed: true, data: {key: "value"}}')
+          .exactly(1).times
+      end
 
-    it 'calls log_result on Logger with correct arguments' do
-      allow(Servus::Support::Logger).to receive(:log_result)
-        .with(TestServiceV2, an_instance_of(Servus::Support::Response), an_instance_of(Float))
-        .exactly(1).times
+      it 'logs a success with its duration' do
+        TestServiceV2.call(should_succeed: true, data: custom_data)
 
-      TestServiceV2.call(should_succeed: true, data: custom_data)
+        expect(logger).to have_received(:info)
+          .with(a_string_matching(/\ATestServiceV2 succeeded in \d+\.\d+s\z/))
+          .exactly(1).times
+      end
 
-      expect(Servus::Support::Logger).to have_received(:log_result)
-        .with(TestServiceV2, an_instance_of(Servus::Support::Response), an_instance_of(Float))
-        .exactly(1).times
-    end
+      it 'logs a failure with its error and duration' do
+        TestServiceV2.call(should_succeed: false)
 
-    it 'calls log_failure on Logger with correct arguments' do
-      allowed_instance = an_instance_of(Servus::Support::Errors::ServiceError)
+        expect(logger).to have_received(:warn)
+          .with(a_string_matching(/\ATestServiceV2 failed in \d+\.\d+s with error: .*error message\z/))
+          .exactly(1).times
+      end
 
-      allow(Servus::Support::Logger).to receive(:log_failure)
-        .with(TestServiceV2, allowed_instance, an_instance_of(Float)).exactly(1).times
+      it 'logs an uncaught exception' do
+        allow(Time).to receive(:now).and_raise(StandardError, 'boom')
 
-      TestServiceV2.call(should_succeed: false)
+        expect { TestServiceV2.call(should_succeed: true, data: custom_data) }.to raise_error(StandardError)
 
-      expect(Servus::Support::Logger).to have_received(:log_failure)
-        .with(TestServiceV2, allowed_instance, an_instance_of(Float)).exactly(1).times
-    end
-
-    it 'calls log_exception on Logger with correct arguments' do
-      allow(Servus::Support::Logger).to receive(:log_exception)
-        .with(TestServiceV2, an_instance_of(StandardError)).exactly(1).times
-
-      # Raise an exception to test the error handling
-      allow(Time).to receive(:now).and_raise(StandardError)
-
-      # Call the service and expect it to raise an exception
-      expect { TestServiceV2.call(should_succeed: true, data: custom_data) }.to raise_error(StandardError)
-
-      expect(Servus::Support::Logger).to have_received(:log_exception)
-        .with(TestServiceV2, an_instance_of(StandardError)).exactly(1).times
+        expect(logger).to have_received(:error)
+          .with('TestServiceV2 uncaught exception: StandardError - boom')
+          .exactly(1).times
+      end
     end
   end
 

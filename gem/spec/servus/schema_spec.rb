@@ -92,13 +92,18 @@ RSpec.describe Servus::Schema, :schema_registry do
   end
 
   describe '.register idempotency' do
+    let(:logger) { instance_spy(Logger) }
+
+    before { Servus.config.logger = logger }
+    after  { Servus.config.logger = nil }
+
     it 'is a silent no-op when re-registering an equal value' do
       described_class.register('core', core_fragment)
       generation = described_class.generation
 
-      expect(Servus::Support::Logger).not_to receive(:log_schema_override)
       described_class.register('core', core_fragment.dup)
 
+      expect(logger).not_to have_received(:warn)
       expect(described_class.generation).to eq(generation)
     end
 
@@ -106,7 +111,6 @@ RSpec.describe Servus::Schema, :schema_registry do
       described_class.register('core', core_fragment)
       generation = described_class.generation
 
-      allow(Servus::Support::Logger).to receive(:log_schema_override)
       described_class.register('core', { '$defs' => { 'amount' => { 'type' => 'string' } } })
 
       expect(described_class.fetch('core')['$defs']['amount']['type']).to eq('string')
@@ -116,9 +120,9 @@ RSpec.describe Servus::Schema, :schema_registry do
     it 'logs an override when re-registering a different value' do
       described_class.register('core', core_fragment)
 
-      expect(Servus::Support::Logger).to receive(:log_schema_override).with('core')
-
       described_class.register('core', { '$defs' => {} })
+
+      expect(logger).to have_received(:warn).with(a_string_matching(/\ASchema fragment "core" was already registered/))
     end
   end
 

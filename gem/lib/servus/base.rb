@@ -119,24 +119,27 @@ module Servus
       # Assigns the logger Servus writes this service's call, outcome, and
       # error lines through. It covers this class and every service below it.
       #
+      # Build the logger from {Servus.logger} so it keeps the appenders and
+      # formatting the app configured, rather than replacing them.
+      #
       # Assigning +nil+ returns the class to the logger it inherits.
       #
       # @param logger [::Logger, nil]
       #
-      # @example Logging an engine's services under the engine's own name
+      # @example Tagging an engine's service logs
       #   class ZarBankTransfer::ApplicationService < Servus::Base
-      #     self.logger = SemanticLogger[ZarBankTransfer]
+      #     self.logger = Servus.logger.tagged(engine: 'zar_bank_transfer')
       #   end
       attr_writer :logger
 
       # The logger for this service class: its own, else the one it inherits,
-      # else {Servus::Support::Logger.logger}.
+      # else {Servus.logger}.
       #
       # @return [::Logger]
       def logger
         return @logger if @logger
 
-        superclass <= Servus::Base ? superclass.logger : Servus::Support::Logger.logger
+        superclass <= Servus::Base ? superclass.logger : Servus.logger
       end
     end
 
@@ -238,7 +241,7 @@ module Servus
     # @see #failure
     def error!(message = nil, type: Servus::Support::Errors::ServiceError)
       error = type.new(message)
-      Logger.log_exception(self.class, error)
+      Logger.new(self.class).exception(error)
 
       # Emit error! events before raising
       emit_events_for(:error!, Response.new(false, nil, error))
@@ -279,17 +282,19 @@ module Servus
       #
       # rubocop:disable-next Metrics/MethodLength
       def call(**args)
-        before_call(args)
+        log = Logger.new(self)
+
+        before_call(log, args)
 
         instance = new(**args)
 
         # Wrap execution in catch block to handle guard failures
         result = catch(:guard_failure) do
-          benchmark(**args) { instance.send(:call) }
+          benchmark(log) { instance.send(:call) }
         end
 
         if result.is_a?(Servus::Support::Errors::GuardError)
-          Logger.log_guard_failure(self, result)
+          log.guard_failure(result)
           result = Response.new(false, nil, result)
         end
 
@@ -297,10 +302,10 @@ module Servus
 
         result
       rescue Servus::Support::Errors::ValidationError => e
-        Logger.log_validation_error(self, e)
+        log.validation_error(e)
         raise e
       rescue StandardError => e
-        Logger.log_exception(self, e)
+        log.exception(e)
         raise e
       end
 
@@ -310,13 +315,14 @@ module Servus
       # - Logging the service call with arguments
       # - Validating arguments against ARGUMENTS_SCHEMA (if defined)
       #
+      # @param log [Servus::Support::Logger] the log for this call
       # @param args [Hash] keyword arguments being passed to the service
       # @return [void]
       # @raise [Servus::Support::Errors::ValidationError] if arguments fail validation
       #
       # @api private
-      def before_call(args)
-        Logger.log_call(self, args)
+      def before_call(log, args)
+        log.call(args)
         Validator.validate_arguments!(self, args)
       end
 
@@ -342,17 +348,17 @@ module Servus
       # This method wraps the service execution to capture timing metrics.
       # The duration is logged along with the success/failure status of the service.
       #
-      # @param _args [Hash] keyword arguments (unused, kept for method signature compatibility)
+      # @param log [Servus::Support::Logger] the log for this call
       # @yieldreturn [Servus::Support::Response] the result from executing the service
       # @return [Servus::Support::Response] the service execution result
       #
       # @api private
-      def benchmark(**_args)
+      def benchmark(log)
         start_time = Time.now.utc
         result = yield
         duration = Time.now.utc - start_time
 
-        Logger.log_result(self, result, duration)
+        log.result(result, duration)
 
         result
       end

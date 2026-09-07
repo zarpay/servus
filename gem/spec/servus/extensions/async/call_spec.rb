@@ -115,6 +115,11 @@ RSpec.describe '.call_async extension', type: :job do
   end
 
   describe 'a job constant the application already owns' do
+    let(:conflict_logger) { instance_spy(Logger) }
+
+    before { Servus.config.logger = conflict_logger }
+    after  { Servus.config.logger = nil }
+
     # Foo alongside a hand-written FooJob is ordinary Rails. Overwriting it left the
     # app's job reachable by name but stripped of its own constants and methods, and
     # said nothing.
@@ -123,21 +128,16 @@ RSpec.describe '.call_async extension', type: :job do
       app_job = Class.new(ActiveJob::Base)
       OwnedJobNamespace.const_set(:ServiceJob, app_job)
 
-      allow(Servus::Support::Logger).to receive(:log_job_class_conflict)
-
       OwnedJobNamespace.module_eval('class Service < AsyncFixtureService; end', __FILE__, __LINE__)
 
       expect(OwnedJobNamespace::ServiceJob).to equal(app_job)
-      expect(Servus::Support::Logger)
-        .to have_received(:log_job_class_conflict)
-        .with(OwnedJobNamespace::Service, 'OwnedJobNamespace::ServiceJob')
+      expect(conflict_logger).to have_received(:warn)
+        .with(a_string_including('OwnedJobNamespace::Service', 'OwnedJobNamespace::ServiceJob'))
     end
 
     it 'still builds a job class so the service keeps working' do
       stub_const('OwnedJobNamespace2', Module.new)
       OwnedJobNamespace2.const_set(:ServiceJob, Class.new(ActiveJob::Base))
-
-      allow(Servus::Support::Logger).to receive(:log_job_class_conflict)
 
       OwnedJobNamespace2.module_eval('class Service < AsyncFixtureService; end', __FILE__, __LINE__)
 
@@ -155,8 +155,6 @@ RSpec.describe '.call_async extension', type: :job do
       stub_const('ConflictedCallNamespace', Module.new)
       ConflictedCallNamespace.const_set(:ServiceJob, Class.new(ActiveJob::Base))
 
-      allow(Servus::Support::Logger).to receive(:log_job_class_conflict)
-
       ConflictedCallNamespace.module_eval('class Service < AsyncFixtureService; end', __FILE__, __LINE__)
 
       expect { ConflictedCallNamespace::Service.call_async(test: 'data') }
@@ -171,8 +169,6 @@ RSpec.describe '.call_async extension', type: :job do
     it 'does not resolve a pending autoload to decide' do
       stub_const('AutoloadNamespace', Module.new)
       AutoloadNamespace.autoload(:ServiceJob, '/nonexistent/service_job.rb')
-
-      allow(Servus::Support::Logger).to receive(:log_job_class_conflict)
 
       expect do
         AutoloadNamespace.module_eval('class Service < AsyncFixtureService; end', __FILE__, __LINE__)

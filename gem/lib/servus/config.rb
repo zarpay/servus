@@ -76,6 +76,27 @@ module Servus
     # @return [Boolean] true to require payload schemas, false to allow schema-less events
     attr_accessor :require_event_payload_schema
 
+    # Sets the logger Servus writes through.
+    #
+    # Assigning +nil+ returns Servus to the default: `Rails.logger` when
+    # Rails is loaded, otherwise a `$stdout` logger.
+    #
+    # @param logger [::Logger, nil]
+    #
+    # @example
+    #   Servus.configure do |config|
+    #     config.logger = SemanticLogger[Servus]
+    #   end
+    attr_writer :logger
+
+    # The logger Servus writes through: the one configured here, else
+    # `Rails.logger`, else a `$stdout` logger.
+    #
+    # @return [::Logger]
+    def logger
+      @logger || rails_logger || stdout_logger
+    end
+
     # The ordered list of routers that resolve invocations for events.
     #
     # The Bus iterates routers in order, collects invocations, deduplicates
@@ -162,6 +183,16 @@ module Servus
       @log_filter_parameters            = [].freeze
     end
 
+    # @return [::Logger, nil] Rails' logger, when Rails is loaded and has one
+    def rails_logger
+      Rails.logger if defined?(Rails) && Rails.respond_to?(:logger)
+    end
+
+    # @return [::Logger] the fallback logger, built once
+    def stdout_logger
+      @stdout_logger ||= ::Logger.new($stdout)
+    end
+
     def set_default_directories
       @guards_dir   = 'app/guards'
       @events_dir   = 'app/events'
@@ -179,6 +210,21 @@ module Servus
   #   # => "app/services"
   def self.config
     @config ||= Config.new
+  end
+
+  # The logger Servus writes through.
+  #
+  # Build a service's own logger from this one rather than replacing it, so
+  # the app's appenders and formatting are kept.
+  #
+  # @return [::Logger]
+  #
+  # @example A per-service logger that adds a tag
+  #   class Treasury::ApplicationService < Servus::Base
+  #     self.logger = Servus.logger.tagged(engine: 'treasury')
+  #   end
+  def self.logger
+    config.logger
   end
 
   # Yields the configuration for modification.

@@ -167,7 +167,7 @@ RSpec.describe Servus::Base, 'Logger' do
 end
 
 RSpec.describe Servus::Base, 'default logger' do
-  it 'is Servus::Support::Logger.logger' do
-    expect(described_class.logger).to be(Servus::Support::Logger.logger)
+  it 'is the configured logger' do
+    expect(described_class.logger).to be(Servus.logger)
   end
 end
