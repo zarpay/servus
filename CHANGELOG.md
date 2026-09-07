@@ -1,4 +1,4 @@
-## [1.0.2] - 2026-09-04
+## [1.0.2] - 2026-09-07
 
 Two bugs in the generated per-service job classes. Both are silent, and both
 surface somewhere other than where they were caused.
