@@ -147,6 +147,25 @@ RSpec.describe '.call_async extension', type: :job do
       expect(job.name).to be_nil
     end
 
+    # ActiveJob serializes a job by its class name, and the conflicted service's
+    # job has none. Without this guard, perform_later happily enqueues a payload
+    # with `job_class: nil` — the failure only surfaces on the worker, far from
+    # the call site, which is the same pathology as the bugs this release fixes.
+    it 'refuses call_async instead of enqueueing a job no worker could resolve' do
+      stub_const('ConflictedCallNamespace', Module.new)
+      ConflictedCallNamespace.const_set(:ServiceJob, Class.new(ActiveJob::Base))
+
+      allow(Servus::Support::Logger).to receive(:log_job_class_conflict)
+
+      ConflictedCallNamespace.module_eval('class Service < AsyncFixtureService; end', __FILE__, __LINE__)
+
+      expect { ConflictedCallNamespace::Service.call_async(test: 'data') }
+        .to raise_error(Servus::Extensions::Async::Errors::JobNameConflictError,
+                        /ConflictedCallNamespace::ServiceJob/)
+
+      expect(ActiveJob::Base.queue_adapter.enqueued_jobs).to be_empty
+    end
+
     # A pending Zeitwerk autoload is the app's constant. Resolving it to find out
     # would run app code in the middle of defining a service.
     it 'does not resolve a pending autoload to decide' do

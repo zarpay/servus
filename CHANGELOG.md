@@ -32,12 +32,15 @@ surface somewhere other than where they were caused.
   entirely.
 
   A name the application already owns is now left alone, and the skip is logged
-  naming both the service and the constant. The service keeps working; only its
-  job goes unnamed, which means `call_async` on that one service is
-  unavailable until the service or the job is renamed. A pending Zeitwerk
-  autoload counts as the application's without being resolved, and a constant
-  holding a job Servus generated earlier is still reclaimed, so development
-  reloads are unaffected.
+  naming both the service and the constant. The service keeps working
+  synchronously; only its job goes unnamed, and because ActiveJob serializes
+  jobs by class name, `call_async` on that one service now raises
+  `Errors::JobNameConflictError` at the call site — enqueueing the unnamed job
+  would succeed and then fail on the worker at deserialization, far from the
+  cause. Event `enqueue` invocations go through `call_async` and raise the same
+  error. A pending Zeitwerk autoload counts as the application's without being
+  resolved, and a constant holding a job Servus generated earlier is still
+  reclaimed, so development reloads are unaffected.
 
 ## [1.0.1] - 2026-08-28
 

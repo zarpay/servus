@@ -87,7 +87,7 @@ You never write or reference these classes yourself — they're created for you 
 
 `Foo` alongside a hand-written `FooJob` is ordinary Rails, so Servus does not overwrite a job constant the application already owns. Your class stays exactly as you wrote it, and Servus logs a warning naming the service and the constant it skipped.
 
-The service still works — it just has no *named* job, so `call_async` on it has nothing ActiveJob can serialize. If you want that service in the background, rename either the service or your job so the two stop colliding.
+The service still works synchronously — it just has no *named* job, and ActiveJob serializes jobs by class name. Calling `call_async` on it (directly or through an event `enqueue`) raises `Servus::Extensions::Async::Errors::JobNameConflictError` at the call site, rather than enqueueing a job no worker could ever resolve. If you want that service in the background, rename either the service or your job so the two stop colliding.
 
 ## Per-service job configuration
 
