@@ -76,6 +76,20 @@ module Servus
     # @return [Boolean] true to require payload schemas, false to allow schema-less events
     attr_accessor :require_event_payload_schema
 
+    # The logger Servus writes through.
+    #
+    # Left +nil+ (the default), Servus resolves one itself: `Rails.logger`
+    # when Rails is loaded, otherwise a `$stdout` logger. Read the resolved
+    # logger through {Servus.logger}.
+    #
+    # @return [::Logger, nil] the configured logger, or nil when none is set
+    #
+    # @example
+    #   Servus.configure do |config|
+    #     config.logger = SemanticLogger[Servus]
+    #   end
+    attr_accessor :logger
+
     # The ordered list of routers that resolve invocations for events.
     #
     # The Bus iterates routers in order, collects invocations, deduplicates
@@ -179,6 +193,21 @@ module Servus
   #   # => "app/services"
   def self.config
     @config ||= Config.new
+  end
+
+  # The logger Servus writes through.
+  #
+  # Build a service's own logger from this one rather than replacing it, so
+  # the app's appenders and formatting are kept.
+  #
+  # @return [::Logger]
+  #
+  # @example A per-service logger that adds a tag (SemanticLogger)
+  #   class Treasury::ApplicationService < Servus::Base
+  #     self.logger = Servus.logger.tagged(engine: 'treasury')
+  #   end
+  def self.logger
+    Servus::Support::Logger.default
   end
 
   # Yields the configuration for modification.

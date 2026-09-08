@@ -56,56 +56,6 @@ RSpec.describe Servus::Base do
 
       TestServiceV2.call(should_succeed: true, data: custom_data)
     end
-
-    it 'calls log_call on Logger with correct arguments' do
-      data = { should_succeed: true, data: custom_data }
-
-      allow(Servus::Support::Logger).to receive(:log_call)
-        .with(TestServiceV2, data).exactly(1).times
-
-      TestServiceV2.call(should_succeed: true, data: custom_data)
-
-      expect(Servus::Support::Logger).to have_received(:log_call)
-        .with(TestServiceV2, data).exactly(1).times
-    end
-
-    it 'calls log_result on Logger with correct arguments' do
-      allow(Servus::Support::Logger).to receive(:log_result)
-        .with(TestServiceV2, an_instance_of(Servus::Support::Response), an_instance_of(Float))
-        .exactly(1).times
-
-      TestServiceV2.call(should_succeed: true, data: custom_data)
-
-      expect(Servus::Support::Logger).to have_received(:log_result)
-        .with(TestServiceV2, an_instance_of(Servus::Support::Response), an_instance_of(Float))
-        .exactly(1).times
-    end
-
-    it 'calls log_failure on Logger with correct arguments' do
-      allowed_instance = an_instance_of(Servus::Support::Errors::ServiceError)
-
-      allow(Servus::Support::Logger).to receive(:log_failure)
-        .with(TestServiceV2, allowed_instance, an_instance_of(Float)).exactly(1).times
-
-      TestServiceV2.call(should_succeed: false)
-
-      expect(Servus::Support::Logger).to have_received(:log_failure)
-        .with(TestServiceV2, allowed_instance, an_instance_of(Float)).exactly(1).times
-    end
-
-    it 'calls log_exception on Logger with correct arguments' do
-      allow(Servus::Support::Logger).to receive(:log_exception)
-        .with(TestServiceV2, an_instance_of(StandardError)).exactly(1).times
-
-      # Raise an exception to test the error handling
-      allow(Time).to receive(:now).and_raise(StandardError)
-
-      # Call the service and expect it to raise an exception
-      expect { TestServiceV2.call(should_succeed: true, data: custom_data) }.to raise_error(StandardError)
-
-      expect(Servus::Support::Logger).to have_received(:log_exception)
-        .with(TestServiceV2, an_instance_of(StandardError)).exactly(1).times
-    end
   end
 
   describe '#success' do

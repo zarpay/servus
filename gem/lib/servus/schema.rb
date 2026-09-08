@@ -229,7 +229,7 @@ module Servus
           existing = @registry[key]
           return false if existing == normalized
 
-          Support::Logger.log_schema_override(key) if existing
+          Support::Logger.schema_override(key) if existing
           @registry = @registry.merge(key => normalized).freeze
         end
 

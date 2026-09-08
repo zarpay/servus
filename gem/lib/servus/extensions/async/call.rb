@@ -229,7 +229,7 @@ module Servus
         # @api private
         def publish_job_const(const_name, klass)
           unless job_const_available?(const_name)
-            return Servus::Support::Logger.log_job_class_conflict(self, qualified_const_name(const_name))
+            return Servus::Support::Logger.new(self).job_class_conflict(qualified_const_name(const_name))
           end
 
           # Reclaiming a stale generated job: drop it first so Ruby does not warn

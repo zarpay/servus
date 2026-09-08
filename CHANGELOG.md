@@ -1,3 +1,49 @@
+## [1.1.0] - 2026-09-07
+
+Servus's logger is now configurable, and a service class can carry its own.
+
+```ruby
+Servus.configure do |config|
+  config.logger = SemanticLogger[Servus]
+end
+```
+
+Or give a service tree its own.
+
+```ruby
+class CustomBaseService::ApplicationService < Servus::Base
+  self.logger = SemanticLogger[CustomBaseService]
+end
+```
+
+Without configuration nothing changes. Servus still uses `Rails.logger`, or
+`Logger.new($stdout)` when Rails is absent or has no logger.
+
+See [Logging](https://zarpay.github.io/servus/features/logging) for the
+inheritance rules and how to add tags to the configured logger.
+
+### Removed
+
+- **`Servus::Support::Logger`'s class methods.** `.logger`, `.log_call`,
+  `.log_result`, `.log_success`, `.log_failure`, `.log_guard_failure`,
+  `.log_validation_error`, `.log_exception`, `.log_job_class_conflict` (added
+  in 1.0.2), and `.log_parameters` are gone.
+  Each took the service class as its first argument; the class is now built
+  for one service and holds it, so `Logger.log_call(MyService, args)` becomes
+  `Logger.new(MyService).call(args)`. `.log_event` and `.log_schema_override`
+  are still class methods, renamed to `.event` and `.schema_override`, because
+  neither line belongs to a service.
+
+  The class is now marked `@api private`. It was reachable before, and
+  [zarpay/core#3742](https://github.com/zarpay/core/pull/3742) reopened it, so
+  this is a break for anyone who called it directly. Reopening it is no longer
+  the way to route a service's logs — assign `Servus::Base.logger` instead.
+
+- **`Servus::Base.before_call` and `.benchmark` changed signature.** Both now
+  take the per-call log object: `before_call(log, args)` and `benchmark(log)`.
+  Both are `@api private`, but they were public class methods, so an override
+  raises `ArgumentError` until it is updated.
+
 ## [1.0.2] - 2026-09-07
 
 Two bugs in the generated per-service job classes. Both are silent, and both
@@ -41,6 +87,7 @@ surface somewhere other than where they were caused.
   error. A pending Zeitwerk autoload counts as the application's without being
   resolved, and a constant holding a job Servus generated earlier is still
   reclaimed, so development reloads are unaffected.
+
 
 ## [1.0.1] - 2026-08-28
 

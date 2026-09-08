@@ -195,20 +195,18 @@ RSpec.describe Servus::Base, 'event emission' do
   describe 'event emission logging' do
     before { Servus::Events::Bus.enable_logging! }
 
-    it 'logs when an event is emitted with event_id and duration' do
-      service_class = stub_const('LoggedEventService', Class.new(Servus::Base) do
+    it 'logs the event with its correlation id and duration' do
+      allow(Servus::Support::Logger).to receive(:event)
+
+      stub_const('LoggedEventService', Class.new(Servus::Base) do
         emits :logged_event, on: :success
 
         def call
           success({ user_id: 123 })
         end
-      end)
+      end).call
 
-      allow(Servus::Support::Logger).to receive(:log_event)
-
-      service_class.call
-
-      expect(Servus::Support::Logger).to have_received(:log_event)
+      expect(Servus::Support::Logger).to have_received(:event)
         .with(:logged_event, hash_including(:user_id), event_id: a_kind_of(String), duration_ms: a_kind_of(Float))
     end
   end

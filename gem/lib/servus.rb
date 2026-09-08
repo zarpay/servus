@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 # Globals
+require 'logger'
 require 'json-schema'
 require 'active_support'
 require 'active_support/core_ext/class/attribute'
