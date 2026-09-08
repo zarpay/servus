@@ -202,7 +202,7 @@ module Servus
   #
   # @return [::Logger]
   #
-  # @example A per-service logger that adds a tag
+  # @example A per-service logger that adds a tag (SemanticLogger)
   #   class Treasury::ApplicationService < Servus::Base
   #     self.logger = Servus.logger.tagged(engine: 'treasury')
   #   end

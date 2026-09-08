@@ -4,10 +4,9 @@ module Servus
   module Support
     # Writes every line Servus logs about one service call.
     #
-    # Built by {Servus::Base.call} for the service it is about, so the
-    # service class is the object's identity rather than an argument on
-    # every method. Lines go to {Servus::Base.logger}, which a service
-    # class can set for itself.
+    # Holds the service class, so it is the object's identity rather than an
+    # argument on every method. Lines go to that class's own logger, which
+    # {Servus::Base.logger} resolves.
     #
     # Lines that belong to no service — event emission, schema fragment
     # overrides — are class methods, written through {.default}.

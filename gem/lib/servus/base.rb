@@ -126,9 +126,9 @@ module Servus
       #
       # @param logger [::Logger, nil]
       #
-      # @example Tagging an engine's service logs
-      #   class ZarBankTransfer::ApplicationService < Servus::Base
-      #     self.logger = Servus.logger.tagged(engine: 'zar_bank_transfer')
+      # @example Giving an engine's services their own logger
+      #   class Treasury::ApplicationService < Servus::Base
+      #     self.logger = SemanticLogger[Treasury]
       #   end
       attr_writer :logger
 
