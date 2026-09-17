@@ -178,7 +178,7 @@ GEM
       yard
     ruby-progressbar (1.13.0)
     securerandom (0.4.1)
-    simplecov (1.1.1)
+    simplecov (1.2.0)
     sqlite3 (2.9.6)
       mini_portile2 (~> 2.8.0)
     sqlite3 (2.9.6-x86_64-linux-gnu)
