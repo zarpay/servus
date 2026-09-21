@@ -58,20 +58,55 @@ ERROR Treasury::TransferGold::Service uncaught exception: ActiveRecord::RecordNo
 
 ## Logger configuration
 
-Servus uses `Rails.logger` when available, otherwise `Logger.new($stdout)`. Control the log level through Rails configuration:
+```ruby
+# config/initializers/servus.rb
+Servus.configure do |config|
+  config.logger = SemanticLogger[Servus]
+end
+```
+
+Left unset, Servus uses `Rails.logger` when Rails is loaded, otherwise `Logger.new($stdout)`. `Servus.logger` returns whichever applies.
+
+Control the log level through Rails configuration:
 
 ```ruby
 # config/environments/production.rb
 config.log_level = :warn  # Hides info-level call and success logs
 ```
 
+## Per-service loggers
+
+`Servus::Base.logger` is inherited down the service tree. Assign one to a base class and it covers every service below it:
+
+```ruby
+class Treasury::ApplicationService < Servus::Base
+  self.logger = SemanticLogger[Treasury]
+end
+```
+
+Unassigned classes inherit from the class above them, up to `Servus.logger`. Assigning `nil` returns a class to what it inherits.
+
+A host service calling an engine service logs under the host, and the engine service under the engine, in the same call chain — including from a thread the host spawned.
+
+To add to the configured logger rather than replace it, build from `Servus.logger`. `SemanticLogger::Logger#tagged` without a block returns a child logger carrying the tags on every line, keeping the app's appenders, level, and format:
+
+```ruby
+self.logger = Servus.logger.tagged(engine: 'treasury')
+```
+
+```
+INFO [engine: treasury] Treasury::TransferGold::Service succeeded in 0.013s
+```
+
+Event emission and schema override lines go to `Servus.logger`. Neither belongs to a service.
+
 ## Custom logging inside services
 
-The automatic logging covers the lifecycle — call, outcome, duration. If you need to log something specific inside your `call` method, use `Rails.logger` (or whatever logger your app uses) as you normally would. Servus doesn't replace or wrap your application's logger.
+The automatic logging covers the lifecycle — call, outcome, duration. Inside `call`, `logger` is the service class's logger:
 
 ```ruby
 def call
-  Rails.logger.info("Transferring #{@gold_dragons} gold dragons from #{from_account.id} to #{to_account.id}")
+  logger.info("Transferring #{@gold_dragons} gold dragons from #{from_account.id} to #{to_account.id}")
 
   from_account.withdraw!(@gold_dragons)
   to_account.deposit!(@gold_dragons)

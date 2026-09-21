@@ -1,3 +1,27 @@
+## [1.1.0] - 2026-09-07
+
+Servus's logger is now configurable, and a service class can carry its own.
+
+```ruby
+Servus.configure do |config|
+  config.logger = SemanticLogger[Servus]
+end
+```
+
+Or give a service tree its own.
+
+```ruby
+class CustomBaseService::ApplicationService < Servus::Base
+  self.logger = SemanticLogger[CustomBaseService]
+end
+```
+
+Without configuration nothing changes. Servus still uses `Rails.logger`, or
+`Logger.new($stdout)` when Rails is absent or has no logger.
+
+See [Logging](https://zarpay.github.io/servus/features/logging) for the
+inheritance rules and how to add tags to the configured logger.
+
 ## [1.0.2] - 2026-09-07
 
 Two bugs in the generated per-service job classes. Both are silent, and both
@@ -41,6 +65,7 @@ surface somewhere other than where they were caused.
   error. A pending Zeitwerk autoload counts as the application's without being
   resolved, and a constant holding a job Servus generated earlier is still
   reclaimed, so development reloads are unaffected.
+
 
 ## [1.0.1] - 2026-08-28
 

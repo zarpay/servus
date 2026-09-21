@@ -6,15 +6,16 @@ module Servus
   module Support
     # Logger class for logging service calls and results
     class Logger
-      # Returns the logger instance depending on the environment
+      # The logger Servus writes through: the one set in {Servus::Config#logger},
+      # else `Rails.logger`, else a `$stdout` logger. Resolved on every read, so
+      # Servus follows Rails if the application swaps its logger after boot.
       #
-      # @return [Logger] The logger instance
+      # Lines about a service go to that service's {Servus::Base.logger} instead.
+      #
+      # @return [::Logger] The logger instance
+      # @see Servus.logger
       def self.logger
-        if defined?(Rails) && Rails.respond_to?(:logger) && Rails.logger
-          Rails.logger
-        else
-          @logger ||= ::Logger.new($stdout)
-        end
+        Servus.config.logger || rails_logger || stdout_logger
       end
 
       # Logs a call to a service.
@@ -27,7 +28,7 @@ module Servus
       # @param args [Hash] The arguments passed to the service
       def self.log_call(service_class, args)
         rendered = log_parameters(args)
-        logger.info("Calling #{service_class.name} with args: #{rendered.inspect}")
+        service_class.logger.info("Calling #{service_class.name} with args: #{rendered.inspect}")
       end
 
       # Logs a result from a service
@@ -48,7 +49,7 @@ module Servus
       # @param service_class [Class] The service class
       # @param duration [Float] The duration of the service call
       def self.log_success(service_class, duration)
-        logger.info("#{service_class.name} succeeded in #{duration.round(3)}s")
+        service_class.logger.info("#{service_class.name} succeeded in #{duration.round(3)}s")
       end
 
       # Logs a failed result from a service
@@ -57,7 +58,7 @@ module Servus
       # @param error [Servus::Support::Errors::ServiceError] The error from the service
       # @param duration [Float] The duration of the service call
       def self.log_failure(service_class, error, duration)
-        logger.warn("#{service_class.name} failed in #{duration.round(3)}s with error: #{error}")
+        service_class.logger.warn("#{service_class.name} failed in #{duration.round(3)}s with error: #{error}")
       end
 
       # Logs a guard failure from a service
@@ -65,7 +66,7 @@ module Servus
       # @param service_class [Class] The service class
       # @param error [Servus::Support::Errors::GuardError] The guard error
       def self.log_guard_failure(service_class, error)
-        logger.warn("#{service_class.name} guard failed: #{error.message}")
+        service_class.logger.warn("#{service_class.name} guard failed: #{error.message}")
       end
 
       # Logs an event emission with correlation ID and duration.
@@ -83,7 +84,7 @@ module Servus
       # @param service_class [Class] The service class
       # @param error [Servus::Support::Errors::ValidationError] The validation error
       def self.log_validation_error(service_class, error)
-        logger.error("#{service_class.name} validation error: #{error.message}")
+        service_class.logger.error("#{service_class.name} validation error: #{error.message}")
       end
 
       # Logs an uncaught exception from a service
@@ -91,7 +92,9 @@ module Servus
       # @param service_class [Class] The service class
       # @param exception [Exception] The uncaught exception
       def self.log_exception(service_class, exception)
-        logger.error("#{service_class.name} uncaught exception: #{exception.class} - #{exception.message}")
+        service_class.logger.error(
+          "#{service_class.name} uncaught exception: #{exception.class} - #{exception.message}"
+        )
       end
 
       # Logs that a registered schema fragment was replaced with a different value.
@@ -113,7 +116,7 @@ module Servus
       # @param service_class [Class<Servus::Base>] The service whose job was not published
       # @param const_name [String] The constant the application already owns
       def self.log_job_class_conflict(service_class, const_name)
-        logger.warn(
+        service_class.logger.warn(
           "#{service_class.name} did not publish its generated job as #{const_name} — that constant " \
           'is already defined by the application. The application class is unchanged; ' \
           "#{service_class.name}.call_async cannot be enqueued until the service or the job is renamed."
@@ -131,6 +134,18 @@ module Servus
           Servus.config.parameter_filter.filter(params)
         end
       end
+
+      # @return [::Logger, nil] Rails' logger, when Rails is loaded and has one
+      def self.rails_logger
+        Rails.logger if defined?(Rails) && Rails.respond_to?(:logger)
+      end
+      private_class_method :rails_logger
+
+      # @return [::Logger] the fallback logger, built once
+      def self.stdout_logger
+        @stdout_logger ||= ::Logger.new($stdout)
+      end
+      private_class_method :stdout_logger
     end
   end
 end

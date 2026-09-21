@@ -3,13 +3,69 @@
 require 'spec_helper'
 
 RSpec.describe Servus::Support::Logger do
+  let(:service) { stub_const('LoggedService', Class.new(Servus::Base)) }
+
+  describe '.logger' do
+    after { Servus.config.logger = nil }
+
+    it 'is the configured logger' do
+      configured = Logger.new(File::NULL)
+      Servus.config.logger = configured
+
+      expect(described_class.logger).to be(configured)
+    end
+
+    it 'falls back to Rails.logger when Rails is loaded' do
+      rails_logger = Logger.new(File::NULL)
+      stub_const('Rails', Class.new { define_singleton_method(:logger) { rails_logger } })
+
+      expect(described_class.logger).to be(rails_logger)
+    end
+
+    it 'falls back to a $stdout logger outside Rails' do
+      expect(described_class.logger).to be_a(Logger)
+    end
+
+    it 'picks up a Rails logger set after Servus first read one' do
+      described_class.logger
+      rails_logger = Logger.new(File::NULL)
+      stub_const('Rails', Class.new { define_singleton_method(:logger) { rails_logger } })
+
+      expect(described_class.logger).to be(rails_logger)
+    end
+  end
+
+  describe 'lines about a service' do
+    let(:service_logger) { instance_spy(Logger) }
+
+    before { service.logger = service_logger }
+
+    it 'writes through the service class logger' do
+      described_class.log_success(service, 0.0125)
+
+      expect(service_logger).to have_received(:info).with('LoggedService succeeded in 0.013s')
+    end
+
+    it 'keeps the configured logger for lines that name no service' do
+      configured = instance_spy(Logger)
+      Servus.config.logger = configured
+
+      described_class.log_schema_override('core')
+
+      expect(configured).to have_received(:warn).with(a_string_including('"core"'))
+      expect(service_logger).not_to have_received(:warn)
+    ensure
+      Servus.config.logger = nil
+    end
+  end
+
   describe '.log_call' do
     let(:messages) { [] }
 
     before { allow(described_class.logger).to receive(:info) { |msg| messages << msg } }
 
     it 'logs arguments verbatim by default' do
-      described_class.log_call(String, { token: 'ps_supersecret', name: 'ok' })
+      described_class.log_call(service, { token: 'ps_supersecret', name: 'ok' })
 
       expect(messages.last).to include('ps_supersecret')
       expect(messages.last).not_to include('[FILTERED]')
@@ -20,7 +76,7 @@ RSpec.describe Servus::Support::Logger do
       after { Servus.config.log_filter_parameters = [] }
 
       it 'filters matching argument values' do
-        described_class.log_call(String, { token: 'ps_supersecret', name: 'ok' })
+        described_class.log_call(service, { token: 'ps_supersecret', name: 'ok' })
 
         expect(messages.last).to include('[FILTERED]')
         expect(messages.last).to include('"ok"')
@@ -28,32 +84,32 @@ RSpec.describe Servus::Support::Logger do
       end
 
       it 'filters partial-match keys like raw_token and password' do
-        described_class.log_call(String, { raw_token: 'abc', password: 'hunter2' })
+        described_class.log_call(service, { raw_token: 'abc', password: 'hunter2' })
 
         expect(messages.last).not_to include('abc')
         expect(messages.last).not_to include('hunter2')
       end
 
       it 'filters auth-prefixed keys wholesale, including nested values' do
-        described_class.log_call(String, { auth_hash: { credentials: { token: 'ya29.secret' } } })
+        described_class.log_call(service, { auth_hash: { credentials: { token: 'ya29.secret' } } })
 
         expect(messages.last).to include('[FILTERED]')
         expect(messages.last).not_to include('ya29.secret')
       end
 
       it 'leaves non-matching keys visible' do
-        described_class.log_call(String, { wand: 'elder', token: 'hidden' })
+        described_class.log_call(service, { wand: 'elder', token: 'hidden' })
 
         expect(messages.last).to include('elder')
         expect(messages.last).not_to include('hidden')
       end
 
       it 'applies a reassigned filter list on the next call' do
-        described_class.log_call(String, { wand: 'elder' })
+        described_class.log_call(service, { wand: 'elder' })
         expect(messages.last).to include('elder')
 
         Servus.config.log_filter_parameters = %i[wand]
-        described_class.log_call(String, { wand: 'elder' })
+        described_class.log_call(service, { wand: 'elder' })
 
         expect(messages.last).not_to include('elder')
       end
@@ -64,7 +120,7 @@ RSpec.describe Servus::Support::Logger do
       after { Servus.config.log_filter_parameters = [] }
 
       it 'masks their values as [FILTERED] while keeping the key names visible' do
-        described_class.log_call(String, { wand: 'elder', sigil: 'dark-mark', house: 'gryffindor' })
+        described_class.log_call(service, { wand: 'elder', sigil: 'dark-mark', house: 'gryffindor' })
 
         expect(messages.last).to match(/wand.*?\[FILTERED\]/)
         expect(messages.last).to match(/sigil.*?\[FILTERED\]/)
