@@ -241,7 +241,7 @@ module Servus
     # @see #failure
     def error!(message = nil, type: Servus::Support::Errors::ServiceError)
       error = type.new(message)
-      Logger.new(self.class).exception(error)
+      Logger.log_exception(self.class, error)
 
       # Emit error! events before raising
       emit_events_for(:error!, Response.new(false, nil, error))
@@ -282,19 +282,17 @@ module Servus
       #
       # rubocop:disable-next Metrics/MethodLength
       def call(**args)
-        log = Logger.new(self)
-
-        before_call(log, args)
+        before_call(args)
 
         instance = new(**args)
 
         # Wrap execution in catch block to handle guard failures
         result = catch(:guard_failure) do
-          benchmark(log) { instance.send(:call) }
+          benchmark(**args) { instance.send(:call) }
         end
 
         if result.is_a?(Servus::Support::Errors::GuardError)
-          log.guard_failure(result)
+          Logger.log_guard_failure(self, result)
           result = Response.new(false, nil, result)
         end
 
@@ -302,10 +300,10 @@ module Servus
 
         result
       rescue Servus::Support::Errors::ValidationError => e
-        log.validation_error(e)
+        Logger.log_validation_error(self, e)
         raise e
       rescue StandardError => e
-        log.exception(e)
+        Logger.log_exception(self, e)
         raise e
       end
 
@@ -315,14 +313,13 @@ module Servus
       # - Logging the service call with arguments
       # - Validating arguments against ARGUMENTS_SCHEMA (if defined)
       #
-      # @param log [Servus::Support::Logger] the log for this call
       # @param args [Hash] keyword arguments being passed to the service
       # @return [void]
       # @raise [Servus::Support::Errors::ValidationError] if arguments fail validation
       #
       # @api private
-      def before_call(log, args)
-        log.call(args)
+      def before_call(args)
+        Logger.log_call(self, args)
         Validator.validate_arguments!(self, args)
       end
 
@@ -348,17 +345,17 @@ module Servus
       # This method wraps the service execution to capture timing metrics.
       # The duration is logged along with the success/failure status of the service.
       #
-      # @param log [Servus::Support::Logger] the log for this call
+      # @param _args [Hash] keyword arguments (unused, kept for method signature compatibility)
       # @yieldreturn [Servus::Support::Response] the result from executing the service
       # @return [Servus::Support::Response] the service execution result
       #
       # @api private
-      def benchmark(log)
+      def benchmark(**_args)
         start_time = Time.now.utc
         result = yield
         duration = Time.now.utc - start_time
 
-        log.result(result, duration)
+        Logger.log_result(self, result, duration)
 
         result
       end

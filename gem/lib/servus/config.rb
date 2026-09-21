@@ -207,7 +207,7 @@ module Servus
   #     self.logger = Servus.logger.tagged(engine: 'treasury')
   #   end
   def self.logger
-    Servus::Support::Logger.default
+    Servus::Support::Logger.logger
   end
 
   # Yields the configuration for modification.
