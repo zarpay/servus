@@ -1,3 +1,9 @@
+## [1.1.1] - 2026-09-28
+
+A `DataObject` key that names a method now returns the stored value.
+
+`DataObject` inherits `SimpleDelegator`, so a key like `size`, `keys`, or `count` was resolved as the method and the stored value was only reachable through bracket access. The accessor is now defined on the instance for a colliding key, and a hash without one keeps the real method. A call with arguments still delegates.
+
 ## [1.1.0] - 2026-09-07
 
 Servus's logger is now configurable, and a service class can carry its own.

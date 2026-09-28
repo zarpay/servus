@@ -10,6 +10,7 @@ if ENV['COVERAGE']
 end
 
 require 'servus'
+require 'active_support/core_ext/object/json'
 require 'servus/testing'
 require 'spec_support/active_job_loader'
 require 'spec_support/schema_registry'

@@ -285,6 +285,39 @@ RSpec.describe Servus::Support::DataObject do
       expect(data.length).to eq(3)
     end
 
+    # EVENTUS-25, Fizzy 2073. A key that names a Hash method used to be unreachable:
+    # SimpleDelegator resolved the method before method_missing, so the stored value
+    # came back only through bracket access.
+    it 'returns the stored value when a key names a Hash method' do
+      shadowed = described_class.wrap({ 'size' => 'large', 'keys' => 'id', 'count' => 3 })
+
+      expect(shadowed.size).to eq('large')
+      expect(shadowed.keys).to eq('id')
+      expect(shadowed.count).to eq(3)
+      expect(shadowed['size']).to eq('large')
+    end
+
+    it 'still delegates a Hash method when no key collides with it' do
+      plain = described_class.wrap({ name: 'Alice', role: 'admin' })
+
+      expect(plain.size).to eq(2)
+      expect(plain.keys.map(&:to_s)).to contain_exactly('name', 'role')
+    end
+
+    it 'wraps a nested hash whose key names a Hash method' do
+      data = described_class.wrap({ user: { 'size' => 'small' } })
+
+      expect(data.user).to be_a(described_class)
+      expect(data.user.size).to eq('small')
+    end
+
+    it 'keeps the argument form of a shadowed Hash method' do
+      data = described_class.wrap({ 'fetch' => 'stored' })
+
+      expect(data.fetch).to eq('stored')
+      expect(data.fetch('fetch')).to eq('stored')
+    end
+
     it 'delegates as_json' do
       result = data.as_json
       expect(result).to be_a(Hash)

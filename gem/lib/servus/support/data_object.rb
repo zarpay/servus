@@ -48,6 +48,34 @@ module Servus
 
       private
 
+      # A key that names a Hash method is unreachable through method_missing:
+      # SimpleDelegator resolves the method first, so data.size returns the count
+      # instead of the stored value (EVENTUS-25, Fizzy 2073). Defining the
+      # accessor on the instance makes it win, and only for a colliding key, so a
+      # hash without one keeps the real Hash method.
+
+      def shadow_colliding_keys(data)
+        data.each_key { |key| shadow_key(data, key.to_sym) }
+      end
+
+      # respond_to? sees methods Hash inherits and ones mixed in later
+      # (ActiveSupport adds as_json), which is the set SimpleDelegator resolves
+      # before method_missing.
+      def shadow_key(data, name)
+        return unless respond_to?(name)
+        return unless data.key?(name) || data.key?(name.to_s)
+
+        define_singleton_method(name) { |*call_args, &call_block| read_or_delegate(name, *call_args, &call_block) }
+      end
+
+      def read_or_delegate(name, *call_args, &call_block)
+        hash = __getobj__
+        return hash.public_send(name, *call_args, &call_block) if call_args.any? || call_block
+        return hash.public_send(name) unless hash.key?(name) || hash.key?(name.to_s)
+
+        self.class.wrap(hash.key?(name) ? hash[name] : hash[name.to_s])
+      end
+
       # Provides accessor-style access to Hash keys.
       #
       # Only zero-argument, no-block calls trigger key lookup. Methods with
@@ -57,17 +85,15 @@ module Servus
       # @param method_name [Symbol] the method name to look up as a key
       # @return [Object] the value for the key, wrapped if it is a Hash
       # @raise [NoMethodError] if the key does not exist
-      def method_missing(method_name, *args, &block)
-        return super if args.any? || block
+      def initialize(data)
+        super
+        shadow_colliding_keys(data)
+      end
 
-        hash = __getobj__
-        if hash.key?(method_name.to_sym)
-          self.class.wrap(hash[method_name.to_sym])
-        elsif hash.key?(method_name.to_s)
-          self.class.wrap(hash[method_name.to_s])
-        else
-          super
-        end
+      def method_missing(method_name, *args, &block)
+        return __getobj__.public_send(method_name, *args, &block) if args.any? || block
+
+        read_or_delegate(method_name)
       end
 
       # @api private
