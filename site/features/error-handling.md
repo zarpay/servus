@@ -49,6 +49,44 @@ result.data.reason       # => "insufficient_funds"
 result.data.decline_code # => "do_not_honor"
 ```
 
+## `failure!()` — ending the service from a check
+
+`failure` only ends the service when `call` returns it. `failure!` ends it from anywhere `call` reaches, including a private method, so each check can live in a named method and `call` reads as a list of steps:
+
+```ruby
+def call
+  distinct_accounts!
+  funds_available!
+
+  from_account.withdraw!(@gold_dragons)
+  to_account.deposit!(@gold_dragons)
+
+  success(transferred: @gold_dragons)
+end
+
+private
+
+def distinct_accounts!
+  return unless from_account == to_account
+
+  failure!("Cannot transfer to the same account")
+end
+
+def funds_available!
+  return if from_account.balance >= @gold_dragons
+
+  failure!("Insufficient funds", type: InsufficientFundsError, data: { balance: from_account.balance })
+end
+```
+
+It takes the same arguments as `failure`, and the caller cannot tell the two apart: the response is logged, validated against the failure schema, and emits `on: :failure` events exactly as a returned one does.
+
+It is a `throw`, not an exception. `rescue` inside the service does not catch it, `ensure` still runs, and `rescue_from` never sees it. A `failure!` in a nested service ends only that service; the outer one receives a failed `Response`, as it would from a returned failure.
+
+::: warning Inside a database transaction
+Leaving an ActiveRecord `transaction` or `with_lock` block with `failure!` **commits** it, because no exception was raised. Run checks before the first write, or raise (for example `ActiveRecord::Rollback`) when the writes must be undone.
+:::
+
 ## `error!()` — exceptional halts
 
 Use `error!` when something is genuinely broken and the service cannot continue. Unlike `failure`, it raises an exception:
@@ -136,6 +174,7 @@ failure("Account balance too low", type: InsufficientFundsError)
 | Situation | Use | Why |
 | --- | --- | --- |
 | Business rule prevents the action | `failure(...)` | Caller can handle it — it's an expected outcome |
+| The same, checked in a helper method | `failure!(...)` | Ends the service without threading a return value back to `call` |
 | Input violates the schema | Schema validation | Caught before `call` runs — see [Schema Validation](/features/schema-validation) |
 | External dependency times out | `rescue_from` | Converts infrastructure exceptions into caller-friendly failures |
 | System invariant is broken | `error!()` or let it raise | The application is in a bad state — don't normalize it |
