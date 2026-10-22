@@ -1,3 +1,30 @@
+## [1.2.0] - 2026-10-22
+
+`failure!` ends a service with a failure from anywhere inside `call`, so a check
+can live in its own method instead of being returned from `call`.
+
+```ruby
+def call
+  account_open!
+  success(account.withdraw!(amount))
+end
+
+private
+
+def account_open!
+  return if account.open?
+
+  failure!("Account is closed", type: UnprocessableEntityError)
+end
+```
+
+It takes the same arguments as `failure` and produces the same response, which
+is logged, validated, and emits events the same way. It is a `throw`, not an
+exception, so `rescue` and `rescue_from` do not see it. Leaving an ActiveRecord
+transaction with it commits the transaction.
+
+See [Error Handling](https://zarpay.github.io/servus/features/error-handling).
+
 ## [1.1.0] - 2026-09-07
 
 Servus's logger is now configurable, and a service class can carry its own.

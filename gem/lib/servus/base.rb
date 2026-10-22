@@ -216,6 +216,46 @@ module Servus
       Response.new(false, data, error)
     end
 
+    # Ends the service with a failure response, from anywhere inside +call+.
+    #
+    # Builds the same response as {#failure} and returns it from the service as
+    # if +call+ had returned it, so it is logged, validated against the failure
+    # schema, and emits events exactly as a returned failure does. Unlike
+    # {#failure}, it does not need to be the value of +call+: a private check
+    # method can end the service itself, which keeps +call+ a list of steps.
+    #
+    # It is not an exception: +rescue+ does not see it, and +ensure+ still runs.
+    # A failure ends only the service that raised it — a nested service called
+    # from +call+ hands its failure back as a response, as it always has.
+    #
+    # @param message [String, nil] custom error message (uses error type's default if nil)
+    # @param data [Object, nil] optional structured data to attach to the failure response
+    # @param type [Class] error class to instantiate (must inherit from ServiceError)
+    # @return [void] never returns
+    #
+    # @example Ending the service from a check
+    #   def call
+    #     account_open!
+    #     success(account.withdraw!(amount))
+    #   end
+    #
+    #   private
+    #
+    #   def account_open!
+    #     return if account.open?
+    #
+    #     failure!("Account is closed", type: Servus::Support::Errors::UnprocessableEntityError)
+    #   end
+    #
+    # @note Leaving an ActiveRecord +transaction+ (or +with_lock+) block this way
+    #   commits it, as any non-exception exit does. Run checks before writing, or
+    #   raise to roll back.
+    # @see #failure
+    # @see #error!
+    def failure!(message = nil, data: nil, type: Servus::Support::Errors::ServiceError)
+      throw :service_failure, failure(message, data:, type:)
+    end
+
     # Logs an error and raises an exception, halting service execution.
     #
     # Use this method when you need to immediately halt execution with an exception
@@ -288,7 +328,7 @@ module Servus
 
         # Wrap execution in catch block to handle guard failures
         result = catch(:guard_failure) do
-          benchmark(**args) { instance.send(:call) }
+          benchmark(**args) { catch(:service_failure) { instance.send(:call) } }
         end
 
         if result.is_a?(Servus::Support::Errors::GuardError)
