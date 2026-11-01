@@ -1,3 +1,31 @@
+## [Unreleased]
+
+A service's job now subclasses its parent service's job, so `async` on a base
+service configures every service beneath it, and a service's own `async`
+overrides what it inherits.
+
+```ruby
+class ApplicationService < Servus::Base
+  async queue: :within_10_minutes
+end
+
+class Reports::Rebuild::Service < ApplicationService; end
+# Reports::Rebuild::ServiceJob runs on :within_10_minutes
+```
+
+A service that nothing configures now runs on ActiveJob's configured default
+queue (`config.active_job.default_queue_name`). Servus's job class named
+`:default` itself, which hid an application's own default from every service.
+
+Two things change for an existing application:
+
+- `async` settings on a base service, which used to configure only that
+  service's job, now reach every subclass that does not override them.
+- An application that changed `default_queue_name` will see services it never
+  configured move from `:default` to that queue. Its workers must read it.
+
+See [Async Execution](https://zarpay.github.io/servus/features/async-execution).
+
 ## [1.2.0] - 2026-10-22
 
 `failure!` ends a service with a failure from anywhere inside `call`, so a check

@@ -63,6 +63,16 @@ class AsyncPriorityService < AsyncFixtureService; end
 class AsyncBlockService < AsyncFixtureService; end
 class AsyncRetryService < AsyncFixtureService; end
 
+# A base service configured with `.async` and the services beneath it, so the
+# job hierarchy can be seen to follow the service hierarchy: one subclass
+# inherits the base's job configuration, the other overrides it.
+class AsyncInheritingBaseService < AsyncFixtureService; end
+class AsyncInheritingService < AsyncInheritingBaseService; end
+class AsyncOverridingService < AsyncInheritingBaseService; end
+
+# Never configured with `.async`, so its queue is whatever ActiveJob's default is.
+class AsyncUnconfiguredService < AsyncFixtureService; end
+
 # Namespaced fixture — its sibling job is AsyncNamespace::DeliverServiceJob.
 module AsyncNamespace
   class DeliverService < AsyncFixtureService; end

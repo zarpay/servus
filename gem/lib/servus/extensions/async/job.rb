@@ -30,8 +30,6 @@ module Servus
         # @return [Class<Servus::Base>, nil] the owning service class
         class_attribute :servus_service
 
-        queue_as :default
-
         # Executes the job's service with the provided arguments.
         #
         # The service is identified by {servus_service} rather than a serialized
