@@ -1,4 +1,4 @@
-## [Unreleased]
+## [1.3.0] - 2026-11-02
 
 A service's job now subclasses its parent service's job, so `async` on a base
 service configures every service beneath it, and a service's own `async`
