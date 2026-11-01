@@ -121,6 +121,28 @@ Treasury::TransferGold::Service.call_async(
 )
 ```
 
+## Configuring a family of services
+
+A service's job subclasses its parent service's job, so `async` on a base service configures every service beneath it. A service's own `async` overrides what it inherits, the way any ActiveJob subclass overrides its parent:
+
+```ruby
+class ApplicationService < Servus::Base
+  async queue: :within_10_minutes do
+    retry_on Net::OpenTimeout, attempts: 3
+  end
+end
+
+# Runs on :within_10_minutes and retries timeouts, from ApplicationService
+class Reports::Rebuild::Service < ApplicationService; end
+
+# Runs on :within_10_seconds, and still retries timeouts
+class Console::Reply::Service < ApplicationService
+  async queue: :within_10_seconds
+end
+```
+
+A service that nothing configures runs on ActiveJob's default queue (`config.active_job.default_queue_name`).
+
 ## How it works
 
 `call_async` enqueues the service's named job with just the service arguments — the job class itself already identifies which service to run. When the worker picks it up, it calls `Service.call(**args)`, and the full lifecycle runs exactly as if you had called `.call` directly.

@@ -175,6 +175,11 @@ module Servus
         # Generates a named job subclass for this service and installs it as a sibling
         # constant in the service's parent namespace.
         #
+        # The job subclasses its parent service's job (see {#parent_servus_job_class}),
+        # so whatever a base service configures with {#async} — queue, priority,
+        # +retry_on+, callbacks — every service beneath it inherits, and a service's
+        # own {#async} overrides it as an ActiveJob subclass overrides its parent.
+        #
         # The constant is +"#{ServiceConst}Job"+, so +Treasury::TransferGold::Service+
         # yields +Treasury::TransferGold::ServiceJob+. Defining it eagerly (see
         # {#inherited}) means Rails' production eager-load defines every service's job
@@ -191,12 +196,26 @@ module Servus
         def build_servus_job_class
           raise Servus::Events::Errors::AnonymousServiceError.for(self) if name.nil?
 
-          klass = Class.new(Servus::Extensions::Async::Job)
+          klass = Class.new(parent_servus_job_class)
           klass.servus_service = self
 
           publish_job_const(servus_job_const_name, klass)
 
           klass
+        end
+
+        # The job class this service's job subclasses: its parent service's, so job
+        # configuration follows the service hierarchy. A service directly beneath
+        # {Servus::Base}, or beneath an anonymous service with no job of its own,
+        # starts from {Servus::Extensions::Async::Job}.
+        #
+        # @return [Class<Servus::Extensions::Async::Job>] the job class to subclass
+        # @api private
+        def parent_servus_job_class
+          parent = superclass
+          return Servus::Extensions::Async::Job unless parent < Servus::Base && parent.name
+
+          parent.servus_job_class
         end
 
         # @return [String] the sibling constant the service's job is published under
