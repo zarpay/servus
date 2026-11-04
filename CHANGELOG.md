@@ -1,4 +1,4 @@
-## [Unreleased]
+## [1.3.1] - 2026-11-04
 
 `event_payload_enricher` adds the same thing to every event payload, so what
 every event should say alike — who caused it, the tenant, when — is configured
