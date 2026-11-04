@@ -467,6 +467,17 @@ RSpec.describe Servus::Event, :inline_jobs do
         .with(hash_including(user_id: 123))
     end
 
+    it 'enriches the payload as configured, with no service' do
+      Servus.config.event_payload_enricher = ->(payload, service:, **) { payload.merge(service: service) }
+      event_class = Class.new(described_class) { event_name :enriched_emit_event }
+
+      expect { event_class.emit({ user_id: 123 }) }
+        .to emit_event(:enriched_emit_event)
+        .with(hash_including(user_id: 123, service: nil))
+    ensure
+      Servus.config.event_payload_enricher = nil
+    end
+
     it 'raises if no event name configured' do
       event_class = Class.new(described_class)
 

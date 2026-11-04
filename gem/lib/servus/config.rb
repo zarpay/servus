@@ -90,6 +90,36 @@ module Servus
     #   end
     attr_accessor :logger
 
+    # What to add to every event payload, beside what each event is about.
+    #
+    # A callable given the payload as built, the event's name and the service
+    # emitting it (+nil+ for {Servus::Event.emit}), returning the payload to
+    # validate and dispatch. Applied on both emission paths, before the payload
+    # is validated, so an Event's schema can require what it adds. Use it for
+    # what every event should say the same way, such as who caused it, rather
+    # than having each service build it into its own payloads.
+    #
+    # @return [#call, nil] the enricher, or nil to emit payloads as built
+    #
+    # @example Say who caused every event
+    #   config.event_payload_enricher = lambda do |payload, event_name:, service:|
+    #     payload.merge(meta: { actor: Current.user&.id })
+    #   end
+    attr_accessor :event_payload_enricher
+
+    # The payload an event is emitted with: as built, or as the configured
+    # {#event_payload_enricher} returns it.
+    #
+    # @param payload [Hash] the payload as built
+    # @param event_name [Symbol] the event being emitted
+    # @param service [Servus::Base, nil] the service emitting it, if one is
+    # @return [Hash] the payload to validate and dispatch
+    def enrich_event_payload(payload, event_name:, service: nil)
+      return payload unless event_payload_enricher
+
+      event_payload_enricher.call(payload, event_name:, service:)
+    end
+
     # The ordered list of routers that resolve invocations for events.
     #
     # The Bus iterates routers in order, collects invocations, deduplicates

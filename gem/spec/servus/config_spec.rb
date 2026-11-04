@@ -131,6 +131,23 @@ RSpec.describe Servus::Config do
     after { Servus.config.require_event_payload_schema = false }
   end
 
+  describe '#event_payload_enricher' do
+    after { Servus.config.event_payload_enricher = nil }
+
+    it 'defaults to nil, leaving payloads as built' do
+      expect(Servus.config.enrich_event_payload({ id: 1 }, event_name: :thing_happened)).to eq({ id: 1 })
+    end
+
+    it 'gives the enricher the payload, the event and the service' do
+      Servus.config.event_payload_enricher = lambda do |payload, event_name:, service:|
+        payload.merge(meta: { event: event_name, service: service })
+      end
+
+      expect(Servus.config.enrich_event_payload({ id: 1 }, event_name: :thing_happened, service: :svc))
+        .to eq({ id: 1, meta: { event: :thing_happened, service: :svc } })
+    end
+  end
+
   describe '#log_filter_parameters' do
     after { Servus.config.log_filter_parameters = [] }
 
