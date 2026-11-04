@@ -146,7 +146,9 @@ module Servus
         end
       end
 
-      # Emits events for a specific trigger with the given result.
+      # Emits events for a specific trigger with the given result. Each payload
+      # is built, then given to the configured
+      # {Servus::Config#event_payload_enricher}, then validated and dispatched.
       #
       # @param trigger [Symbol] the trigger type (:success, :failure, :error!)
       # @param result [Servus::Support::Response] the service result
@@ -156,7 +158,9 @@ module Servus
         self.class.emissions_for(trigger).each do |emission|
           next unless emission_condition_met?(emission, result)
 
-          payload = build_event_payload(emission, result)
+          payload = Servus.config.enrich_event_payload(build_event_payload(emission, result),
+                                                       event_name: emission[:event_name],
+                                                       service: self)
           validate_event_payload!(emission[:event_name], payload)
           Servus::Events::Bus.emit(emission[:event_name], payload)
         end

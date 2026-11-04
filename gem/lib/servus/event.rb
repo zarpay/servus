@@ -202,6 +202,9 @@ module Servus
       #
       # Provides a type-safe, discoverable way to emit events from anywhere in
       # the application (controllers, jobs, rake tasks) without creating a service.
+      # The payload is given to the configured
+      # {Servus::Config#event_payload_enricher}, with no service, before it is
+      # validated.
       #
       # @param payload [Hash] the event payload
       # @return [void]
@@ -226,6 +229,7 @@ module Servus
       def emit(payload)
         raise 'No event configured. Call event_name :name first.' unless @event_name
 
+        payload = Servus.config.enrich_event_payload(payload, event_name: @event_name)
         Servus::Support::Validator.validate_event_payload!(self, payload)
 
         Servus::Events::Bus.emit(@event_name, payload)

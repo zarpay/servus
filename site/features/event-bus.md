@@ -349,6 +349,44 @@ file that doesn't match — or a non-Rails host that never requires it — will 
 unregistered and trip the raise even though it has a perfectly good schema.
 :::
 
+## Adding the same metadata to every event
+
+Some things every event should say the same way: who caused it, the tenant it
+happened in, when. Rather than have each service build them into its own
+payloads, configure an enricher. It is given every payload as built, with the
+event's name and the service emitting it, and returns the payload to validate
+and dispatch:
+
+```ruby
+# config/initializers/servus.rb
+Servus.configure do |config|
+  config.event_payload_enricher = lambda do |payload, event_name:, service:|
+    payload.merge(meta: { actor: Current.user&.id, occurred_at: Time.current.iso8601 })
+  end
+end
+```
+
+It runs on both emission paths — the `emits` DSL and `Event.emit`, where
+`service` is `nil` — and **before** the payload is validated, so an Event's
+schema can require what it adds:
+
+```ruby
+class GoldTransferredEvent < Servus::Event
+  schema payload: {
+    type: "object",
+    required: ["transferred", "meta"],
+    properties: {
+      transferred: { type: "number" },
+      meta: { type: "object" }
+    }
+  }
+end
+```
+
+The enricher runs in the emitting process, so it can read request or job state
+(`Current`, a thread-local) as it stood when the event was emitted. With no
+enricher configured, payloads are emitted as built.
+
 ## Emitting events without a service
 
 Event classes provide an `emit` class method for triggering events from controllers, jobs, or other code that isn't a Servus service:

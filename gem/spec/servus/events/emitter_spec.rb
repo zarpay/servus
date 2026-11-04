@@ -36,6 +36,45 @@ RSpec.describe Servus::Events::Emitter do
     end
   end
 
+  describe 'payload enrichment' do
+    let(:service_class) do
+      stub_const('EnrichedEmitService', Class.new(Servus::Base) do
+        emits :enriched_emission, on: :success
+
+        def call = success({ user_id: 7 })
+      end)
+    end
+
+    before do
+      stub_const('EnrichedEmission', Class.new(Servus::Event) do
+        event_name :enriched_emission
+
+        schema payload: {
+          type: 'object',
+          required: %w[user_id meta],
+          properties: { user_id: { type: 'integer' }, meta: { type: 'object' } }
+        }
+      end)
+
+      Servus.config.event_payload_enricher = lambda do |payload, event_name:, service:|
+        payload.merge(meta: { event: event_name.to_s, service: service.class.name })
+      end
+    end
+
+    after { Servus.config.event_payload_enricher = nil }
+
+    it 'adds what the enricher returns to the payload it dispatches' do
+      expect { service_class.call }
+        .to emit_event(:enriched_emission)
+        .with(hash_including(user_id: 7, meta: { event: 'enriched_emission', service: 'EnrichedEmitService' }))
+    end
+
+    # The enricher runs first, so an Event's schema may require what it adds.
+    it 'enriches before validating' do
+      expect { service_class.call }.not_to raise_error
+    end
+  end
+
   describe 'payload schema enforcement' do
     subject(:call_service) { service_class.call }
 

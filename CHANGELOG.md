@@ -1,3 +1,23 @@
+## [1.3.1] - 2026-11-04
+
+`event_payload_enricher` adds the same thing to every event payload, so what
+every event should say alike — who caused it, the tenant, when — is configured
+once rather than built by each service.
+
+```ruby
+Servus.configure do |config|
+  config.event_payload_enricher = lambda do |payload, event_name:, service:|
+    payload.merge(meta: { actor: Current.user&.id })
+  end
+end
+```
+
+It is given each payload as built, the event's name and the emitting service
+(`nil` from `Event.emit`), and applied on both emission paths before
+validation, so an Event's schema may require what it adds.
+
+See [Event Bus](https://zarpay.github.io/servus/features/event-bus#adding-the-same-metadata-to-every-event).
+
 ## [1.3.0] - 2026-11-02
 
 A service's job now subclasses its parent service's job, so `async` on a base
