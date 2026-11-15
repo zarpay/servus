@@ -62,7 +62,7 @@ The service code is identical in all three cases. The resolver handles the diffe
 ```ruby
 lazily :name, finds: ModelClass              # resolves via ModelClass.find(value)
 lazily :name, finds: ModelClass, by: :column # resolves via ModelClass.find_by!(column: value)
-lazily :name, finds: ModelClass, optional: true # nil instead of raising when absent or not found
+lazily :name, finds: ModelClass, optional: true # nil instead of raising when nil or not found
 ```
 
 | Parameter | Description |
@@ -202,18 +202,11 @@ end
 | Input | `optional: false` (default) | `optional: true` |
 | --- | --- | --- |
 | A record of the target class | Returned unchanged | Returned unchanged |
-| `nil`, or a dry-initializer `option` left out | Raises `NotFoundError` | `nil` |
+| `nil`, or not passed (keyword defaults to `nil`) | Raises `NotFoundError` | `nil` |
 | An id (or `by:` value) that finds no record | Raises `ActiveRecord::RecordNotFound` | `nil` |
 | An array of ids, some finding no record | The records found | The records found (empty if none) |
 
 With `optional: true`, a scalar is looked up with `.find_by(column => value)` instead of `.find` / `.find_by!`, so a missing record gives `nil`. Arrays use `.where` either way, which already leaves out ids that find no record.
-
-With dry-initializer, `option :referrer, optional: true` leaves `@referrer` as `Dry::Initializer::UNDEFINED` when the caller leaves it out. `lazily` treats that as absent, so there's no need for `default: proc {}`:
-
-```ruby
-option :referrer, optional: true
-lazily :referrer, finds: User, optional: true
-```
 
 ## Multiple resolvers
 
@@ -234,8 +227,6 @@ Raises `Servus::Extensions::Lazily::Errors::NotFoundError` immediately with a me
 ```
 Couldn't find Account (from_account was nil)
 ```
-
-A dry-initializer `option` that was left out raises the same error, ending `(from_account was not given)`. Declare the resolver with [`optional: true`](#optional-records) to get `nil` instead.
 
 ### Missing record
 

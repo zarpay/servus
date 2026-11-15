@@ -7,11 +7,10 @@ record or id without dropping `lazily`.
 lazily :referrer, finds: User, optional: true
 ```
 
-With `optional: true`, `nil`, a left-out dry-initializer option and an id (or
-`by:` value) that finds no record all resolve to `nil` instead of raising; an
-array of ids resolves to the records that were found. Without it, behaviour is
-unchanged, except that a left-out dry-initializer option now raises
-`NotFoundError` ("referrer was not given") rather than reaching `.find`.
+With `optional: true`, `nil` (including an input that isn't passed and defaults
+to `nil`) and an id (or `by:` value) that finds no record resolve to `nil`
+instead of raising; an array of ids resolves to the records that were found.
+Without it, behaviour is unchanged.
 
 See [Lazy Resolvers](https://zarpay.github.io/servus/features/lazy-resolvers#optional-records).
 

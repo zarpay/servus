@@ -26,7 +26,7 @@ module Servus
         # @param by [Symbol] the lookup column (default: +:id+). When +:id+, uses +.find+.
         #   Otherwise uses +.find_by!(column: value)+.
         # @param optional [Boolean] when true, resolves to +nil+ instead of raising if the
-        #   value is +nil+, left out, or finds no record; arrays keep only the records found
+        #   value is +nil+ or finds no record; arrays keep only the records found
         #   (default: +false+)
         # @return [void]
         #
@@ -70,7 +70,7 @@ module Servus
         # @param name [Symbol] the method/ivar name
         # @param klass [Class] the target model class
         # @param by [Symbol] the lookup column
-        # @param optional [Boolean] whether absent or missing records resolve to nil
+        # @param optional [Boolean] whether nil values or missing records resolve to nil
         # @api private
         def define_resolver_method(name, klass, by, optional)
           mod = (@_resolver_module ||= Module.new)

@@ -451,19 +451,13 @@ RSpec.describe Servus::Extensions::Lazily::Call do
   end
 
   describe 'optional:' do
-    # Stands in for dry-initializer's sentinel for an option that was left out.
-    let(:undefined) { Object.new.freeze }
-
-    before do
-      stub_const('Dry::Initializer::UNDEFINED', undefined)
-    end
-
     def build_service(name, optional:, finds: FakeModel, by: :id)
       Class.new(Servus::Base) do
         lazily name, finds: finds, by: by, optional: optional
 
+        # Equivalent to `def initialize(user: nil)`: an input that isn't passed is nil.
         define_method(:initialize) do |**kwargs|
-          instance_variable_set(:"@#{name}", kwargs.fetch(name, Dry::Initializer::UNDEFINED))
+          instance_variable_set(:"@#{name}", kwargs[name])
         end
 
         define_method(:call) { success(name => public_send(name)) }
@@ -477,7 +471,7 @@ RSpec.describe Servus::Extensions::Lazily::Call do
         expect(service_class.new(user: nil).user).to be_nil
       end
 
-      it 'resolves an omitted option (Dry::Initializer::UNDEFINED) to nil' do
+      it 'resolves an input that is not passed to nil' do
         expect(service_class.new.user).to be_nil
       end
 
@@ -551,9 +545,9 @@ RSpec.describe Servus::Extensions::Lazily::Call do
         )
       end
 
-      it 'raises NotFoundError for an omitted option (Dry::Initializer::UNDEFINED)' do
+      it 'raises NotFoundError for an input that is not passed' do
         expect { service_class.new.user }.to raise_error(
-          Servus::Extensions::Lazily::Errors::NotFoundError, /user was not given/
+          Servus::Extensions::Lazily::Errors::NotFoundError, /user was nil/
         )
       end
 
