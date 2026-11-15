@@ -150,3 +150,12 @@ end
 ```
 
 Both `option` and `lazily` declare `:from_account`, but `lazily`'s accessor takes precedence. The `option` declaration still handles the initialization — `lazily` just intercepts the read.
+
+For an optional record, declare both as optional. An `option` left out is `Dry::Initializer::UNDEFINED`, which `lazily` treats as absent and resolves to `nil`:
+
+```ruby
+option :referrer, optional: true
+lazily :referrer, finds: User, optional: true
+```
+
+See [Optional records](/features/lazy-resolvers#optional-records).

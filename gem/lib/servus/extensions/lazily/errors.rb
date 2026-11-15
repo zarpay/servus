@@ -13,10 +13,11 @@ module Servus
         # All lazy resolution errors inherit from this class for easy rescue handling.
         class LazilyError < StandardError; end
 
-        # Raised when a lazily-resolved record reference is nil.
+        # Raised when a lazily-resolved record reference is nil or not given.
         #
         # This occurs when a service declares +lazily :user, finds: User+ but
-        # receives +user: nil+. A nil reference is always a bug at the call site.
+        # receives +user: nil+ (or, with dry-initializer, leaves the option out).
+        # Declare +lazily :user, finds: User, optional: true+ to resolve to +nil+ instead.
         #
         # @example
         #   class MyService < Servus::Base
