@@ -22,13 +22,19 @@ class FakeModel
 
   def self.find_by!(**attrs)
     value = attrs.values.first
-    raise ActiveRecord::RecordNotFound, "Couldn't find FakeModel" if value == 'missing'
+    raise ActiveRecord::RecordNotFound, "Couldn't find FakeModel" if ['missing', 999].include?(value)
 
     new(**attrs)
   end
 
+  def self.find_by(**attrs)
+    find_by!(**attrs)
+  rescue ActiveRecord::RecordNotFound
+    nil
+  end
+
   def self.where(**attrs)
-    values = Array(attrs.values.first)
+    values = Array(attrs.values.first).reject { |v| v == 999 }
     values.map { |v| new(id: v) }
   end
 end
@@ -53,8 +59,14 @@ class FakeAccount
     new(**attrs)
   end
 
+  def self.find_by(**attrs)
+    find_by!(**attrs)
+  rescue ActiveRecord::RecordNotFound
+    nil
+  end
+
   def self.where(**attrs)
-    values = Array(attrs.values.first)
+    values = Array(attrs.values.first).reject { |v| v == 'missing' }
     values.map { |v| new(uuid: v) }
   end
 end
@@ -70,7 +82,15 @@ RSpec.describe Servus::Extensions::Lazily::Call do
         lazily :user, finds: FakeModel
       end
 
-      expect(service_class.lazy_resolvers[:user]).to eq({ klass: FakeModel, by: :id })
+      expect(service_class.lazy_resolvers[:user]).to eq({ klass: FakeModel, by: :id, optional: false })
+    end
+
+    it 'stores optional: true when given' do
+      service_class = Class.new(Servus::Base) do
+        lazily :user, finds: FakeModel, optional: true
+      end
+
+      expect(service_class.lazy_resolvers[:user]).to eq({ klass: FakeModel, by: :id, optional: true })
     end
 
     it 'accumulates multiple lazily declarations' do
@@ -427,6 +447,131 @@ RSpec.describe Servus::Extensions::Lazily::Call do
 
       instance = service_class.new(user: 999)
       expect { instance.user }.to raise_error(ActiveRecord::RecordNotFound)
+    end
+  end
+
+  describe 'optional:' do
+    def build_service(name, optional:, finds: FakeModel, by: :id)
+      Class.new(Servus::Base) do
+        lazily name, finds: finds, by: by, optional: optional
+
+        # Equivalent to `def initialize(user: nil)`: an input that isn't passed is nil.
+        define_method(:initialize) do |**kwargs|
+          instance_variable_set(:"@#{name}", kwargs[name])
+        end
+
+        define_method(:call) { success(name => public_send(name)) }
+      end
+    end
+
+    context 'with optional: true' do
+      let(:service_class) { build_service(:user, optional: true) }
+
+      it 'resolves nil to nil' do
+        expect(service_class.new(user: nil).user).to be_nil
+      end
+
+      it 'resolves an input that is not passed to nil' do
+        expect(service_class.new.user).to be_nil
+      end
+
+      it 'resolves an id that finds no record to nil' do
+        expect(service_class.new(user: 999).user).to be_nil
+      end
+
+      it 'resolves a by: value that finds no record to nil' do
+        svc = build_service(:account, optional: true, finds: FakeAccount, by: :uuid)
+
+        expect(svc.new(account: 'missing').account).to be_nil
+      end
+
+      it 'resolves an id that finds a record' do
+        resolved = service_class.new(user: 42).user
+
+        expect(resolved).to be_a(FakeModel)
+        expect(resolved.id).to eq(42)
+      end
+
+      it 'resolves a by: value that finds a record' do
+        svc = build_service(:account, optional: true, finds: FakeAccount, by: :uuid)
+        resolved = svc.new(account: 'abc-123').account
+
+        expect(resolved).to be_a(FakeAccount)
+        expect(resolved.uuid).to eq('abc-123')
+      end
+
+      it 'returns a record of the right class unchanged' do
+        existing = FakeModel.new(id: 7)
+        expect(FakeModel).not_to receive(:find_by)
+
+        expect(service_class.new(user: existing).user).to equal(existing)
+      end
+
+      it 'returns only the records found for an array of ids' do
+        svc = build_service(:users, optional: true)
+
+        expect(svc.new(users: [1, 999, 3]).users.map(&:id)).to eq([1, 3])
+      end
+
+      it 'returns an empty array when no ids in the array find a record' do
+        svc = build_service(:users, optional: true)
+
+        expect(svc.new(users: [999]).users).to eq([])
+      end
+
+      it 'memoizes a nil result' do
+        expect(FakeModel).to receive(:find_by).once.and_call_original
+
+        instance = service_class.new(user: 999)
+        instance.user
+
+        expect(instance.user).to be_nil
+      end
+
+      it 'returns a successful result with nil through .call' do
+        result = service_class.call(user: nil)
+
+        expect(result).to be_success
+        expect(result.data[:user]).to be_nil
+      end
+    end
+
+    context 'with optional: false (default)' do
+      let(:service_class) { build_service(:user, optional: false) }
+
+      it 'raises NotFoundError for nil' do
+        expect { service_class.new(user: nil).user }.to raise_error(
+          Servus::Extensions::Lazily::Errors::NotFoundError, /user was nil/
+        )
+      end
+
+      it 'raises NotFoundError for an input that is not passed' do
+        expect { service_class.new.user }.to raise_error(
+          Servus::Extensions::Lazily::Errors::NotFoundError, /user was nil/
+        )
+      end
+
+      it 'raises ActiveRecord::RecordNotFound for an id that finds no record' do
+        expect { service_class.new(user: 999).user }.to raise_error(ActiveRecord::RecordNotFound)
+      end
+
+      it 'raises ActiveRecord::RecordNotFound for a by: value that finds no record' do
+        svc = build_service(:account, optional: false, finds: FakeAccount, by: :uuid)
+
+        expect { svc.new(account: 'missing').account }.to raise_error(ActiveRecord::RecordNotFound)
+      end
+
+      it 'returns a record of the right class unchanged' do
+        existing = FakeModel.new(id: 7)
+
+        expect(service_class.new(user: existing).user).to equal(existing)
+      end
+
+      it 'returns only the records .where finds for an array of ids, as before' do
+        svc = build_service(:users, optional: false)
+
+        expect(svc.new(users: [1, 999, 3]).users.map(&:id)).to eq([1, 3])
+      end
     end
   end
 end

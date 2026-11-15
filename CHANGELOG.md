@@ -1,3 +1,19 @@
+## [Unreleased]
+
+`lazily` takes an `optional:` keyword, so a service can accept an optional
+record or id without dropping `lazily`.
+
+```ruby
+lazily :referrer, finds: User, optional: true
+```
+
+With `optional: true`, `nil` (including an input that isn't passed and defaults
+to `nil`) and an id (or `by:` value) that finds no record resolve to `nil`
+instead of raising; an array of ids resolves to the records that were found.
+Without it, behaviour is unchanged.
+
+See [Lazy Resolvers](https://zarpay.github.io/servus/features/lazy-resolvers#optional-records).
+
 ## [1.3.1] - 2026-11-04
 
 `event_payload_enricher` adds the same thing to every event payload, so what

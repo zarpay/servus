@@ -16,7 +16,8 @@ module Servus
         # Raised when a lazily-resolved record reference is nil.
         #
         # This occurs when a service declares +lazily :user, finds: User+ but
-        # receives +user: nil+. A nil reference is always a bug at the call site.
+        # receives +user: nil+ and the resolver is not declared +optional: true+.
+        # Declare +lazily :user, finds: User, optional: true+ to resolve to +nil+ instead.
         #
         # @example
         #   class MyService < Servus::Base

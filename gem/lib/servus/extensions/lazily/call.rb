@@ -25,6 +25,9 @@ module Servus
         # @param finds [Class] the model class to resolve against (e.g., +User+, +Account+)
         # @param by [Symbol] the lookup column (default: +:id+). When +:id+, uses +.find+.
         #   Otherwise uses +.find_by!(column: value)+.
+        # @param optional [Boolean] when true, resolves to +nil+ instead of raising if the
+        #   value is +nil+ or finds no record; arrays keep only the records found
+        #   (default: +false+)
         # @return [void]
         #
         # @example Basic usage with .find
@@ -40,11 +43,16 @@ module Servus
         #   lazily :users, finds: User
         #   # users: [1, 2, 3] → User.where(id: [1, 2, 3])
         #
+        # @example Optional record
+        #   lazily :referrer, finds: User, optional: true
+        #   # referrer: nil → nil
+        #   # referrer: 999 → User.find_by(id: 999) → nil when not found
+        #
         # @note Only available when ActiveRecord is loaded (via Railtie)
         # @see Servus::Base.call
-        def lazily(name, finds:, by: :id)
-          (@lazy_resolvers ||= {})[name] = { klass: finds, by: by }
-          define_resolver_method(name, finds, by)
+        def lazily(name, finds:, by: :id, optional: false)
+          (@lazy_resolvers ||= {})[name] = { klass: finds, by: by, optional: optional }
+          define_resolver_method(name, finds, by, optional)
         end
 
         # Returns the hash of registered lazy resolvers for this service class.
@@ -62,8 +70,9 @@ module Servus
         # @param name [Symbol] the method/ivar name
         # @param klass [Class] the target model class
         # @param by [Symbol] the lookup column
+        # @param optional [Boolean] whether nil values or missing records resolve to nil
         # @api private
-        def define_resolver_method(name, klass, by)
+        def define_resolver_method(name, klass, by, optional)
           mod = (@_resolver_module ||= Module.new)
           prepend(mod) unless ancestors.include?(mod)
 
@@ -71,7 +80,8 @@ module Servus
             @_lazily_resolved ||= {}
             return instance_variable_get(:"@#{name}") if @_lazily_resolved[name]
 
-            resolved = Resolver.call(instance_variable_get(:"@#{name}"), klass: klass, by: by, name: name)
+            resolved = Resolver.call(instance_variable_get(:"@#{name}"), klass: klass, by: by, name: name,
+                                                                         optional: optional)
             @_lazily_resolved[name] = true
             instance_variable_set(:"@#{name}", resolved)
           end

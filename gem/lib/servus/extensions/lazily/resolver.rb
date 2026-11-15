@@ -17,15 +17,33 @@ module Servus
         # @param klass [Class] the target model class
         # @param by [Symbol] the lookup column
         # @param name [Symbol] the param name (for error messages)
-        # @return [Object] the resolved record or collection
-        # @raise [Errors::NotFoundError] if raw is nil
-        def self.call(raw, klass:, by:, name:)
+        # @param optional [Boolean] resolve to +nil+ instead of raising when the value
+        #   is nil or finds no record
+        # @return [Object, nil] the resolved record or collection, or +nil+ when optional
+        # @raise [Errors::NotFoundError] if raw is nil and +optional+ is false
+        def self.call(raw, klass:, by:, name:, optional: false)
           return raw if raw.is_a?(klass)
-          raise Errors::NotFoundError, "Couldn't find #{klass} (#{name} was nil)" if raw.nil?
+
+          if raw.nil?
+            return nil if optional
+
+            raise Errors::NotFoundError, "Couldn't find #{klass} (#{name} was nil)"
+          end
+
+          lookup(raw, klass: klass, by: by, optional: optional)
+        end
+
+        # Looks up a present value. +.where+ already omits values that find no
+        # record, so arrays resolve the same way whether optional or not.
+        #
+        # @return [Object, nil]
+        def self.lookup(raw, klass:, by:, optional:)
           return klass.where(by => raw) if raw.is_a?(Array)
+          return klass.find_by(by => raw) if optional
 
           by == :id ? klass.find(raw) : klass.find_by!(by => raw)
         end
+        private_class_method :lookup
       end
     end
   end
