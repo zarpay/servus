@@ -1,5 +1,22 @@
 ## [Unreleased]
 
+`schema_validator` chooses the gem that validates schemas. `:json_schemer`
+reads each `pattern` as ECMAScript, as JSON Schema defines it, so `^...$`
+covers the whole value; the default, `:json_schema`, reads it as Ruby, where
+`^[0-9]+$` accepts `"123\nanything"`.
+
+```ruby
+Servus.configure do |config|
+  config.schema_validator = :json_schemer # add json_schemer to your Gemfile
+end
+```
+
+Both validate as draft-06 and check the same formats. Under `:json_schemer` a
+pattern must be valid ECMAScript (`^`, `$`, never `\A`, `\z`), and
+`ValidationError` messages are worded differently. The default is unchanged.
+
+See [Schema Validation](https://zarpay.github.io/servus/features/schema-validation#choosing-the-validator).
+
 `lazily` takes an `optional:` keyword, so a service can accept an optional
 record or id without dropping `lazily`.
 

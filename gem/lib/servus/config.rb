@@ -120,6 +120,40 @@ module Servus
       event_payload_enricher.call(payload, event_name:, service:)
     end
 
+    # The validators {#schema_validator} can name.
+    SCHEMA_VALIDATORS = %i[json_schema json_schemer].freeze
+
+    # Which library validates service arguments, results and event payloads.
+    #
+    # +:json_schema+ (the default) uses the +json-schema+ gem, which compiles a
+    # +pattern+ as a Ruby regex: +^+ and +$+ match at any line, so
+    # +^[0-9]+$+ accepts +"1\nanything"+. +:json_schemer+ uses the
+    # +json_schemer+ gem, which the application adds to its own Gemfile, and
+    # reads each pattern as ECMAScript, as JSON Schema defines it: +^...$+
+    # covers the whole value. Both read schemas as Draft 6 and check the same
+    # formats; their error messages are worded differently.
+    #
+    # @return [Symbol] +:json_schema+ or +:json_schemer+
+    #
+    # @example Read patterns as JSON Schema defines them
+    #   config.schema_validator = :json_schemer
+    attr_reader :schema_validator
+
+    # Sets which library validates schemas, loading +json_schemer+ when named.
+    #
+    # @param value [Symbol] one of {SCHEMA_VALIDATORS}
+    # @return [Symbol] the new value
+    # @raise [ArgumentError] for a validator Servus does not know
+    # @raise [LoadError] for +:json_schemer+ when the gem is not installed
+    def schema_validator=(value)
+      unless SCHEMA_VALIDATORS.include?(value)
+        raise ArgumentError, "schema_validator must be one of #{SCHEMA_VALIDATORS.inspect}, got #{value.inspect}"
+      end
+
+      require 'json_schemer' if value == :json_schemer
+      @schema_validator = value
+    end
+
     # The ordered list of routers that resolve invocations for events.
     #
     # The Bus iterates routers in order, collects invocations, deduplicates
@@ -203,6 +237,7 @@ module Servus
       @require_service_arguments_schema = false
       @require_service_result_schema    = false
       @require_event_payload_schema     = false
+      @schema_validator                 = :json_schema
       @log_filter_parameters            = [].freeze
     end
 

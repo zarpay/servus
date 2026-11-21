@@ -55,5 +55,13 @@ Servus.configure do |config|
   config.require_service_arguments_schema = false  # default: false
   config.require_service_result_schema    = false  # default: false
   config.require_event_payload_schema     = false  # default: false
+
+  # ── Schema Validator ───────────────────────────────────────────────
+  # Which gem validates schemas. :json_schemer reads each `pattern` as
+  # ECMAScript, where ^...$ covers the whole value; :json_schema reads it
+  # as Ruby, where ^ and $ match at any line. :json_schemer needs the
+  # json_schemer gem in your Gemfile.
+
+  config.schema_validator = :json_schema  # default: :json_schema
 end
 ```

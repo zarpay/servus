@@ -148,6 +148,24 @@ RSpec.describe Servus::Config do
     end
   end
 
+  describe '#schema_validator' do
+    after { Servus.config.schema_validator = :json_schema }
+
+    it 'defaults to json-schema' do
+      expect(Servus.config.schema_validator).to eq(:json_schema)
+    end
+
+    it 'can be set to json_schemer' do
+      Servus.config.schema_validator = :json_schemer
+      expect(Servus.config.schema_validator).to eq(:json_schemer)
+    end
+
+    it 'refuses a validator it does not know' do
+      expect { Servus.config.schema_validator = :jsonschema }
+        .to raise_error(ArgumentError, /schema_validator must be one of/)
+    end
+  end
+
   describe '#log_filter_parameters' do
     after { Servus.config.log_filter_parameters = [] }
 

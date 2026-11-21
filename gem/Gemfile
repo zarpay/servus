@@ -13,6 +13,7 @@ gem 'rake', '~> 13.0'
 group :development, :test do
   gem 'activejob'
   gem 'activerecord'
+  gem 'json_schemer' # Servus.config.schema_validator = :json_schemer
   gem 'railties'
   gem 'sqlite3'
 
