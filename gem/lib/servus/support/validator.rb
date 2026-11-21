@@ -31,28 +31,16 @@ module Servus
       # @api private
       SCHEMA_TYPES = %w[arguments result failure payload].freeze
 
-      # Formats read as +json-schema+ reads them. +json_schemer+ checks five
-      # formats under Draft 6 that +json-schema+ does not, and wants an absolute
-      # +uri+ where +json-schema+ takes any reference it parses, +/path+ included.
+      # The validator each {Servus::Config#schema_validator} names.
       #
       # @api private
-      FORMATS = %w[email hostname uri-reference uri-template json-pointer]
-                .to_h { |format| [format, false] }
-                .merge('uri' => lambda do |value, _format|
-                  JSON::Util::URI.parse(value) if value.is_a?(String)
-                  true
-                rescue JSON::Schema::UriError
-                  false
-                end)
-                .freeze
+      SCHEMA_VALIDATORS = {
+        json_schema: SchemaValidators::JsonSchema,
+        json_schemer: SchemaValidators::JsonSchemer
+      }.freeze
 
       # @api private
       @schema_cache = {}
-
-      # Compiled +json_schemer+ schemas, keyed by the schema Hash they compile.
-      #
-      # @api private
-      @schemers = ObjectSpace::WeakMap.new
 
       # Validates service arguments against the service's arguments schema.
       #
@@ -220,34 +208,11 @@ module Servus
       # @return [Array<String>] one message per error, empty when the data is valid
       #
       # @example
-      #   schema_errors({ 'type' => 'string' }, 1) # => ["The property '#/' of type integer did not match ..."]
+      #   schema_errors({ 'type' => 'string' }, 'a') # => []
       #
       # @api private
       def self.schema_errors(schema, data)
-        return JSON::Validator.fully_validate(schema, data) if Servus.config.schema_validator == :json_schema
-
-        schemer(schema).validate(data).map { |error| error['error'] }
-      end
-
-      # The schema compiled by +json_schemer+ as Draft 6, with ECMAScript
-      # patterns, compiled once per schema Hash. Symbols in the schema are read
-      # as strings, as +json-schema+ reads them: +required: %i[name]+ requires
-      # the +"name"+ key the serialized data carries.
-      #
-      # @param schema [Hash] the JSON schema to compile
-      # @return [JSONSchemer::Schema] the compiled schema
-      #
-      # @example
-      #   schemer({ 'pattern' => '^[0-9]+$' }).valid?("1\nx") # => false
-      #
-      # @api private
-      def self.schemer(schema)
-        @schemers[schema] ||= JSONSchemer.schema(
-          JSON::Schema.stringify(schema),
-          meta_schema: JSONSchemer.draft6,
-          regexp_resolver: 'ecma',
-          formats: FORMATS
-        )
+        SCHEMA_VALIDATORS.fetch(Servus.config.schema_validator).errors(schema, data)
       end
 
       # Raises if a schema is absent and the corresponding config flag is on.
