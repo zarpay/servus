@@ -303,4 +303,43 @@ RSpec.describe Servus::Support::Validator, :schema_registry do
       end
     end
   end
+
+  describe 'with schema_validator :json_schemer' do
+    around do |example|
+      Servus.config.schema_validator = :json_schemer
+      example.run
+    ensure
+      Servus.config.schema_validator = :json_schema
+    end
+
+    def validate(properties, args)
+      service_class.schema arguments: { type: 'object', properties: properties }
+      described_class.validate_arguments!(service_class, args)
+    end
+
+    let(:digits) { { code: { type: 'string', pattern: '^[0-9]+$' } } }
+
+    it 'refuses a value whose second line misses the pattern' do
+      expect { validate(digits, { code: "123\nDROP" }) }
+        .to raise_error(Servus::Base::ValidationError, /does not match pattern/)
+    end
+
+    it 'accepts a value the pattern matches whole' do
+      expect(validate(digits, { code: '123' })).to be(true)
+    end
+
+    it 'reads items given as a list as Draft 6 does, one schema per position' do
+      expect { validate({ pair: { type: 'array', items: [{ type: 'integer' }] } }, { pair: ['one'] }) }
+        .to raise_error(Servus::Base::ValidationError, /integer/)
+    end
+
+    it 'leaves the email format unchecked, as json-schema does' do
+      expect(validate({ contact: { type: 'string', format: 'email' } }, { contact: 'not an address' })).to be(true)
+    end
+
+    it 'checks the date-time format, as json-schema does' do
+      expect { validate({ at: { type: 'string', format: 'date-time' } }, { at: 'yesterday' }) }
+        .to raise_error(Servus::Base::ValidationError, /format: date-time/)
+    end
+  end
 end

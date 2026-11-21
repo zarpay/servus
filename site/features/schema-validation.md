@@ -1,6 +1,6 @@
 # Schema Validation
 
-Servus can validate a service's arguments before execution and its result after execution using [JSON Schema](https://json-schema.org/understanding-json-schema). Validation is opt-in — services work without schemas. Servus uses the [`json-schema`](https://github.com/voxpupuli/json-schema) gem, which supports up to draft-06 and defaults to it.
+Servus can validate a service's arguments before execution and its result after execution using [JSON Schema](https://json-schema.org/understanding-json-schema). Validation is opt-in — services work without schemas. Servus validates with the [`json-schema`](https://github.com/voxpupuli/json-schema) gem as draft-06, or with [`json_schemer`](https://github.com/davishmcclurg/json_schemer) when you [choose it](#choosing-the-validator).
 
 ## Defining schemas
 
@@ -217,6 +217,32 @@ Treasury::TransferGold::Service.call(from_account: 1, to_account: 2, gold_dragon
 ```
 
 Both are programming errors, not business failures. The goal is never to catch or rescue a `ValidationError` — it's a signal that something upstream of the service is passing bad data, or the service itself is returning the wrong shape. An argument validation error means the caller has a bug. A result validation error means the service has a bug. Either way, the fix is in the code, not in error handling.
+
+## Choosing the validator
+
+By default `json-schema` validates, and it compiles a `pattern` as a Ruby regex. In Ruby `^` and `$` match at the start and end of any line, so `^[0-9]+$` accepts `"123\nanything"`: a field validated by a pattern accepts a valid line followed by whatever comes after it.
+
+JSON Schema defines `pattern` as an ECMAScript regex, where `^...$` covers the whole value. To validate that way, add `json_schemer` to your Gemfile and select it:
+
+```ruby
+# config/initializers/servus.rb
+Servus.configure do |config|
+  config.schema_validator = :json_schemer
+end
+```
+
+```ruby
+schema arguments: { type: "object", properties: { code: { type: "string", pattern: "^[0-9]+$" } } }
+
+MyService.call(code: "123\nDROP")
+# :json_schema  => runs
+# :json_schemer => raises ValidationError: string at `/code` does not match pattern: ^[0-9]+$
+```
+
+Both read schemas as draft-06 and check the same formats (`date-time`, `ipv4`, `ipv6`, `uri`). Two things differ under `:json_schemer`:
+
+- A pattern must be valid ECMAScript. Ruby-only syntax such as `\A`, `\z` or `\h` raises when the schema is used; write `^`, `$` and `[0-9a-fA-F]`.
+- `ValidationError` messages use `json_schemer`'s wording.
 
 ## Enforcing schema usage
 

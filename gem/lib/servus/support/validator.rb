@@ -31,8 +31,20 @@ module Servus
       # @api private
       SCHEMA_TYPES = %w[arguments result failure payload].freeze
 
+      # Formats +json_schemer+ checks under Draft 6 that +json-schema+ does not,
+      # left unchecked so the two validators agree on formats.
+      #
+      # @api private
+      UNCHECKED_FORMATS = %w[email hostname uri-reference uri-template json-pointer]
+                          .to_h { |format| [format, false] }.freeze
+
       # @api private
       @schema_cache = {}
+
+      # Compiled +json_schemer+ schemas, keyed by the schema Hash they compile.
+      #
+      # @api private
+      @schemers = ObjectSpace::WeakMap.new
 
       # Validates service arguments against the service's arguments schema.
       #
@@ -186,10 +198,46 @@ module Servus
       #
       # @api private
       def self.validate_data_against_schema!(data, schema, message_prefix)
-        errors = JSON::Validator.fully_validate(schema, data.as_json)
+        errors = schema_errors(schema, data.as_json)
         return if errors.empty?
 
         raise Servus::Base::ValidationError, "#{message_prefix}: #{errors.join(', ')}"
+      end
+
+      # The messages for each way data misses a schema, from the configured
+      # {Servus::Config#schema_validator}.
+      #
+      # @param schema [Hash] the JSON schema to validate against
+      # @param data [Object] the data, already serialized to JSON types
+      # @return [Array<String>] one message per error, empty when the data is valid
+      #
+      # @example
+      #   schema_errors({ 'type' => 'string' }, 1) # => ["The property '#/' of type integer did not match ..."]
+      #
+      # @api private
+      def self.schema_errors(schema, data)
+        return JSON::Validator.fully_validate(schema, data) if Servus.config.schema_validator == :json_schema
+
+        schemer(schema).validate(data).map { |error| error['error'] }
+      end
+
+      # The schema compiled by +json_schemer+ as Draft 6, with ECMAScript
+      # patterns, compiled once per schema Hash.
+      #
+      # @param schema [Hash] the JSON schema to compile
+      # @return [JSONSchemer::Schema] the compiled schema
+      #
+      # @example
+      #   schemer({ 'pattern' => '^[0-9]+$' }).valid?("1\nx") # => false
+      #
+      # @api private
+      def self.schemer(schema)
+        @schemers[schema] ||= JSONSchemer.schema(
+          schema,
+          meta_schema: JSONSchemer.draft6,
+          regexp_resolver: 'ecma',
+          formats: UNCHECKED_FORMATS
+        )
       end
 
       # Raises if a schema is absent and the corresponding config flag is on.
