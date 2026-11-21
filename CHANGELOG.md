@@ -1,3 +1,15 @@
+## [1.4.1] - 2026-11-21
+
+### Fixed
+
+`schema_validator = :json_schemer` now validates what `:json_schema` accepts,
+patterns aside:
+
+- Symbols in a schema read as strings. `required: %i[name]` refused every
+  call, since serialized data carries the key `"name"`.
+- `format: "uri"` takes any reference `json-schema` parses, `/path` included,
+  rather than only an absolute URI.
+
 ## [1.4.0] - 2026-11-21
 
 `schema_validator` chooses the gem that validates schemas. `:json_schemer`
