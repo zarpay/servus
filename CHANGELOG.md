@@ -1,4 +1,4 @@
-## [Unreleased]
+## [1.4.0] - 2026-11-21
 
 `schema_validator` chooses the gem that validates schemas. `:json_schemer`
 reads each `pattern` as ECMAScript, as JSON Schema defines it, so `^...$`
