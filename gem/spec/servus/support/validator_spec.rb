@@ -337,6 +337,21 @@ RSpec.describe Servus::Support::Validator, :schema_registry do
       expect(validate({ contact: { type: 'string', format: 'email' } }, { contact: 'not an address' })).to be(true)
     end
 
+    it 'reads symbols in the schema as strings, as json-schema does' do
+      service_class.schema arguments: { type: 'object', required: %i[code], properties: { code: { enum: %i[gold] } } }
+
+      expect(described_class.validate_arguments!(service_class, { code: 'gold' })).to be(true)
+    end
+
+    it 'accepts a relative uri, as json-schema does' do
+      expect(validate({ link: { type: 'string', format: 'uri' } }, { link: '/path' })).to be(true)
+    end
+
+    it 'refuses a uri that does not parse, as json-schema does' do
+      expect { validate({ link: { type: 'string', format: 'uri' } }, { link: 'http://a b' }) }
+        .to raise_error(Servus::Base::ValidationError, /format: uri/)
+    end
+
     it 'checks the date-time format, as json-schema does' do
       expect { validate({ at: { type: 'string', format: 'date-time' } }, { at: 'yesterday' }) }
         .to raise_error(Servus::Base::ValidationError, /format: date-time/)

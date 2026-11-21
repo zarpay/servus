@@ -31,12 +31,20 @@ module Servus
       # @api private
       SCHEMA_TYPES = %w[arguments result failure payload].freeze
 
-      # Formats +json_schemer+ checks under Draft 6 that +json-schema+ does not,
-      # left unchecked so the two validators agree on formats.
+      # Formats read as +json-schema+ reads them. +json_schemer+ checks five
+      # formats under Draft 6 that +json-schema+ does not, and wants an absolute
+      # +uri+ where +json-schema+ takes any reference it parses, +/path+ included.
       #
       # @api private
-      UNCHECKED_FORMATS = %w[email hostname uri-reference uri-template json-pointer]
-                          .to_h { |format| [format, false] }.freeze
+      FORMATS = %w[email hostname uri-reference uri-template json-pointer]
+                .to_h { |format| [format, false] }
+                .merge('uri' => lambda do |value, _format|
+                  JSON::Util::URI.parse(value) if value.is_a?(String)
+                  true
+                rescue JSON::Schema::UriError
+                  false
+                end)
+                .freeze
 
       # @api private
       @schema_cache = {}
@@ -222,7 +230,9 @@ module Servus
       end
 
       # The schema compiled by +json_schemer+ as Draft 6, with ECMAScript
-      # patterns, compiled once per schema Hash.
+      # patterns, compiled once per schema Hash. Symbols in the schema are read
+      # as strings, as +json-schema+ reads them: +required: %i[name]+ requires
+      # the +"name"+ key the serialized data carries.
       #
       # @param schema [Hash] the JSON schema to compile
       # @return [JSONSchemer::Schema] the compiled schema
@@ -233,10 +243,10 @@ module Servus
       # @api private
       def self.schemer(schema)
         @schemers[schema] ||= JSONSchemer.schema(
-          schema,
+          JSON::Schema.stringify(schema),
           meta_schema: JSONSchemer.draft6,
           regexp_resolver: 'ecma',
-          formats: UNCHECKED_FORMATS
+          formats: FORMATS
         )
       end
 
