@@ -47,7 +47,7 @@ module Servus
       # @param service_class [Class] the service class being validated
       # @param args [Hash] keyword arguments passed to the service
       # @return [Boolean] true if validation passes
-      # @raise [Servus::Support::Errors::ValidationError] if arguments fail validation
+      # @raise [Servus::Support::Errors::InvalidArgumentsError] if arguments fail validation
       # @raise [Servus::Support::Errors::SchemaRequiredError] if no schema is
       #   declared and +require_service_arguments_schema+ is enabled
       #
@@ -60,7 +60,7 @@ module Servus
         enforce_schema_presence!(schema, service_class, :require_service_arguments_schema)
         return true unless schema
 
-        validate_data_against_schema!(args, schema, "Invalid arguments for #{service_class.name}", :invalid_arguments)
+        validate_data_against_schema!(args, schema, "Invalid arguments for #{service_class.name}", Errors::InvalidArgumentsError)
 
         true
       end
@@ -74,7 +74,7 @@ module Servus
       # @param service_class [Class] the service class being validated
       # @param result [Servus::Support::Response] the response object to validate
       # @return [Servus::Support::Response] the original result if validation passes
-      # @raise [Servus::Support::Errors::ValidationError] if result data fails validation
+      # @raise [Servus::Support::Errors::InvalidResultError] if result data fails validation
       #
       # @example
       #   Validator.validate_result!(MyService, response)
@@ -88,7 +88,7 @@ module Servus
           result.data,
           schema,
           "Invalid #{schema_type} structure from #{service_class.name}",
-          :invalid_result
+          Errors::InvalidResultError
         )
 
         result
@@ -116,7 +116,7 @@ module Servus
       # @param event_class [Class] the Event subclass
       # @param payload [Hash] the event payload to validate
       # @return [Boolean] true if validation passes
-      # @raise [Servus::Support::Errors::ValidationError] if payload fails validation
+      # @raise [Servus::Support::Errors::InvalidEventError] if payload fails validation
       #
       # @example
       #   Validator.validate_event_payload!(UserCreated, { user_id: 123 })
@@ -131,7 +131,7 @@ module Servus
           payload,
           schema,
           "Invalid payload for event :#{event_class.event_name}",
-          :invalid_event
+          Errors::InvalidEventError
         )
 
         true
@@ -191,18 +191,16 @@ module Servus
       # @param data [Object] the data to validate
       # @param schema [Hash] the JSON schema to validate against
       # @param message_prefix [String] prefix for the error message on failure
-      # @param outcome [Symbol] the call.servus outcome a failure reports
+      # @param error_class [Class<Servus::Support::Errors::ValidationError>] the error raised on failure
       # @return [void]
       # @raise [Servus::Support::Errors::ValidationError] if data fails validation
       #
       # @api private
-      def self.validate_data_against_schema!(data, schema, message_prefix, outcome)
+      def self.validate_data_against_schema!(data, schema, message_prefix, error_class)
         errors = schema_errors(schema, data.as_json)
         return if errors.empty?
 
-        error = Servus::Base::ValidationError.new("#{message_prefix}: #{errors.join(', ')}")
-        Instrumentation.failed_check(error, outcome)
-        raise error
+        raise error_class, "#{message_prefix}: #{errors.join(', ')}"
       end
 
       # The messages for each way data misses a schema, from the configured

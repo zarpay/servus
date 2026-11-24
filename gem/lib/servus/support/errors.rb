@@ -267,6 +267,15 @@ module Servus
         def api_error = { code: http_status, message: message }
       end
 
+      # The arguments a service was called with failed its arguments schema.
+      class InvalidArgumentsError < ValidationError; end
+
+      # A service's result, or its failure data, failed its result or failure schema.
+      class InvalidResultError < ValidationError; end
+
+      # An emitted event's payload failed the event's payload schema.
+      class InvalidEventError < ValidationError; end
+
       # Raised when a service or Event class is used without a required schema.
       #
       # Triggered by the +require_service_arguments_schema+,

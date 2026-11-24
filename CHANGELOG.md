@@ -1,10 +1,12 @@
 ## [Unreleased]
 
 Servus sends ActiveSupport notifications, so a subscriber can trace,
-log or measure services
+log or measure services. `call.servus` and `enqueue.servus` do no work until
+something subscribes to them.
 
 - `call.servus` around every service call. Its payload
-  carries the `service`, the filtered `args`, the `response` and an `outcome`. 
+  carries the `service`, the filtered `args`, the `response` and an `outcome`:
+  `:success`, `:failure`, `:guard` or `:exception`.
 - `enqueue.servus` around every `call_async`, with the `service`, the filtered
   `args` and the `job`.
 - `emit.servus` around every `Bus.emit`, with the `event`, the `service`
@@ -17,6 +19,10 @@ end
 ```
 
 See [Instrumentation](https://zarpay.github.io/servus/features/instrumentation).
+
+A failed schema check now raises a subclass of `ValidationError`, which says
+which check failed: `InvalidArgumentsError`, `InvalidResultError` or
+`InvalidEventError`. `rescue ValidationError` still catches all three.
 
 ## [1.4.1] - 2026-11-21
 

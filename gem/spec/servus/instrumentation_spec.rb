@@ -70,7 +70,7 @@ RSpec.describe 'Servus notifications' do
       expect(event.payload[:response].error).to be_a(Servus::Support::Errors::GuardError)
     end
 
-    it 'reports arguments that fail their schema as :invalid_arguments' do
+    it 'reports arguments that fail their schema as an InvalidArgumentsError' do
       strict = service('StrictArguments') do
         schema arguments: { type: 'object', properties: { id: { type: 'integer' } } }
 
@@ -80,11 +80,11 @@ RSpec.describe 'Servus notifications' do
 
       event = notifications('call.servus') { strict.call(id: 'x') }.sole
 
-      expect(event.payload).to include(outcome: :invalid_arguments)
-      expect(event.payload[:exception_object]).to be_a(Servus::Support::Errors::ValidationError)
+      expect(event.payload).to include(outcome: :exception)
+      expect(event.payload[:exception_object]).to be_a(Servus::Support::Errors::InvalidArgumentsError)
     end
 
-    it 'reports a result that fails its schema as :invalid_result' do
+    it 'reports a result that fails its schema as an InvalidResultError' do
       strict = service('StrictResult') do
         schema result: { type: 'object', required: ['id'] }
 
@@ -93,11 +93,11 @@ RSpec.describe 'Servus notifications' do
 
       event = notifications('call.servus') { strict.call }.sole
 
-      expect(event.payload).to include(outcome: :invalid_result)
-      expect(event.payload[:exception_object]).to be_a(Servus::Support::Errors::ValidationError)
+      expect(event.payload).to include(outcome: :exception)
+      expect(event.payload[:exception_object]).to be_a(Servus::Support::Errors::InvalidResultError)
     end
 
-    it 'reports an emitted event payload that fails its schema as :invalid_event' do
+    it 'reports an emitted event payload that fails its schema as an InvalidEventError' do
       payload_event
       emitting = service('BadEmitter') do
         emits :instrumented, on: :success, with: ->(_) { { id: 'x' } }
@@ -107,11 +107,11 @@ RSpec.describe 'Servus notifications' do
 
       event = notifications('call.servus') { emitting.call }.sole
 
-      expect(event.payload).to include(outcome: :invalid_event)
-      expect(event.payload[:exception_object]).to be_a(Servus::Support::Errors::ValidationError)
+      expect(event.payload).to include(outcome: :exception)
+      expect(event.payload[:exception_object]).to be_a(Servus::Support::Errors::InvalidEventError)
     end
 
-    it 'reports an event emitted from the body with a payload that fails its schema as :invalid_event' do
+    it 'reports an event emitted from the body with a payload that fails its schema as an InvalidEventError' do
       event_class = payload_event
       emitting = service('BodyEmitter') do
         define_method(:call) do
@@ -120,7 +120,10 @@ RSpec.describe 'Servus notifications' do
         end
       end
 
-      expect(notifications('call.servus') { emitting.call }.sole.payload).to include(outcome: :invalid_event)
+      event = notifications('call.servus') { emitting.call }.sole
+
+      expect(event.payload).to include(outcome: :exception)
+      expect(event.payload[:exception_object]).to be_a(Servus::Support::Errors::InvalidEventError)
     end
 
     it 'reports any other raised error as :exception' do
@@ -202,7 +205,16 @@ RSpec.describe 'Servus notifications' do
       events = notifications('call.servus') { outer.call }
 
       expect(events.map { |event| event.payload.values_at(:service, :outcome) })
-        .to eq([[strict, :invalid_arguments], [outer, :exception]])
+        .to eq([[strict, :exception], [outer, :exception]])
+    end
+  end
+
+  describe 'without a subscriber' do
+    it 'does not send call.servus' do
+      allow(ActiveSupport::Notifications).to receive(:instrument).and_call_original
+      service('Unwatched') { def call = success({}) }.call
+
+      expect(ActiveSupport::Notifications).not_to have_received(:instrument).with('call.servus', anything)
     end
   end
 

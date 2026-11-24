@@ -156,6 +156,8 @@ module Servus
         private
 
         def enqueue_servus_job(job, args)
+          return job.perform_later(**args) unless ActiveSupport::Notifications.notifier.listening?('enqueue.servus')
+
           payload = { service: self, args: Servus::Support::Logger.log_parameters(args) }
           ActiveSupport::Notifications.instrument('enqueue.servus', payload) do
             payload[:job] = job.perform_later(**args)
