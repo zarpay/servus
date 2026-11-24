@@ -1,3 +1,28 @@
+## [Unreleased]
+
+Servus sends three ActiveSupport notifications, so a subscriber can trace,
+log or measure services without reaching into Servus:
+
+- `call.servus` around every service call, outside `rescue_from`. Its payload
+  carries the `service`, the filtered `args`, the `response` and an `outcome`:
+  `:success`, `:failure`, `:guard`, `:invalid_arguments`, `:invalid_result`,
+  `:invalid_event` or `:exception`.
+- `enqueue.servus` around every `call_async`, with the `service`, the filtered
+  `args` and the `job`.
+- `emit.servus` around every `Bus.emit`, with the `event`, the emitting
+  `service` (`nil` when the bus is called directly) and the `payload`.
+
+```ruby
+ActiveSupport::Notifications.subscribe('call.servus') do |event|
+  event.payload.values_at(:service, :outcome) # => [Treasury::TransferGold::Service, :success]
+end
+```
+
+`Bus.emit` takes an optional `service:` keyword for `emit.servus`. Log lines,
+error classes and the `servus.events.<name>` notifications are unchanged.
+
+See [Instrumentation](https://zarpay.github.io/servus/features/instrumentation).
+
 ## [1.4.1] - 2026-11-21
 
 ### Fixed

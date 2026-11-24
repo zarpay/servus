@@ -162,7 +162,7 @@ module Servus
                                                        event_name: emission[:event_name],
                                                        service: self)
           validate_event_payload!(emission[:event_name], payload)
-          Servus::Events::Bus.emit(emission[:event_name], payload)
+          Servus::Events::Bus.emit(emission[:event_name], payload, service: self.class)
         end
       end
 
@@ -208,7 +208,9 @@ module Servus
         event_class = Servus::Events::Bus.event_for(event_name)
         return require_event_schema!(event_name) unless event_class
 
-        Servus::Support::Validator.validate_event_payload!(event_class, payload)
+        Servus::Support::Instrumentation.schema_check(:invalid_event) do
+          Servus::Support::Validator.validate_event_payload!(event_class, payload)
+        end
       end
 
       # Enforces {Servus::Config#require_event_payload_schema} for an event that

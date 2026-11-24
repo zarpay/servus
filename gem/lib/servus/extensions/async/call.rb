@@ -76,7 +76,7 @@ module Servus
 
           # The named job class identifies the service — only args are serialized.
           job = job_options.any? ? servus_job_class.set(**job_options) : servus_job_class
-          job.perform_later(**args)
+          enqueue(job, args)
         rescue Servus::Support::Errors::ServiceError, Servus::Events::Errors::Error, Errors::AsyncError
           # With the :inline and :test adapters perform_later runs the service,
           # so Servus's own errors surface here — as do this extension's own,
@@ -154,6 +154,13 @@ module Servus
         end
 
         private
+
+        def enqueue(job, args)
+          payload = { service: self, args: Servus::Support::Logger.log_parameters(args) }
+          ActiveSupport::Notifications.instrument('enqueue.servus', payload) do
+            payload[:job] = job.perform_later(**args)
+          end
+        end
 
         # Splits ActiveJob configuration out of the combined argument hash, mutating
         # +args+ so only the service's own arguments remain.

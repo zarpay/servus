@@ -74,16 +74,19 @@ module Servus
         #
         # @param event_name [Symbol] the name of the event to emit
         # @param payload [Hash] the event payload
+        # @param service [Class, nil] the emitting service, reported on emit.servus
         # @return [void]
         #
         # @example
         #   Bus.emit(:user_created, { user_id: 123, email: 'user@example.com' })
         #   # Rails log: servus.events.user_created (1.2ms) {:user_id=>123, :email=>"user@example.com"}
-        def emit(event_name, payload)
-          ActiveSupport::Notifications.instrument(notification_name(event_name), payload) do
-            resolve_invocations(event_name, payload)
-              .uniq(&:key)
-              .each(&:enqueue)
+        def emit(event_name, payload, service: nil)
+          ActiveSupport::Notifications.instrument('emit.servus', { event: event_name, service:, payload: }) do
+            ActiveSupport::Notifications.instrument(notification_name(event_name), payload) do
+              resolve_invocations(event_name, payload)
+                .uniq(&:key)
+                .each(&:enqueue)
+            end
           end
         end
 

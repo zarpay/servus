@@ -53,6 +53,7 @@ export default defineConfig({
           { text: 'Error Handling', link: '/features/error-handling' },
           { text: 'Async Execution', link: '/features/async-execution' },
           { text: 'Logging', link: '/features/logging' },
+          { text: 'Instrumentation', link: '/features/instrumentation' },
           { text: 'Events', link: '/features/event-bus' },
           { text: 'Guards', link: '/features/guards' },
           { text: 'Lazy Resolvers', link: '/features/lazy-resolvers' },

@@ -48,6 +48,7 @@ module Servus
   class Base
     include Servus::Support::Errors
     include Servus::Support::Rescuer
+    include Servus::Support::Instrumentation
     include Servus::Support::Lockdown
     include Servus::Events::Emitter
     include Servus::Guards
@@ -114,6 +115,7 @@ module Servus
     Emitter = Servus::Events::Emitter
     Response = Servus::Support::Response
     Validator = Servus::Support::Validator
+    Instrumentation = Servus::Support::Instrumentation
 
     class << self
       # Assigns the logger Servus writes this service's call, outcome, and
@@ -360,7 +362,7 @@ module Servus
       # @api private
       def before_call(args)
         Logger.log_call(self, args)
-        Validator.validate_arguments!(self, args)
+        Instrumentation.schema_check(:invalid_arguments) { Validator.validate_arguments!(self, args) }
       end
 
       # Executes post-call hooks including result validation and event emission.
@@ -376,7 +378,7 @@ module Servus
       #
       # @api private
       def after_call(result, instance)
-        Validator.validate_result!(self, result)
+        Instrumentation.schema_check(:invalid_result) { Validator.validate_result!(self, result) }
         Emitter.emit_result_events!(instance, result)
       end
 
