@@ -208,9 +208,7 @@ module Servus
         event_class = Servus::Events::Bus.event_for(event_name)
         return require_event_schema!(event_name) unless event_class
 
-        Servus::Support::Instrumentation.schema_check(:invalid_event) do
-          Servus::Support::Validator.validate_event_payload!(event_class, payload)
-        end
+        Servus::Support::Validator.validate_event_payload!(event_class, payload)
       end
 
       # Enforces {Servus::Config#require_event_payload_schema} for an event that

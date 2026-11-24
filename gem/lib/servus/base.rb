@@ -115,7 +115,6 @@ module Servus
     Emitter = Servus::Events::Emitter
     Response = Servus::Support::Response
     Validator = Servus::Support::Validator
-    Instrumentation = Servus::Support::Instrumentation
 
     class << self
       # Assigns the logger Servus writes this service's call, outcome, and
@@ -362,7 +361,7 @@ module Servus
       # @api private
       def before_call(args)
         Logger.log_call(self, args)
-        Instrumentation.schema_check(:invalid_arguments) { Validator.validate_arguments!(self, args) }
+        Validator.validate_arguments!(self, args)
       end
 
       # Executes post-call hooks including result validation and event emission.
@@ -378,7 +377,7 @@ module Servus
       #
       # @api private
       def after_call(result, instance)
-        Instrumentation.schema_check(:invalid_result) { Validator.validate_result!(self, result) }
+        Validator.validate_result!(self, result)
         Emitter.emit_result_events!(instance, result)
       end
 

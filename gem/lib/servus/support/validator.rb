@@ -60,7 +60,7 @@ module Servus
         enforce_schema_presence!(schema, service_class, :require_service_arguments_schema)
         return true unless schema
 
-        validate_data_against_schema!(args, schema, "Invalid arguments for #{service_class.name}")
+        validate_data_against_schema!(args, schema, "Invalid arguments for #{service_class.name}", :invalid_arguments)
 
         true
       end
@@ -87,7 +87,8 @@ module Servus
         validate_data_against_schema!(
           result.data,
           schema,
-          "Invalid #{schema_type} structure from #{service_class.name}"
+          "Invalid #{schema_type} structure from #{service_class.name}",
+          :invalid_result
         )
 
         result
@@ -129,7 +130,8 @@ module Servus
         validate_data_against_schema!(
           payload,
           schema,
-          "Invalid payload for event :#{event_class.event_name}"
+          "Invalid payload for event :#{event_class.event_name}",
+          :invalid_event
         )
 
         true
@@ -189,15 +191,18 @@ module Servus
       # @param data [Object] the data to validate
       # @param schema [Hash] the JSON schema to validate against
       # @param message_prefix [String] prefix for the error message on failure
+      # @param outcome [Symbol] the call.servus outcome a failure reports
       # @return [void]
       # @raise [Servus::Support::Errors::ValidationError] if data fails validation
       #
       # @api private
-      def self.validate_data_against_schema!(data, schema, message_prefix)
+      def self.validate_data_against_schema!(data, schema, message_prefix, outcome)
         errors = schema_errors(schema, data.as_json)
         return if errors.empty?
 
-        raise Servus::Base::ValidationError, "#{message_prefix}: #{errors.join(', ')}"
+        error = Servus::Base::ValidationError.new("#{message_prefix}: #{errors.join(', ')}")
+        Instrumentation.failed_check(error, outcome)
+        raise error
       end
 
       # The messages for each way data misses a schema, from the configured
