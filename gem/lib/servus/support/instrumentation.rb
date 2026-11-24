@@ -21,11 +21,8 @@ module Servus
           ActiveSupport::Notifications.instrument('call.servus', payload) { record_outcome(payload, &) }
         end
 
-        def schema_check(outcome)
-          yield
-        rescue Errors::ValidationError => e
-          failed_checks[-1] = [e, outcome] unless failed_checks.empty?
-          raise
+        def failed_check(error, outcome)
+          failed_checks[-1] = [error, outcome] unless failed_checks.empty?
         end
 
         private

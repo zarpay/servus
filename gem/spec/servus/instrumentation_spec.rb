@@ -111,6 +111,18 @@ RSpec.describe 'Servus notifications' do
       expect(event.payload[:exception_object]).to be_a(Servus::Support::Errors::ValidationError)
     end
 
+    it 'reports an event emitted from the body with a payload that fails its schema as :invalid_event' do
+      event_class = payload_event
+      emitting = service('BodyEmitter') do
+        define_method(:call) do
+          event_class.emit({ id: 'x' })
+          success({})
+        end
+      end
+
+      expect(notifications('call.servus') { emitting.call }.sole.payload).to include(outcome: :invalid_event)
+    end
+
     it 'reports any other raised error as :exception' do
       raising = service('Raising') { def call = raise(ArgumentError, 'boom') }
 
