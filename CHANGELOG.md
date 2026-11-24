@@ -1,3 +1,29 @@
+## [Unreleased]
+
+Servus sends ActiveSupport notifications, so a subscriber can trace,
+log or measure services. `call.servus` and `enqueue.servus` do no work until
+something subscribes to them.
+
+- `call.servus` around every service call. Its payload
+  carries the `service`, the filtered `args`, the `response` and an `outcome`:
+  `:success`, `:failure`, `:guard` or `:exception`.
+- `enqueue.servus` around every `call_async`, with the `service`, the filtered
+  `args` and the `job`.
+- `emit.servus` around every `Bus.emit`, with the `event` and the `payload`.
+  An emit from a service is sent inside that service's `call.servus`.
+
+```ruby
+ActiveSupport::Notifications.subscribe('call.servus') do |event|
+  event.payload.values_at(:service, :outcome) # => [Treasury::TransferGold::Service, :success]
+end
+```
+
+See [Instrumentation](https://zarpay.github.io/servus/features/instrumentation).
+
+A failed schema check now raises a subclass of `ValidationError`, which says
+which check failed: `InvalidArgumentsError`, `InvalidResultError` or
+`InvalidEventError`. `rescue ValidationError` still catches all three.
+
 ## [1.4.1] - 2026-11-21
 
 ### Fixed

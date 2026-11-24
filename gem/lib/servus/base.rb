@@ -48,6 +48,7 @@ module Servus
   class Base
     include Servus::Support::Errors
     include Servus::Support::Rescuer
+    include Servus::Support::Instrumentation
     include Servus::Support::Lockdown
     include Servus::Events::Emitter
     include Servus::Guards

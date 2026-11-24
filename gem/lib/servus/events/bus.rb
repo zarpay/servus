@@ -80,10 +80,12 @@ module Servus
         #   Bus.emit(:user_created, { user_id: 123, email: 'user@example.com' })
         #   # Rails log: servus.events.user_created (1.2ms) {:user_id=>123, :email=>"user@example.com"}
         def emit(event_name, payload)
-          ActiveSupport::Notifications.instrument(notification_name(event_name), payload) do
-            resolve_invocations(event_name, payload)
-              .uniq(&:key)
-              .each(&:enqueue)
+          ActiveSupport::Notifications.instrument('emit.servus', { event: event_name, payload: }) do
+            ActiveSupport::Notifications.instrument(notification_name(event_name), payload) do
+              resolve_invocations(event_name, payload)
+                .uniq(&:key)
+                .each(&:enqueue)
+            end
           end
         end
 
