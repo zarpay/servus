@@ -133,6 +133,13 @@ RSpec.describe 'Servus notifications' do
       expect(event.payload).not_to have_key(:response)
     end
 
+    it 'reports a throw out of the call as :exception' do
+      throwing = service('Throwing') { def call = throw(:escape) }
+
+      expect(notifications('call.servus') { catch(:escape) { throwing.call } }.sole.payload)
+        .to include(outcome: :exception)
+    end
+
     it 'reports a ValidationError raised from the body as :exception' do
       raising = service('RaisingValidation') do
         def call = raise(Servus::Support::Errors::ValidationError, 'body')

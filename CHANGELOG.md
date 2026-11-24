@@ -9,8 +9,9 @@ log or measure services without reaching into Servus:
   `:invalid_event` or `:exception`.
 - `enqueue.servus` around every `call_async`, with the `service`, the filtered
   `args` and the `job`.
-- `emit.servus` around every `Bus.emit`, with the `event`, the emitting
-  `service` (`nil` when the bus is called directly) and the `payload`.
+- `emit.servus` around every `Bus.emit`, with the `event`, the `service`
+  whose `emits` declaration sent it (`nil` for `Event.emit` and a direct
+  `Bus.emit`) and the `payload`.
 
 ```ruby
 ActiveSupport::Notifications.subscribe('call.servus') do |event|

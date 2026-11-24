@@ -36,6 +36,7 @@ module Servus
           payload[:outcome] = failed_check_outcome(e)
           raise
         ensure
+          payload[:outcome] ||= :exception
           failed_checks.pop
         end
 

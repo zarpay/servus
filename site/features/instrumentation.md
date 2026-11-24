@@ -34,7 +34,7 @@ The names follow the Rails `event.library` form. Payload keys are plain symbols,
 | `:invalid_arguments` | The arguments failed their schema |
 | `:invalid_result` | The result (or failure data) failed its schema |
 | `:invalid_event` | An emitted event's payload failed its schema |
-| `:exception` | Any other error raised out of the call |
+| `:exception` | Any other exception raised out of the call, or a `throw` through it |
 
 The notification wraps `rescue_from`, so it reports what the caller gets. An exception that `rescue_from` turns into a failure shows as `:failure`, with a `response` and no `exception_object`.
 
@@ -55,7 +55,7 @@ With the `:inline` adapter, the service runs during the enqueue, so its `call.se
 | Key | Value |
 | --- | --- |
 | `event` | The event name, a symbol |
-| `service` | The emitting service class, or `nil` when the bus is called directly |
+| `service` | The service class whose `emits` declaration sent the event, or `nil` for `Event.emit` and a direct `Bus.emit` |
 | `payload` | The event payload |
 
 An event whose payload fails its schema never reaches the bus. It shows as `outcome: :invalid_event` on `call.servus`.
