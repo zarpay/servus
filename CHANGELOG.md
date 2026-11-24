@@ -9,8 +9,8 @@ something subscribes to them.
   `:success`, `:failure`, `:guard` or `:exception`.
 - `enqueue.servus` around every `call_async`, with the `service`, the filtered
   `args` and the `job`.
-- `emit.servus` around every `Bus.emit`, with the `event`, the `service`
-  whose `emits` declaration sent it and the `payload`.
+- `emit.servus` around every `Bus.emit`, with the `event` and the `payload`.
+  An emit from a service is sent inside that service's `call.servus`.
 
 ```ruby
 ActiveSupport::Notifications.subscribe('call.servus') do |event|

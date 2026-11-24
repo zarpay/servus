@@ -54,8 +54,9 @@ All three are subclasses of `ValidationError`, so `rescue ValidationError` and `
 | Key | Value |
 | --- | --- |
 | `event` | The event name, a symbol |
-| `service` | The service class whose `emits` declaration sent the event. |
 | `payload` | The event payload |
+
+An event a service emits is sent inside that service's `call.servus`, so a tracer nests the emit span under the call span.
 
 ## Subscribing
 

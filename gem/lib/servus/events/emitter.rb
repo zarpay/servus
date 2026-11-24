@@ -162,7 +162,7 @@ module Servus
                                                        event_name: emission[:event_name],
                                                        service: self)
           validate_event_payload!(emission[:event_name], payload)
-          Servus::Events::Bus.emit(emission[:event_name], payload, service: self.class)
+          Servus::Events::Bus.emit(emission[:event_name], payload)
         end
       end
 

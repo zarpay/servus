@@ -247,7 +247,13 @@ RSpec.describe 'Servus notifications' do
   end
 
   describe 'emit.servus' do
-    it 'reports the event, the emitting service and the payload' do
+    it 'reports the event and the payload' do
+      event = notifications('emit.servus') { Servus::Events::Bus.emit(:direct, { id: 1 }) }.sole
+
+      expect(event.payload).to eq(event: :direct, payload: { id: 1 })
+    end
+
+    it 'is sent inside the call.servus of the emitting service' do
       payload_event
       emitting = service('Emitter') do
         emits :instrumented, on: :success, with: ->(_) { { id: 1 } }
@@ -255,15 +261,9 @@ RSpec.describe 'Servus notifications' do
         def call = success({})
       end
 
-      event = notifications('emit.servus') { emitting.call }.sole
+      events = notifications(/\A(call|emit)\.servus\z/) { emitting.call }
 
-      expect(event.payload).to eq(event: :instrumented, service: emitting, payload: { id: 1 })
-    end
-
-    it 'reports no service when the bus is called directly' do
-      event = notifications('emit.servus') { Servus::Events::Bus.emit(:direct, { id: 1 }) }.sole
-
-      expect(event.payload).to eq(event: :direct, service: nil, payload: { id: 1 })
+      expect(events.map(&:name)).to eq(%w[emit.servus call.servus])
     end
 
     it 'wraps the servus.events notification' do

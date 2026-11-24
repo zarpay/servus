@@ -77,7 +77,7 @@ RSpec.describe Servus::Base, '#failure!' do
 
     klass.call
 
-    expect(Servus::Events::Bus).to have_received(:emit).with(:account_refused, anything, service: klass)
+    expect(Servus::Events::Bus).to have_received(:emit).with(:account_refused, anything)
   end
 
   it 'validates its data against the failure schema' do
